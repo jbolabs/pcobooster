@@ -35,6 +35,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { KeyTransitionPopover } from "@/components/schedule/key-transition-popover";
+import { PlanFilesBrowser } from "@/components/schedule/plan-files-browser";
 import { SongHistory } from "@/components/schedule/song-history";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -645,6 +646,15 @@ export const PlanItemPane = ({
       />
       <CardContent className="min-h-0 overflow-y-auto">
         <div className="flex flex-col gap-4">
+          {serviceTypeId !== null && planId !== null ? (
+            <PlanFilesBrowser
+              key={`${serviceTypeId}:${planId}:${item.id}`}
+              serviceTypeId={serviceTypeId}
+              planId={planId}
+              items={[item]}
+              item={item}
+            />
+          ) : null}
           {item.song ? (
             <SongFields
               item={item}

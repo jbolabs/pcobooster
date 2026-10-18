@@ -38,6 +38,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { PageScrollArea } from "@/components/page-shell";
 import { QueryDataBoundary } from "@/components/query-data-boundary";
 import type { ReadQueryState } from "@/components/query-data-boundary";
+import { PlanFilesBrowser } from "@/components/schedule/plan-files-browser";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
@@ -713,6 +714,12 @@ export const PlanOverviewTab = ({
         <QueryDataBoundary query={planTimesQuery} title="Couldn't load times">
           <TimesCard plan={plan} schedule={schedule} />
         </QueryDataBoundary>
+        <PlanFilesBrowser
+          key={`${serviceTypeId}:${planId}`}
+          serviceTypeId={serviceTypeId}
+          planId={planId}
+          items={planItems ?? []}
+        />
       </div>
     </PageScrollArea>
   );

@@ -48,6 +48,14 @@ export const queryKeys = {
   myScheduledPlans: () => ["my-scheduled-plans"] as const,
   planItems: (serviceTypeId: string | null, planId: string | null) =>
     ["plan-items", serviceTypeId, planId] as const,
+  planFiles: (serviceTypeId: string, planId: string) =>
+    ["plan-files", serviceTypeId, planId] as const,
+  planFileLink: (
+    serviceTypeId: string,
+    planId: string,
+    fileId: string,
+    as: string
+  ) => ["plan-file-link", serviceTypeId, planId, fileId, as] as const,
   planTimes: (serviceTypeId: string | null, planId: string | null) =>
     ["plan-times", serviceTypeId, planId] as const,
   songSearch: (query: string) => ["song-search", query] as const,

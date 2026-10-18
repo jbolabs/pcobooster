@@ -830,6 +830,14 @@
   padding-bottom: max(--spacing(2), env(safe-area-inset-bottom));
 }
 
+@utility pb-safe-3 {
+  padding-bottom: max(--spacing(3), env(safe-area-inset-bottom));
+}
+
+@utility pt-safe-2 {
+  padding-top: max(--spacing(2), env(safe-area-inset-top));
+}
+
 @utility no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
