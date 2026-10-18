@@ -9,17 +9,30 @@ const DEFAULT_PACE_FROM_SHARE = 0.5;
  * beyond it stays for interactive reads.
  */
 const DEFAULT_SPECULATIVE_SHARE = 0.4;
+/**
+ * Budget interactive reads leave unused, as a share of the reported limit, so a change the
+ * person just made still has room when a screen's reads have spent the rest.
+ */
+const DEFAULT_WRITE_RESERVE_SHARE = 0.1;
 /** Longest an interactive request waits for budget before failing fast. */
 export const DEFAULT_MAX_RATE_LIMIT_WAIT_MS = 5000;
+/**
+ * Longest a write waits for budget. A write is a change the person already made (the screen
+ * shows it optimistically), so it waits out up to one whole window rather than failing.
+ */
+export const DEFAULT_MAX_WRITE_RATE_LIMIT_WAIT_MS = 20_000;
 /** Retry wait after a 429 that names no Retry-After and no known window. */
 const UNKNOWN_BLOCK_MS = 1000;
 /** Credentials tracked before idle ones are pruned; OAuth tokens rotate every 2 hours. */
 const PRUNE_ABOVE_CREDENTIALS = 64;
 const MS_PER_SECOND = 1000;
 const MS_PER_MINUTE = 60_000;
-const PERIOD_PATTERN = /^(?<amount>\d+)\s*(?<unit>second|minute)s?$/iu;
+const PERIOD_PATTERN = /^(?<amount>\d+)(?:\s*(?<unit>second|minute)s?)?$/iu;
 
-/** Parses `X-PCO-API-Request-Rate-Period`, for example "20 seconds". */
+/**
+ * Parses `X-PCO-API-Request-Rate-Period`. Successful responses send bare seconds ("20");
+ * 429s send "20 seconds".
+ */
 export const parseRatePeriodMs = (
   period: string | undefined
 ): number | undefined => {
@@ -77,6 +90,10 @@ export interface PlanningCenterRatePacerOptions {
   readonly paceFromShare?: number;
   /** Longest wait before a read fails fast (default 5 s). */
   readonly maxWaitMs?: number;
+  /** Longest wait before a write fails fast (default 20 s). */
+  readonly maxWriteWaitMs?: number;
+  /** Share of the reported limit interactive reads leave for writes (default 0.1). */
+  readonly writeReserveShare?: number;
   /** Share of the reported limit speculative reads may use (default 0.4). */
   readonly speculativeShare?: number;
 }
@@ -141,8 +158,10 @@ const learnFromResponse = (
  * from the rate headers Planning Center reports, never from hard-coded
  * limits. Below `paceFromShare` of the limit requests go straight out; above
  * it, concurrent requests take evenly spaced slots that spread the remaining
- * budget over the rest of the window. A wait longer than `maxWaitMs` is
- * rejected so the caller can fail fast. Speculative reads never wait: they go
+ * budget, less `writeReserveShare` kept for writes, over the rest of the
+ * window. A wait longer than `maxWaitMs` is rejected so the caller can fail
+ * fast. Writes skip that pacing and wait (up to `maxWriteWaitMs`) only while
+ * a 429 blocks the credential or the window is spent. Speculative reads never wait: they go
  * out only while the window is below `speculativeShare` and nothing is paced,
  * and are rejected otherwise, so prefetches cannot take budget from what the
  * user is waiting on. Isolates do not share state, so this cannot prevent 429s
@@ -153,6 +172,8 @@ const learnFromResponse = (
  */
 export class PlanningCenterRatePacer {
   readonly maxWaitMs: number;
+  private readonly maxWriteWaitMs: number;
+  private readonly writeReserveShare: number;
   private readonly paceFromShare: number;
   private readonly speculativeShare: number;
   private readonly windows = new Map<string, CredentialWindow>();
@@ -160,6 +181,10 @@ export class PlanningCenterRatePacer {
   constructor(options: PlanningCenterRatePacerOptions = {}) {
     this.paceFromShare = options.paceFromShare ?? DEFAULT_PACE_FROM_SHARE;
     this.maxWaitMs = options.maxWaitMs ?? DEFAULT_MAX_RATE_LIMIT_WAIT_MS;
+    this.maxWriteWaitMs =
+      options.maxWriteWaitMs ?? DEFAULT_MAX_WRITE_RATE_LIMIT_WAIT_MS;
+    this.writeReserveShare =
+      options.writeReserveShare ?? DEFAULT_WRITE_RESERVE_SHARE;
     this.speculativeShare = Math.min(
       options.speculativeShare ?? DEFAULT_SPECULATIVE_SHARE,
       this.paceFromShare
@@ -190,8 +215,9 @@ export class PlanningCenterRatePacer {
 
   /**
    * Reserves a send slot. Reads may wait or be rejected; speculative reads
-   * are sent at once or rejected; writes are never delayed or rejected here,
-   * only counted. Every `send` must be followed by `complete`.
+   * are sent at once or rejected; writes take the budget reads leave for them
+   * and wait only while the window is known to be spent. Every `send` must be
+   * followed by `complete`.
    */
   reserve(
     scope: string,
@@ -200,33 +226,61 @@ export class PlanningCenterRatePacer {
     priority: RequestPriority = "interactive"
   ): PlanningCenterPacingDecision {
     const window = this.windowFor(scope, now);
-    const decision =
-      kind === "read" && priority === "speculative"
-        ? this.decideSpeculative(window, now)
-        : this.decide(window, now, kind);
+    let decision: PlanningCenterPacingDecision;
+    if (kind === "write") {
+      decision = this.decideWrite(window, now);
+    } else if (priority === "speculative") {
+      decision = this.decideSpeculative(window, now);
+    } else {
+      decision = this.decide(window, now);
+    }
     if (decision.kind === "send") {
       window.inFlight += 1;
     }
     return decision;
   }
 
+  /** Writes skip read pacing and wait only for a 429's block or a spent window. */
+  private decideWrite(
+    window: CredentialWindow,
+    now: number
+  ): PlanningCenterPacingDecision {
+    const { limit } = window;
+    const spent =
+      limit !== undefined && window.reportedCount + window.inFlight >= limit;
+    const earliest = Math.max(
+      now,
+      window.blockedUntil,
+      spent ? window.windowEndsAt : now
+    );
+    const waitMs = Math.ceil(earliest - now);
+    if (waitMs > this.maxWriteWaitMs) {
+      return {
+        kind: "reject",
+        reason: "budget",
+        retryAfterMs: waitMs,
+        window: snapshotOf(window),
+      };
+    }
+    return { kind: "send", waitMs, window: snapshotOf(window) };
+  }
+
   private decide(
     window: CredentialWindow,
-    now: number,
-    kind: "read" | "write"
+    now: number
   ): PlanningCenterPacingDecision {
     const { limit } = window;
     const blocked = window.blockedUntil > now;
     const used = window.reportedCount + window.inFlight;
     if (
-      kind === "write" ||
       limit === undefined ||
       window.periodMs === undefined ||
       (!blocked && used < limit * this.paceFromShare)
     ) {
       return { kind: "send", waitMs: 0, window: snapshotOf(window) };
     }
-    const remaining = limit - used;
+    const readLimit = Math.floor(limit * (1 - this.writeReserveShare));
+    const remaining = readLimit - used;
     const earliest = Math.max(
       now,
       window.nextSlotAt,
@@ -237,7 +291,7 @@ export class PlanningCenterRatePacer {
     const spacingMs =
       remaining > 0 && windowLeftMs > 0
         ? windowLeftMs / remaining
-        : window.periodMs / limit;
+        : window.periodMs / readLimit;
     const waitMs = Math.ceil(earliest - now);
     if (waitMs > this.maxWaitMs) {
       return {
