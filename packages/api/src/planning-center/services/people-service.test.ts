@@ -532,7 +532,7 @@ describe("PlanningCenterPeopleService.updatePlanPersonStatus", () => {
 
     expect(routes()).toStrictEqual([
       "GET /services/v2/service_types/st-789/plans/plan-101/team_members",
-      "PATCH /services/v2/plan_people/pp-123",
+      "PATCH /services/v2/service_types/st-789/plans/plan-101/team_members/pp-123",
       "GET /services/v2/service_types/st-789/plans/plan-101/team_members",
     ]);
     expect(sent[1]?.body).toStrictEqual({
@@ -544,6 +544,18 @@ describe("PlanningCenterPeopleService.updatePlanPersonStatus", () => {
         },
       },
     });
+  });
+
+  it("patches through the person when no plan is known", async () => {
+    const { service, routes } = serviceOver(planPersonAnswer);
+
+    await Effect.runPromise(
+      service.updatePlanPersonStatus("pp-123", "D", { personId: "person-456" })
+    );
+
+    expect(routes()).toStrictEqual([
+      "PATCH /services/v2/people/person-456/plan_people/pp-123",
+    ]);
   });
 });
 
@@ -761,7 +773,7 @@ describe("PlanningCenterPeopleService.deletePlanPerson", () => {
     ]);
   });
 
-  it("falls back to the person-scoped plan_people endpoint without plan context", async () => {
+  it("uses the person-scoped plan_people endpoint without plan context", async () => {
     const { service, routes } = serviceOver(() => null);
 
     await Effect.runPromise(

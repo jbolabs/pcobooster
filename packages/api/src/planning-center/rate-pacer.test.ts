@@ -9,7 +9,7 @@ const SCOPE = "bearer:scope";
 
 const rateHeaders = (count: number) => ({
   status: 200,
-  rateLimit: { limit: 100, count, period: "20 seconds" },
+  rateLimit: { limit: 100, count, period: "20" },
 });
 
 /** Sends one read at `now` and reports `count` from its response. */
@@ -31,6 +31,7 @@ const waitOf = (decision: PlanningCenterPacingDecision): number => {
 
 describe(parseRatePeriodMs, () => {
   it.each([
+    ["20", 20_000],
     ["20 seconds", 20_000],
     ["1 minute", 60_000],
     ["2 Minutes", 120_000],
@@ -64,8 +65,8 @@ describe(PlanningCenterRatePacer, () => {
   it("spreads the remaining budget over the rest of the window", () => {
     const pacer = new PlanningCenterRatePacer();
     // The window is assumed to start at the first response: it ends at 20 s.
-    observe(pacer, 0, 80);
-    // 20 requests left over 10 s: one slot every 500 ms, shared by concurrent callers.
+    observe(pacer, 0, 70);
+    // 20 reads left (10 more are kept for writes) over 10 s: one slot every 500 ms.
     expect(waitOf(pacer.reserve(SCOPE, 10_000, "read"))).toBe(0);
     expect(waitOf(pacer.reserve(SCOPE, 10_000, "read"))).toBe(500);
     expect(waitOf(pacer.reserve(SCOPE, 10_000, "read"))).toBe(1000);
@@ -104,10 +105,40 @@ describe(PlanningCenterRatePacer, () => {
     expect(waitOf(pacer.reserve(SCOPE, 1000, "read"))).toBe(3000);
   });
 
-  it("never delays or rejects writes", () => {
+  it("keeps a tenth of the window for writes", () => {
     const pacer = new PlanningCenterRatePacer({ maxWaitMs: 5000 });
-    observe(pacer, 0, 100);
+    observe(pacer, 0, 90);
+    // Reads have spent their share and wait for the next window (past the cap)...
+    expect(pacer.reserve(SCOPE, 1000, "read")).toMatchObject({
+      kind: "reject",
+      retryAfterMs: 19_000,
+    });
+    // ...while a write goes out at once.
     expect(waitOf(pacer.reserve(SCOPE, 1000, "write"))).toBe(0);
+  });
+
+  it("holds a write until a spent window ends, up to the write cap", () => {
+    const pacer = new PlanningCenterRatePacer({ maxWriteWaitMs: 20_000 });
+    observe(pacer, 0, 100);
+    expect(waitOf(pacer.reserve(SCOPE, 1000, "write"))).toBe(19_000);
+    const impatient = new PlanningCenterRatePacer({ maxWriteWaitMs: 5000 });
+    observe(impatient, 0, 100);
+    expect(impatient.reserve(SCOPE, 1000, "write")).toMatchObject({
+      kind: "reject",
+      reason: "budget",
+      retryAfterMs: 19_000,
+    });
+  });
+
+  it("holds a write for a 429's Retry-After", () => {
+    const pacer = new PlanningCenterRatePacer();
+    observe(pacer, 0, 10);
+    pacer.reserve(SCOPE, 1000, "read");
+    pacer.complete(SCOPE, 1000, {
+      status: 429,
+      rateLimit: { limit: 100, count: 100, retryAfterSeconds: 8 },
+    });
+    expect(waitOf(pacer.reserve(SCOPE, 1000, "write"))).toBe(8000);
   });
 
   it("keeps credentials independent", () => {
@@ -154,7 +185,7 @@ describe(PlanningCenterRatePacer, () => {
 
   it("never lets a speculative read wait for a slot or jump the pacing queue", () => {
     const pacer = new PlanningCenterRatePacer({ speculativeShare: 0.9 });
-    observe(pacer, 0, 80);
+    observe(pacer, 0, 70);
     // Interactive reads are spaced; the speculative one is not queued behind or ahead of them.
     expect(waitOf(pacer.reserve(SCOPE, 10_000, "read"))).toBe(0);
     expect(pacer.reserve(SCOPE, 10_000, "read", "speculative")).toMatchObject({
@@ -190,7 +221,7 @@ describe(PlanningCenterRatePacer, () => {
 
   it("never holds back speculative writes", () => {
     const pacer = new PlanningCenterRatePacer();
-    observe(pacer, 0, 100);
+    observe(pacer, 0, 95);
     expect(waitOf(pacer.reserve(SCOPE, 1000, "write", "speculative"))).toBe(0);
   });
 

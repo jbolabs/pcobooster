@@ -12,9 +12,16 @@ bun run build:cloudflare
 
 Use Node 24 and the pinned Bun version. Actions are pinned to immutable commits and installs use the frozen Bun lockfile. CI has no Turborepo remote-cache credential.
 
+During development, use `bun run ci:affected --base origin/main` for lint, affected typechecks and tests, and repository guards. `--dry-run` shows the selected tasks without executing checks. The base is resolved to its merge base with `HEAD`; committed, staged, unstaged, and untracked changes are included. For a stacked PR, use its preceding branch. An unavailable base fails instead of narrowing validation. Shared toolchain, TypeScript, test-fixture, workflow, or scope-selection changes run all packages. Final PR proof still requires the full local gates above.
+
+PR validation restores `.turbo/cache` through GitHub Actions' cache service, partitioned by job, OS, architecture, toolchain/configuration, and revision. The cache action runs only in the secretless `ci` and `cloudflare-build` jobs; deployments build from source. GitHub's branch/ref cache boundaries keep PR-written entries out of `main`. On `main` and manual runs, `TURBO_FORCE` bypasses restored results so every gate executes afresh before deployment and seeds the next PR's cache.
+
+Root tests and typechecks hash all repository inputs: these gates inspect and import files across workspace boundaries. Root scripts, shared TypeScript configuration, and toolchain configuration participate in every task hash, since packages import script types and fixtures; package tests also hash Vitest configuration. Mobile declares its build-time design-token dependency so token edits select and invalidate its checks. `test:install` checks the installed dependency patches outside Turbo on every `bun run test`, since a source cache key cannot establish the state of `node_modules`.
+
 Shared steps live in composite actions:
 
 - `.github/actions/setup` pins Node and Bun, restores the Bun package cache, and installs. Change toolchain versions there only.
+- `.github/actions/turbo-cache` restores and saves content-addressed validation results. Bump its cache namespace when changing the cache trust policy; rollback is to remove its two workflow uses, leaving all validation commands and merge gates in place.
 - Deployment jobs receive encrypted secrets from their declared GitHub environment; app secret values stay in Cloudflare.
 
 The `ci` job also runs checksum-verified `actionlint`. Run it locally when you edit workflows.

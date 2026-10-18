@@ -157,6 +157,7 @@
       "devDependencies": {
         "@expo/fingerprint": "0.20.13",
         "@pcobooster/config": "workspace:*",
+        "@pcobooster/design-tokens": "workspace:*",
         "@types/react": "19.2.14",
         "posthog-react-native": "4.81.0",
         "sf-symbols-typescript": "2.2.0",

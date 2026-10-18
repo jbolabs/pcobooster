@@ -1,4 +1,5 @@
 import {
+  readRetryDelay,
   retryTransientReadFailure,
   speculativeQuery,
 } from "@pcobooster/client/query";
@@ -181,6 +182,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: retryTransientReadFailure,
+      retryDelay: readRetryDelay,
       staleTime: DEFAULT_STALE_MS,
       // Kept as long as the disk copy, so a restored read is not collected before it paints.
       gcTime: QUERY_CACHE_MAX_AGE_MS,

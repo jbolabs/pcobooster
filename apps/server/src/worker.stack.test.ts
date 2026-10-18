@@ -1369,7 +1369,11 @@ test(
             {
               method: "PATCH",
               headers: { origin: FIXTURE_ORIGIN, ...headers },
-              body: JSON.stringify({ status: "D", planId: "plan-1" }),
+              body: JSON.stringify({
+                status: "D",
+                serviceTypeId: "st-1",
+                planId: "plan-1",
+              }),
             }
           );
         })

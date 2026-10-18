@@ -7,6 +7,7 @@ import {
   batchHasAnswered,
   callForQuery,
   queryCallPriority,
+  readRetryDelay,
   retryTransientReadFailure,
   speculativeQuery,
 } from "@pcobooster/client/query";
@@ -222,11 +223,38 @@ describe(retryTransientReadFailure, () => {
     ["Forbidden", new Forbidden({ message: "No access" })],
     ["NotFound", new NotFound({ message: "No plan", resource: "plan" })],
     [
-      "RateLimited",
+      "RateLimited without a Retry-After",
       new RateLimited({ message: "held back", service: "planning-center" }),
+    ],
+    [
+      "RateLimited longer than one window",
+      new RateLimited({
+        message: "held back",
+        service: "planning-center",
+        retryAfterSeconds: 60,
+      }),
     ],
   ])("does not retry %s", (_name, error) => {
     expect(retryTransientReadFailure(0, error)).toBeFalsy();
+  });
+
+  it("waits out a short rate limit twice, after its Retry-After", () => {
+    const limited = new RateLimited({
+      message: "Planning Center rate limit exceeded.",
+      service: "planning-center",
+      retryAfterSeconds: 6,
+    });
+    expect(
+      [0, 1, 2].map((count) => retryTransientReadFailure(count, limited))
+    ).toStrictEqual([true, true, false]);
+    expect(readRetryDelay(0, limited)).toBe(6000);
+  });
+
+  it("keeps exponential backoff for other failures", () => {
+    const down = new InternalError({});
+    expect([0, 1, 5].map((count) => readRetryDelay(count, down))).toStrictEqual(
+      [1000, 2000, 30_000]
+    );
   });
 });
 

@@ -1,5 +1,8 @@
 import { captureAnalyticsException } from "@pcobooster/analytics/client";
-import { retryTransientReadFailure } from "@pcobooster/client/query";
+import {
+  readRetryDelay,
+  retryTransientReadFailure,
+} from "@pcobooster/client/query";
 import { MutationCache, QueryClient, hashKey } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
@@ -30,6 +33,7 @@ const createQueryClient = (presentationScope: string): QueryClient => {
         queryKeyHashFn: (queryKey) => hashKey([presentationScope, ...queryKey]),
         refetchOnWindowFocus: false,
         retry: retryTransientReadFailure,
+        retryDelay: readRetryDelay,
       },
     },
   });
