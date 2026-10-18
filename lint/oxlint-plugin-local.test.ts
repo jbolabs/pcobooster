@@ -8,6 +8,7 @@ import {
   noBackdropBlurRule,
   noClippedSurfaceRule,
   noNudgedIconRule,
+  menuLabelInsideGroupRule,
   noOverlaySectionBorderRule,
   noPopoverContentPaddingRule,
   noTransitionColorsRule,
@@ -714,6 +715,98 @@ ruleTester.run(
           enabled: queryClient.getQueryState(gate.queryKey)?.status === "success",
         };`,
         errors: [{ messageId: "handRolledGate" }],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "menu-label-inside-group",
+  menuLabelInsideGroupRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "label inside a menu group",
+        code: `
+        <DropdownMenuContent>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Section</DropdownMenuLabel>
+            <DropdownMenuItem>Verse</DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>`,
+      },
+      {
+        name: "label inside a radio group",
+        code: `
+        <DropdownMenuRadioGroup>
+          <DropdownMenuLabel>Rewrite chords in</DropdownMenuLabel>
+          <DropdownMenuRadioItem value="G">G</DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>`,
+      },
+      {
+        name: "label rendered from a map callback inside a group",
+        code: `
+        <DropdownMenuGroup>
+          {sections.map((section) => (
+            <DropdownMenuLabel key={section}>{section}</DropdownMenuLabel>
+          ))}
+        </DropdownMenuGroup>`,
+      },
+      {
+        name: "base ui group label inside Menu.Group",
+        code: `
+        <Menu.Group>
+          <Menu.GroupLabel>Section</Menu.GroupLabel>
+        </Menu.Group>`,
+      },
+      {
+        name: "primitive group label inside MenuPrimitive.RadioGroup",
+        code: `
+        <MenuPrimitive.RadioGroup>
+          <MenuPrimitive.GroupLabel>Rewrite chords in</MenuPrimitive.GroupLabel>
+        </MenuPrimitive.RadioGroup>`,
+      },
+      {
+        name: "unrelated group label",
+        code: `<Sidebar.GroupLabel>Files</Sidebar.GroupLabel>`,
+      },
+      {
+        name: "primitive file defines GroupLabel",
+        filename: "apps/web/src/components/ui/dropdown-menu.tsx",
+        code: `
+        const DropdownMenuLabel = () => (
+          <MenuPrimitive.GroupLabel className="label" />
+        );`,
+      },
+    ],
+    invalid: [
+      {
+        name: "label directly in menu content",
+        code: `
+        <DropdownMenuContent>
+          <DropdownMenuLabel>Section</DropdownMenuLabel>
+          <DropdownMenuItem>Verse</DropdownMenuItem>
+        </DropdownMenuContent>`,
+        errors: [{ messageId: "outsideGroup" }],
+      },
+      {
+        name: "helper that returns only a label",
+        code: `
+        const SectionLabel = () => <DropdownMenuLabel>Section</DropdownMenuLabel>;`,
+        errors: [{ messageId: "outsideGroup" }],
+      },
+      {
+        name: "Menu.GroupLabel outside a group",
+        code: `
+        <Menu.Popup>
+          <Menu.GroupLabel>Section</Menu.GroupLabel>
+        </Menu.Popup>`,
+        errors: [{ messageId: "outsideGroup" }],
+      },
+      {
+        name: "MenuPrimitive.GroupLabel outside a group",
+        code: `<MenuPrimitive.GroupLabel>Section</MenuPrimitive.GroupLabel>`,
+        errors: [{ messageId: "outsideGroup" }],
       },
     ],
   }
