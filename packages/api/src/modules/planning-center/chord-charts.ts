@@ -332,7 +332,7 @@ const pdfTooLarge = () =>
   pdfFailure("The chart's PDF is too large to preview.");
 
 /** Reads the body up to `CHORD_CHART_PDF_MAX_BYTES`, stopping the download past it. */
-const readPdfBytes = (
+export const readPdfBytes = (
   response: Response
 ): Effect.Effect<Uint8Array, ExternalServiceFailure> =>
   Effect.gen(function* readLimited() {

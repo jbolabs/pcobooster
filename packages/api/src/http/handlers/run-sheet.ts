@@ -1,5 +1,9 @@
 import { adjustPlanNeededPositions } from "@pcobooster/api/application/needed-positions";
 import {
+  readPlanFileLink,
+  readPlanFiles,
+} from "@pcobooster/api/application/plan-files";
+import {
   commitRunSheetItemCreate,
   commitRunSheetItemUpdate,
   createRunSheetTime,
@@ -18,7 +22,7 @@ import { ProductApi } from "@pcobooster/contracts/http/api";
 import { Layer } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 
-/** The plan page's run sheet: items, times, people's times, and open positions. */
+/** The plan page's run sheet: items, files, times, people's times, and open positions. */
 export const RunSheetHandlers = Layer.mergeAll(
   HttpApiBuilder.group(ProductApi, "planItems", (handlers) =>
     handlers
@@ -38,6 +42,15 @@ export const RunSheetHandlers = Layer.mergeAll(
       .handle("delete", ({ params }) => deleteRunSheetItem(params))
       .handle("reorder", ({ params, payload }) =>
         reorderRunSheetItems({ ...params, ...payload })
+      )
+  ),
+  HttpApiBuilder.group(ProductApi, "planFiles", (handlers) =>
+    handlers
+      .handle("list", ({ params, query }) =>
+        readPlanFiles({ ...params, ...query })
+      )
+      .handle("open", ({ params, query }) =>
+        readPlanFileLink({ ...params, ...query })
       )
   ),
   HttpApiBuilder.group(ProductApi, "planTimes", (handlers) =>

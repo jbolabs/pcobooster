@@ -16,6 +16,7 @@ import { feedback } from "@pcobooster/contracts/http/feedback";
 import { health } from "@pcobooster/contracts/http/health";
 import { neededPositions } from "@pcobooster/contracts/http/needed-positions";
 import { people } from "@pcobooster/contracts/http/people";
+import { planFiles } from "@pcobooster/contracts/http/plan-files";
 import { planItems } from "@pcobooster/contracts/http/plan-items";
 import { planPeople } from "@pcobooster/contracts/http/plan-people";
 import { planTimes } from "@pcobooster/contracts/http/plan-times";
@@ -39,6 +40,7 @@ const groups = [
   songs,
   chordCharts,
   planItems,
+  planFiles,
   planTimes,
   planPeople,
   neededPositions,
