@@ -10,7 +10,6 @@ import {
   planItemDraftChangesItem,
   planItemsHaveSameOrder,
   replacePlanItem,
-  replacePlanItemById,
   shiftPlanItem,
 } from "@pcobooster/planning-center-models/plan-item-order";
 import type { PlanInsertion } from "@pcobooster/planning-center-models/plan-item-order";
@@ -29,6 +28,8 @@ import { useIntentPrefetch } from "@/hooks/use-intent-prefetch";
 import { usePlanItems } from "@/hooks/use-plan-items";
 import { createSongOptionsQueryOptions } from "@/hooks/use-song-options";
 import { isQueryFresh } from "@/lib/intent-prefetch";
+import { confirmPlanItemCreation } from "@/lib/plan-item-creation";
+import type { ConfirmedPlanItemCreation } from "@/lib/plan-item-creation";
 import {
   applyPlanItemsOptimisticUpdate,
   collectPlanSongOptionPrefetchIds,
@@ -207,7 +208,7 @@ export const usePlanTabController = ({
   };
 
   const createItemMutation = useMutation<
-    PlanItem,
+    ConfirmedPlanItemCreation,
     Error,
     {
       kind: "header" | "item";
@@ -232,8 +233,16 @@ export const usePlanTabController = ({
           },
         })
       );
-      await placeCreatedItem(created, optimisticItemId, insertion);
-      return created;
+      return await confirmPlanItemCreation({
+        queryClient,
+        queryKey,
+        item: created,
+        optimisticItemId,
+        insertion,
+        place: async () => {
+          await placeCreatedItem(created, optimisticItemId, insertion);
+        },
+      });
     },
     onMutate: async ({ kind, insertion, optimisticItemId }) => {
       await queryClient.cancelQueries({ queryKey });
@@ -257,13 +266,13 @@ export const usePlanTabController = ({
         ),
       };
     },
-    onSuccess: (item, { kind, optimisticItemId }) => {
-      queryClient.setQueryData<PlanItem[]>(
-        queryKey,
-        (current = EMPTY_PLAN_ITEMS) =>
-          replacePlanItemById(current, optimisticItemId, item)
-      );
+    onSuccess: ({ item, placementFailed }, { kind }) => {
       onItemAdded?.(item.id, kind);
+      if (placementFailed) {
+        toast.error(
+          "Item was added, but could not be moved. Try moving it again."
+        );
+      }
     },
     onError: (error, _kind, context) => {
       restorePlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
@@ -276,7 +285,7 @@ export const usePlanTabController = ({
   });
 
   const addSongMutation = useMutation<
-    PlanItem,
+    ConfirmedPlanItemCreation,
     Error,
     {
       song: SongCatalogEntry;
@@ -319,8 +328,16 @@ export const usePlanTabController = ({
           },
         })
       );
-      await placeCreatedItem(created, optimisticItemId, insertion);
-      return created;
+      return await confirmPlanItemCreation({
+        queryClient,
+        queryKey,
+        item: created,
+        optimisticItemId,
+        insertion,
+        place: async () => {
+          await placeCreatedItem(created, optimisticItemId, insertion);
+        },
+      });
     },
     onMutate: async ({ song, insertion, optimisticItemId }) => {
       await queryClient.cancelQueries({ queryKey });
@@ -347,13 +364,13 @@ export const usePlanTabController = ({
         ),
       };
     },
-    onSuccess: (item, { optimisticItemId }) => {
-      queryClient.setQueryData<PlanItem[]>(
-        queryKey,
-        (current = EMPTY_PLAN_ITEMS) =>
-          replacePlanItemById(current, optimisticItemId, item)
-      );
+    onSuccess: ({ item, placementFailed }) => {
       onItemAdded?.(item.id, "song");
+      if (placementFailed) {
+        toast.error(
+          "Song was added, but could not be moved. Try moving it again."
+        );
+      }
     },
     onError: (error, _song, context) => {
       restorePlanItemsSnapshot(queryClient, queryKey, context?.snapshot);

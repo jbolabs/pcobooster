@@ -49,12 +49,34 @@ export const applyPlanItemsOptimisticUpdate = (
   update: (items: PlanItem[]) => PlanItem[]
 ): PlanItemsOptimisticSnapshot => {
   const previousItems = queryClient.getQueryData<PlanItem[]>(queryKey) ?? [];
-  const nextItems = update(previousItems);
-
-  queryClient.setQueryData(queryKey, nextItems);
+  const nextItems =
+    queryClient.setQueryData<PlanItem[]>(queryKey, update(previousItems)) ?? [];
   return {
     previousItems,
     nextItems,
+  };
+};
+
+const restorePlanItemFields = (
+  before: PlanItem,
+  applied: PlanItem,
+  current: PlanItem
+): PlanItem => {
+  const field = <Key extends keyof PlanItem>(key: Key): PlanItem[Key] =>
+    Object.is(current[key], applied[key]) ? before[key] : current[key];
+  return {
+    ...current,
+    title: field("title"),
+    itemType: field("itemType"),
+    servicePosition: field("servicePosition"),
+    length: field("length"),
+    description: field("description"),
+    htmlDetails: field("htmlDetails"),
+    customArrangementSequence: field("customArrangementSequence"),
+    song: field("song"),
+    arrangement: field("arrangement"),
+    key: field("key"),
+    layout: field("layout"),
   };
 };
 
@@ -66,7 +88,49 @@ export const restorePlanItemsSnapshot = (
   if (!snapshot) {
     return;
   }
-  queryClient.setQueryData(queryKey, snapshot.previousItems);
+  const before = new Map(snapshot.previousItems.map((item) => [item.id, item]));
+  const applied = new Map(snapshot.nextItems.map((item) => [item.id, item]));
+  queryClient.setQueryData<PlanItem[]>(queryKey, (current = []) => {
+    const restored = current.flatMap((item) => {
+      const previous = before.get(item.id);
+      const next = applied.get(item.id);
+      if (next === undefined) {
+        return [item];
+      }
+      if (previous === undefined) {
+        return [];
+      }
+      return [restorePlanItemFields(previous, next, item)];
+    });
+    // Undo a reorder only if a later edit hasn't changed that relative order.
+    const existingIds = new Set(restored.map((item) => item.id));
+    const originalOrder = snapshot.previousItems.filter((item) =>
+      existingIds.has(item.id)
+    );
+    const appliedOrder = snapshot.nextItems.filter(
+      (item) => before.has(item.id) && existingIds.has(item.id)
+    );
+    const currentOrder = restored.filter((item) => before.has(item.id));
+    const canRestoreOrder =
+      before.size === applied.size &&
+      current.length === snapshot.nextItems.length &&
+      currentOrder.length === appliedOrder.length &&
+      currentOrder.every((item, index) => item.id === appliedOrder[index]?.id);
+    const restoredById = new Map(restored.map((item) => [item.id, item]));
+    const original = originalOrder.values();
+    return restored.map((item, index) => {
+      const originalId =
+        canRestoreOrder && before.has(item.id)
+          ? original.next().value?.id
+          : undefined;
+      return {
+        ...(originalId === undefined
+          ? item
+          : (restoredById.get(originalId) ?? item)),
+        sequence: index + 1,
+      };
+    });
+  });
 };
 
 export const settlePlanItemsQuery = (
