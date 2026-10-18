@@ -398,6 +398,34 @@ describe("position candidate list", () => {
       return Effect.succeed([]);
     });
 
+    mocks.getPlanTeamMembers.mockReturnValue(
+      Effect.succeed({
+        data: [
+          planMemberEntry({
+            id: "pp-confirmed",
+            personId: "p-confirmed",
+            planId,
+            teamId,
+            status: "C",
+            teamPositionName: "Vocals",
+          }),
+          planMemberEntry({
+            id: "pp-scheduled",
+            personId: "p-scheduled",
+            planId,
+            teamId,
+            status: "U",
+            teamPositionName: "Vocals",
+          }),
+        ],
+        included: [
+          person("p-confirmed", "Alice", "Confirmed"),
+          person("p-scheduled", "Bob", "Scheduled"),
+          team(teamId, "Band"),
+        ],
+      })
+    );
+
     const result = await loadCandidates({
       serviceTypeId,
       positionId,
@@ -463,6 +491,22 @@ describe("position candidate list", () => {
       })
     );
 
+    mocks.getPlanTeamMembers.mockReturnValue(
+      Effect.succeed({
+        data: [
+          planMemberEntry({
+            id: "pp1",
+            personId: "p1",
+            planId,
+            teamId,
+            status: "U",
+            teamPositionName: "Keys",
+          }),
+        ],
+        included: [person("p1", "Casey", "Elsewhere"), team(teamId, "Band")],
+      })
+    );
+
     const result = await loadCandidates({
       serviceTypeId,
       positionId,
@@ -479,7 +523,7 @@ describe("position candidate list", () => {
     expect(result[0]?.scheduledPlanPersonId).toBeUndefined();
   });
 
-  it("matches the same person's history against each position", async () => {
+  it("matches the same person's current roster against each position", async () => {
     const serviceTypeId = "st-1";
     const teamId = "team-1";
     const planId = "plan-target";
@@ -514,6 +558,25 @@ describe("position candidate list", () => {
           }),
         ],
         included: [],
+      })
+    );
+
+    mocks.getPlanTeamMembers.mockReturnValue(
+      Effect.succeed({
+        data: [
+          planMemberEntry({
+            id: "pp-keys",
+            personId,
+            planId,
+            teamId,
+            status: "U",
+            teamPositionName: "Keys",
+          }),
+        ],
+        included: [
+          person(personId, "Shared", "Candidate"),
+          team(teamId, "Band"),
+        ],
       })
     );
 
@@ -1062,6 +1125,22 @@ describe("position candidate list", () => {
           }),
         ],
         included: [],
+      })
+    );
+
+    mocks.getPlanTeamMembers.mockReturnValue(
+      Effect.succeed({
+        data: [
+          planMemberEntry({
+            id: "pp1",
+            personId: "p1",
+            planId,
+            teamId,
+            status: "U",
+            teamPositionName: "Vocals",
+          }),
+        ],
+        included: [person("p1", "Una", "Prefixed"), team(teamId, "Band")],
       })
     );
 

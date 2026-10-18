@@ -22,7 +22,7 @@ import type {
 import { clearCachedMyScheduledPlans } from "@/lib/my-scheduled-plans-cache";
 import { clearCachedPeopleDashboards } from "@/lib/people-dashboard-cache";
 import { clearCachedCandidateSchedules } from "@/lib/position-candidates-cache";
-import { queryKeys } from "@/lib/query-keys";
+import { queryKeys, scheduleMutationKey } from "@/lib/query-keys";
 import { clearCachedTeamPositions } from "@/lib/team-positions-cache";
 
 export type OptimisticPlanPersonStatusCode = "C" | "U" | "D";
@@ -86,6 +86,7 @@ const WINDOW_HISTORY_QUERY_KEY = ["people-plan-window-history"] as const;
 const CANDIDATE_DETAILS_QUERY_KEY = ["people-candidate-details"] as const;
 
 interface ScheduleMutationSnapshot {
+  applied?: ScheduleMutationSnapshot;
   candidates: [QueryKey, PositionCandidates | undefined][];
   windowHistory: [QueryKey, PlanWindowHistoryBatch[] | undefined][];
   teamPositions: [QueryKey, TeamPositionGroup[] | undefined][];
@@ -105,22 +106,213 @@ const snapshotScheduleCaches = (
   }),
 });
 
+const recalculateFilledCounts = (position: TeamPosition): TeamPosition => {
+  const people = (position.filledPeople ?? []).toSorted((a, b) => {
+    if (a.status !== b.status) {
+      return a.status === "confirmed" ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+  return {
+    ...position,
+    filledConfirmedCount: people.filter(
+      (person) => person.status === "confirmed"
+    ).length,
+    filledPendingCount: people.filter((person) => person.status === "pending")
+      .length,
+    filledPeople: people.length > 0 ? people : undefined,
+  };
+};
+
+const sameSelectedSlot = (
+  first: SelectedPlanSlot | null,
+  second: SelectedPlanSlot | null
+): boolean =>
+  first?.planPersonId === second?.planPersonId &&
+  first?.status === second?.status &&
+  first?.declineReason === second?.declineReason;
+
+/** Roll back only rows this mutation changed, preserving independent edits made since. */
+const restoreChangedRows = <Row>(
+  before: readonly Row[],
+  applied: readonly Row[],
+  current: readonly Row[],
+  keyOf: (row: Row) => string,
+  restoreUpdated: (before: Row, applied: Row, current: Row) => Row = (
+    previous,
+    next,
+    latest
+  ) => (latest === next ? previous : latest),
+  matchesApplied: (current: Row, applied: Row) => boolean = Object.is
+): Row[] => {
+  const previousById = new Map(before.map((row) => [keyOf(row), row]));
+  const appliedById = new Map(applied.map((row) => [keyOf(row), row]));
+  const restored = current.flatMap((row) => {
+    const id = keyOf(row);
+    const previous = previousById.get(id);
+    const next = appliedById.get(id);
+    if (previous === next || next === undefined) {
+      return [row];
+    }
+    if (previous === undefined) {
+      return matchesApplied(row, next) ? [] : [row];
+    }
+    return [restoreUpdated(previous, next, row)];
+  });
+  const currentIds = new Set(current.map(keyOf));
+  for (const row of before) {
+    const id = keyOf(row);
+    if (!appliedById.has(id) && !currentIds.has(id)) {
+      restored.push(row);
+    }
+  }
+  return restored;
+};
+
+/** Every position's candidates show the same current "Also on" assignments as the sidebar. */
+const updateCandidateRosterLabels = (
+  queryClient: QueryClient,
+  previous: ScheduleMutationSnapshot
+) => {
+  for (const [key, groups] of queryClient.getQueriesData<TeamPositionGroup[]>({
+    queryKey: ["team-positions"],
+  })) {
+    const before = previous.teamPositions.find(
+      ([queryKey]) => queryKey[1] === key[1] && queryKey[2] === key[2]
+    )?.[1];
+    if (!groups || groups === before) {
+      continue;
+    }
+    const labels = new Map<string, string[]>();
+    for (const group of groups) {
+      for (const position of group.positions) {
+        for (const person of position.filledPeople ?? []) {
+          const id = person.personId ?? person.id;
+          const personLabels = labels.get(id) ?? [];
+          personLabels.push(`${group.teamName} - ${position.name}`);
+          labels.set(id, personLabels);
+        }
+      }
+    }
+    queryClient.setQueriesData<PositionCandidates>(
+      {
+        queryKey: ["people", key[1]],
+        predicate: ({ queryKey }) => queryKey[4] === key[2],
+      },
+      (data) =>
+        data === undefined
+          ? data
+          : {
+              ...data,
+              candidates: data.candidates.map((candidate) => ({
+                ...candidate,
+                selectedPlanRosterLabels: labels.get(candidate.id) ?? [],
+              })),
+            }
+    );
+  }
+};
+
 export const restoreScheduleCaches = (
   queryClient: QueryClient,
   snapshot: ScheduleMutationSnapshot | undefined
 ) => {
-  if (!snapshot) {
+  const applied = snapshot?.applied;
+  if (!snapshot || !applied) {
     return;
   }
-  for (const [queryKey, data] of snapshot.candidates) {
-    queryClient.setQueryData(queryKey, data);
+  for (const [index, [key, before]] of snapshot.candidates.entries()) {
+    const after = applied.candidates[index]?.[1];
+    if (!before || !after) {
+      continue;
+    }
+    queryClient.setQueryData<PositionCandidates>(key, (current) =>
+      current === undefined
+        ? current
+        : {
+            ...current,
+            candidates: restoreChangedRows(
+              before.candidates,
+              after.candidates,
+              current.candidates,
+              (row) => row.id,
+              (previous, next, latest) => ({
+                ...latest,
+                selectedPlanSlot: sameSelectedSlot(
+                  latest.selectedPlanSlot,
+                  next.selectedPlanSlot
+                )
+                  ? previous.selectedPlanSlot
+                  : latest.selectedPlanSlot,
+              }),
+              (latest, next) =>
+                sameSelectedSlot(latest.selectedPlanSlot, next.selectedPlanSlot)
+            ),
+          }
+    );
   }
-  for (const [queryKey, data] of snapshot.windowHistory) {
-    queryClient.setQueryData(queryKey, data);
+  for (const [index, [key, before]] of snapshot.windowHistory.entries()) {
+    const after = applied.windowHistory[index]?.[1];
+    if (!before || !after) {
+      continue;
+    }
+    queryClient.setQueryData<PlanWindowHistoryBatch[]>(key, (current) =>
+      current?.map((call, callIndex) => {
+        const previousCall = before[callIndex];
+        const nextCall = after[callIndex];
+        if (previousCall === undefined || nextCall === undefined) {
+          return call;
+        }
+        return {
+          ...call,
+          people: call.people.map((person) => ({
+            ...person,
+            rows: restoreChangedRows(
+              previousCall.people.find(
+                (row) => row.personId === person.personId
+              )?.rows ?? [],
+              nextCall.people.find((row) => row.personId === person.personId)
+                ?.rows ?? [],
+              person.rows,
+              (row) => row.id
+            ),
+          })),
+        };
+      })
+    );
   }
-  for (const [queryKey, data] of snapshot.teamPositions) {
-    queryClient.setQueryData(queryKey, data);
+  for (const [index, [key, before]] of snapshot.teamPositions.entries()) {
+    const after = applied.teamPositions[index]?.[1];
+    if (!before || !after) {
+      continue;
+    }
+    queryClient.setQueryData<TeamPositionGroup[]>(key, (current) =>
+      current?.map((group) => ({
+        ...group,
+        positions: group.positions.map((position) => {
+          const previous = before
+            .find((row) => row.teamId === group.teamId)
+            ?.positions.find((row) => row.id === position.id);
+          const next = after
+            .find((row) => row.teamId === group.teamId)
+            ?.positions.find((row) => row.id === position.id);
+          if (!previous || !next || previous === next) {
+            return position;
+          }
+          return recalculateFilledCounts({
+            ...position,
+            filledPeople: restoreChangedRows(
+              previous.filledPeople ?? [],
+              next.filledPeople ?? [],
+              position.filledPeople ?? [],
+              (row) => row.planPersonId
+            ),
+          });
+        }),
+      }))
+    );
   }
+  updateCandidateRosterLabels(queryClient, applied);
 };
 
 interface ScheduleMutationQueryFilters extends InvalidateQueryFilters {
@@ -141,8 +333,6 @@ const getScheduleMutationQueryFilters = (
 ): ScheduleMutationQueryFilters[] => {
   const serviceTypeId = context.serviceTypeId ?? null;
   const planId = context.planId ?? null;
-  const teamId = context.teamId ?? null;
-  const positionId = context.positionId ?? null;
 
   return [
     {
@@ -158,20 +348,11 @@ const getScheduleMutationQueryFilters = (
     },
     {
       queryKey:
-        isNonEmptyString(serviceTypeId) &&
-        teamId !== null &&
-        teamId !== "" &&
-        positionId !== null &&
-        positionId !== "" &&
-        planId !== null &&
-        planId !== ""
-          ? queryKeys.positionCandidates(
-              serviceTypeId,
-              teamId,
-              positionId,
-              planId
-            )
+        isNonEmptyString(serviceTypeId) && isNonEmptyString(planId)
+          ? ["people", serviceTypeId]
           : CANDIDATES_QUERY_KEY,
+      predicate: ({ queryKey }) =>
+        !isNonEmptyString(planId) || queryKey[4] === planId,
       refetchInactive: true,
     },
     { queryKey: WINDOW_HISTORY_QUERY_KEY, refetchInactive: false },
@@ -245,6 +426,10 @@ const scheduleActiveRefetch = (
 
   const nextTimer = setTimeout(() => {
     clientTimers.delete(timerKey);
+    if (queryClient.isMutating({ mutationKey: scheduleMutationKey }) > 0) {
+      scheduleActiveRefetch(queryClient, filters);
+      return;
+    }
     void queryClient.refetchQueries({ ...filters, type: "active" });
   }, SCHEDULE_MUTATION_RECONCILE_DELAY_MS);
   clientTimers.set(timerKey, nextTimer);
@@ -281,19 +466,6 @@ const statusToFilledStatus = (
   return status === "C" ? "confirmed" : "pending";
 };
 
-const recalculateFilledCounts = (position: TeamPosition): TeamPosition => {
-  const people = position.filledPeople ?? [];
-  return {
-    ...position,
-    filledConfirmedCount: people.filter(
-      (person) => person.status === "confirmed"
-    ).length,
-    filledPendingCount: people.filter((person) => person.status === "pending")
-      .length,
-    filledPeople: people.length > 0 ? people : undefined,
-  };
-};
-
 const upsertFilledPerson = (
   position: TeamPosition,
   person: OptimisticSchedulePerson,
@@ -319,7 +491,9 @@ const upsertFilledPerson = (
   }
 
   const nextPerson: FilledPositionPerson = {
+    ...previous,
     id: person.id,
+    personId: person.id,
     planPersonId,
     name: person.fullName,
     status,
@@ -329,12 +503,7 @@ const upsertFilledPerson = (
     notification: previous?.notification ?? null,
   };
 
-  const filledPeople = [...filteredPeople, nextPerson].toSorted((a, b) => {
-    if (a.status !== b.status) {
-      return a.status === "confirmed" ? -1 : 1;
-    }
-    return a.name.localeCompare(b.name);
-  });
+  const filledPeople = [...filteredPeople, nextPerson];
 
   return recalculateFilledCounts({ ...position, filledPeople });
 };
@@ -343,9 +512,13 @@ const removeFilledPerson = (
   position: TeamPosition,
   planPersonId: string
 ): TeamPosition => {
-  const filledPeople = (position.filledPeople ?? []).filter(
+  const people = position.filledPeople ?? [];
+  const filledPeople = people.filter(
     (person) => person.planPersonId !== planPersonId
   );
+  if (filledPeople.length === people.length) {
+    return position;
+  }
   return recalculateFilledCounts({ ...position, filledPeople });
 };
 
@@ -524,6 +697,8 @@ export const optimisticallySchedulePerson = (
       )
   );
 
+  updateCandidateRosterLabels(queryClient, snapshot);
+  snapshot.applied = snapshotScheduleCaches(queryClient);
   return snapshot;
 };
 
@@ -562,6 +737,50 @@ export const reconcileOptimisticPlanPersonId = (
   );
 };
 
+/** Rebuild sidebar entries when a previously declined person accepts again. */
+const restoreDeclinedFilledPerson = (
+  queryClient: QueryClient,
+  snapshot: ScheduleMutationSnapshot,
+  planPersonId: string,
+  statusCode: OptimisticPlanPersonStatusCode
+) => {
+  if (statusCode === "D") {
+    return;
+  }
+  for (const [key, data] of snapshot.candidates) {
+    const candidate = data?.candidates.find(
+      (person) => person.selectedPlanSlot?.planPersonId === planPersonId
+    );
+    if (!candidate) {
+      continue;
+    }
+    queryClient.setQueryData<TeamPositionGroup[]>(
+      ["team-positions", key[1], key[4]],
+      (groups) =>
+        groups?.map((group) =>
+          group.teamId === key[2]
+            ? {
+                ...group,
+                positions: group.positions.map((position) =>
+                  position.id === key[3] &&
+                  position.filledPeople?.some(
+                    (person) => person.planPersonId === planPersonId
+                  ) !== true
+                    ? upsertFilledPerson(
+                        position,
+                        candidate,
+                        planPersonId,
+                        statusCode
+                      )
+                    : position
+                ),
+              }
+            : group
+        )
+    );
+  }
+};
+
 export const optimisticallyUpdatePlanPersonStatus = (
   queryClient: QueryClient,
   planPersonId: string,
@@ -594,19 +813,20 @@ export const optimisticallyUpdatePlanPersonStatus = (
       }))
   );
 
+  restoreDeclinedFilledPerson(queryClient, snapshot, planPersonId, statusCode);
+  updateCandidateRosterLabels(queryClient, snapshot);
+  snapshot.applied = snapshotScheduleCaches(queryClient);
   return snapshot;
 };
 
 export const optimisticallyUnschedulePlanPerson = (
   queryClient: QueryClient,
-  planPersonId: string,
-  personId?: string | null
+  planPersonId: string
 ): ScheduleMutationSnapshot => {
   const snapshot = snapshotScheduleCaches(queryClient);
 
   updateCandidates(queryClient, CANDIDATES_QUERY_KEY, (candidate) =>
-    candidate.selectedPlanSlot?.planPersonId === planPersonId ||
-    (isNonEmptyString(personId) && candidate.id === personId)
+    candidate.selectedPlanSlot?.planPersonId === planPersonId
       ? { ...candidate, selectedPlanSlot: null }
       : candidate
   );
@@ -623,5 +843,7 @@ export const optimisticallyUnschedulePlanPerson = (
       }))
   );
 
+  updateCandidateRosterLabels(queryClient, snapshot);
+  snapshot.applied = snapshotScheduleCaches(queryClient);
   return snapshot;
 };

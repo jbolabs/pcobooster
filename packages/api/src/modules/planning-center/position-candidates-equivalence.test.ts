@@ -741,6 +741,8 @@ const wireJson = (people: readonly object[]): string =>
 /**
  * `people.list` output for these fixtures, recorded from `getPeopleForPosition` before it was
  * removed (commit 78d0fcb), where the same assertions compared both implementations directly.
+ * Updated to use only the current roster for selected-slot membership and labels; Gus is
+ * now unscheduled and sorted with the unavailable candidates despite his stale history.
  */
 const golden = {
   window: wireJson(goldenJson.window),
@@ -807,10 +809,7 @@ describe("progressive candidate list equivalence", () => {
       ben: {
         // Blocked all of Saturday in Los Angeles, which runs into Sunday in UTC.
         isBlockedForDate: false,
-        selectedPlanAssignmentLabels: [
-          "Band - Electric Guitar",
-          "Electric Guitar",
-        ],
+        selectedPlanAssignmentLabels: ["Band - Electric Guitar"],
       },
       cy: {
         isDeclinedForSelectedPlanPosition: true,
@@ -818,11 +817,11 @@ describe("progressive candidate list equivalence", () => {
       },
       dee: true,
       eve: false,
-      // Only history's lagging copy of the roster has Gus on the slot.
+      // History still contains Gus, but the current roster has removed him.
       gus: {
         isBlockedForDate: true,
-        isScheduledForSelectedPlanPosition: true,
-        scheduledPlanPersonId: "pp-gus-sel",
+        isScheduledForSelectedPlanPosition: false,
+        selectedPlanAssignmentLabels: [],
       },
       hal: true,
     });

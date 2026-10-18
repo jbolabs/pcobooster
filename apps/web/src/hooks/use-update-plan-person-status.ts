@@ -10,6 +10,7 @@ import {
   settleScheduleMutationQueries,
 } from "@/hooks/use-schedule-cache-optimism";
 import type { ScheduleMutationInvalidateContext } from "@/hooks/use-schedule-cache-optimism";
+import { scheduleMutationKey } from "@/lib/query-keys";
 import { productClient } from "@/product-client";
 
 export type PlanPersonStatusCode = "C" | "U" | "D";
@@ -29,6 +30,7 @@ export const useUpdatePlanPersonStatus = ({
   const [updateError, setUpdateError] = useState<string | null>(null);
 
   const updateMutation = useMutation({
+    mutationKey: scheduleMutationKey,
     mutationFn: async ({
       planPersonId,
       status,

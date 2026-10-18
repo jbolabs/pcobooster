@@ -17,6 +17,7 @@ import {
   settleScheduleMutationQueries,
 } from "@/hooks/use-schedule-cache-optimism";
 import type { OptimisticSchedulePerson } from "@/hooks/use-schedule-cache-optimism";
+import { scheduleMutationKey } from "@/lib/query-keys";
 import { productClient } from "@/product-client";
 
 const formatScheduleClientError = (error: Error): string => {
@@ -85,6 +86,7 @@ export const useSchedulePlanPerson = ({
   };
 
   const scheduleMutation = useMutation({
+    mutationKey: scheduleMutationKey,
     mutationFn: async ({ person }: { person: OptimisticSchedulePerson }) => {
       if (
         !isNonEmptyString(serviceTypeId) ||
@@ -176,6 +178,9 @@ export const useSchedulePlanPerson = ({
       }
 
       restoreScheduleCaches(queryClient, context?.snapshot);
+      if (err instanceof PositionMismatch) {
+        settleScheduleMutationQueries(queryClient, { serviceTypeId, planId });
+      }
       setScheduleSuccess(false);
       const message = formatScheduleClientError(err);
       setScheduleError(message);
