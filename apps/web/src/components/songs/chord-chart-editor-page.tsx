@@ -50,6 +50,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -212,29 +213,33 @@ const InsertMenu = ({
       <span className="max-sm:hidden">Insert</span>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="start" className="w-56">
-      <DropdownMenuLabel>Section</DropdownMenuLabel>
-      {SECTION_SNIPPETS.map((section) => (
-        <DropdownMenuItem
-          key={section}
-          onClick={() => {
-            insertAtCaret(textareaRef.current, section);
-          }}
-        >
-          {section}
-        </DropdownMenuItem>
-      ))}
+      <DropdownMenuGroup>
+        <DropdownMenuLabel>Section</DropdownMenuLabel>
+        {SECTION_SNIPPETS.map((section) => (
+          <DropdownMenuItem
+            key={section}
+            onClick={() => {
+              insertAtCaret(textareaRef.current, section);
+            }}
+          >
+            {section}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuGroup>
       <DropdownMenuSeparator />
-      <DropdownMenuLabel>Planning Center codes</DropdownMenuLabel>
-      {CODE_SNIPPETS.map((code) => (
-        <DropdownMenuItem
-          key={code.label}
-          onClick={() => {
-            insertAtCaret(textareaRef.current, code.text);
-          }}
-        >
-          {code.label}
-        </DropdownMenuItem>
-      ))}
+      <DropdownMenuGroup>
+        <DropdownMenuLabel>Planning Center codes</DropdownMenuLabel>
+        {CODE_SNIPPETS.map((code) => (
+          <DropdownMenuItem
+            key={code.label}
+            onClick={() => {
+              insertAtCaret(textareaRef.current, code.text);
+            }}
+          >
+            {code.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuGroup>
     </DropdownMenuContent>
   </DropdownMenu>
 );
@@ -265,20 +270,22 @@ const TransposeMenu = ({
         <ChevronDown className="text-muted-foreground" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
-        <DropdownMenuLabel>Rewrite chords in</DropdownMenuLabel>
-        {keysInMode(writtenKey).map((key) => (
-          <DropdownMenuItem
-            key={key}
-            onClick={() => {
-              onTranspose(key);
-            }}
-          >
-            <span>{key}</span>
-            {key === current?.name ? (
-              <Check className="ml-auto" aria-hidden />
-            ) : null}
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Rewrite chords in</DropdownMenuLabel>
+          {keysInMode(writtenKey).map((key) => (
+            <DropdownMenuItem
+              key={key}
+              onClick={() => {
+                onTranspose(key);
+              }}
+            >
+              <span>{key}</span>
+              {key === current?.name ? (
+                <Check className="ml-auto" aria-hidden />
+              ) : null}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
