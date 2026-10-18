@@ -16,7 +16,7 @@ export const WorstCaseDataToggle = () => {
   );
   return (
     <Tabs
-      className="fixed bottom-3 left-1/2 z-100 -translate-x-1/2"
+      className="fixed bottom-[max(--spacing(3),env(safe-area-inset-bottom))] left-1/2 z-100 -translate-x-1/2"
       value={current}
       onValueChange={(value) => {
         const mode = value === "worst" ? "worst" : "demo";

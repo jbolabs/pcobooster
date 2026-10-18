@@ -109,7 +109,7 @@ export const SiteHeader = () => {
       data-open={menu.open ? "" : undefined}
       className="group/menu sticky top-0 z-20"
     >
-      <div className="bg-background relative z-10 group-data-[open]/menu:bg-transparent">
+      <div className="bg-background pt-safe relative z-10 group-data-[open]/menu:bg-transparent">
         <div className="wrap flex h-14 items-center justify-between gap-3 md:grid md:h-(--header-height) md:grid-cols-[1fr_auto_1fr]">
           <div className="flex items-center gap-2.5 justify-self-start">
             <Brand />
@@ -149,10 +149,10 @@ export const SiteHeader = () => {
           </div>
         </div>
       </div>
-      <MobileMenuOverlay id="mobile-menu" open={menu.open} className="pt-14">
+      <MobileMenuOverlay id="mobile-menu" open={menu.open} className="pt-safe">
         <nav
           aria-label="Mobile navigation"
-          className="wrap flex h-full flex-col pt-6 pb-8"
+          className="wrap pb-safe-8 flex h-full flex-col overflow-y-auto overscroll-contain pt-20"
         >
           <ul>
             {NAV_LINKS.map((link, index) => (
@@ -164,7 +164,7 @@ export const SiteHeader = () => {
                 <a
                   href={link.href}
                   onClick={menu.handleClose}
-                  className="font-book block py-3 text-4xl tracking-tight"
+                  className="font-book active:text-muted-foreground block py-3 text-4xl tracking-tight select-none"
                 >
                   {link.label}
                 </a>
@@ -190,7 +190,7 @@ export const SiteHeader = () => {
 };
 
 export const SiteFooter = () => (
-  <footer className="wrap mt-[clamp(64px,8vw,112px)] pb-8">
+  <footer className="wrap pb-safe-8 mt-[clamp(64px,8vw,112px)]">
     <Separator />
     <div className="flex flex-col justify-between gap-5 pt-10 md:flex-row md:gap-8">
       <div>

@@ -124,7 +124,7 @@
   cursor: default;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .button[data-variant="nav"]:hover {
     background: var(--sidebar-accent);
     color: var(--sidebar-accent-foreground);
@@ -150,6 +150,32 @@
   .button[data-variant="roster-row"]:hover {
     background: color-mix(in oklab, var(--muted) 60%, transparent);
   }
+}
+/* Touch gets the same color on press; hover never reaches it. */
+.button[data-variant="nav"]:active {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+.button[data-variant="row"]:active,
+.button[data-variant="menu-item"]:active,
+.button[data-variant="destructive-menu-item"]:active {
+  background: var(--accent);
+}
+.button[data-variant="icon"]:active,
+.button[data-variant="outline"]:not(:disabled):active,
+.button[data-variant="status"]:active {
+  background: var(--muted);
+}
+.button[data-variant="header-tab"]:active {
+  background: color-mix(in oklab, var(--accent) 60%, transparent);
+  color: var(--foreground);
+}
+.button[data-variant="stepper"]:not(:disabled):active {
+  background: var(--muted);
+}
+.button[data-variant="roster-position"]:active,
+.button[data-variant="roster-row"]:active {
+  background: color-mix(in oklab, var(--muted) 60%, transparent);
 }
 
 .switch-label {
@@ -307,11 +333,16 @@
   font-size: 13px;
   color: var(--muted-foreground);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .button[data-variant="ghost"]:hover {
     color: var(--foreground);
     background: var(--accent);
   }
+}
+/* Touch gets the same color on press; hover never reaches it. */
+.button[data-variant="ghost"]:active {
+  color: var(--foreground);
+  background: var(--accent);
 }
 
 /* A single-line text field. */
@@ -407,10 +438,14 @@
   font-size: 13px;
   font-weight: 500;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .button[data-variant="toolbar"]:hover {
     background: var(--accent);
   }
+}
+/* Touch gets the same color on press; hover never reaches it. */
+.button[data-variant="toolbar"]:active {
+  background: var(--accent);
 }
 .button[data-variant="toolbar-primary"] {
   color: var(--primary-foreground);
@@ -469,12 +504,18 @@
   height: 100%;
   cursor: pointer;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .button[data-variant="length"]:hover,
   .button[data-variant="chip"]:hover,
   .button[data-variant="icon-xs"]:hover {
     background: var(--muted);
   }
+}
+/* Touch gets the same color on press; hover never reaches it. */
+.button[data-variant="length"]:active,
+.button[data-variant="chip"]:active,
+.button[data-variant="icon-xs"]:active {
+  background: var(--muted);
 }
 
 /* Narrow replica: position rows become pills. */
@@ -523,11 +564,17 @@
   border: 0;
   border-radius: 999px;
   font: inherit;
-  font-size: 13px;
+  /* 16px on touch screens, where iOS zooms into smaller fields. */
+  font-size: 16px;
   color: inherit;
   background: var(--muted);
   cursor: pointer;
   appearance: none;
+}
+@media (pointer: fine) {
+  .pill-select select {
+    font-size: 13px;
+  }
 }
 .pill-select > svg {
   position: absolute;
@@ -542,7 +589,8 @@
   padding: 14px 16px;
   border: 0;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 12.5px;
+  /* 16px on touch screens, where iOS zooms into smaller fields; `.chart-highlight` matches. */
+  font-size: 16px;
   line-height: 1.85;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -553,6 +601,11 @@
   caret-color: var(--foreground);
   background: transparent;
   outline: 0;
+}
+@media (pointer: fine) {
+  .chart-textarea {
+    font-size: 12.5px;
+  }
 }
 .chart-textarea::selection {
   color: transparent;

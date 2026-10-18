@@ -53,6 +53,8 @@ const SheetContent = ({
       data-side={side}
       className={cn(
         "bg-popover text-popover-foreground fixed z-50 flex flex-col bg-clip-padding text-sm shadow-xl transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
+        // Edge-to-edge sheets pad their content clear of the notch and home indicator.
+        "data-[side=bottom]:pb-safe data-[side=left]:pt-safe data-[side=left]:pb-safe data-[side=right]:pt-safe data-[side=right]:pb-safe data-[side=top]:pt-safe data-[side=left]:pl-[env(safe-area-inset-left,0px)] data-[side=right]:pr-[env(safe-area-inset-right,0px)]",
         className
       )}
       {...props}
@@ -64,7 +66,7 @@ const SheetContent = ({
           render={
             <Button
               variant="ghost"
-              className="bg-secondary absolute top-4 right-4"
+              className="bg-secondary absolute top-4 right-4 in-data-[side=left]:top-[calc(--spacing(4)+env(safe-area-inset-top,0px))] in-data-[side=right]:top-[calc(--spacing(4)+env(safe-area-inset-top,0px))] in-data-[side=right]:right-[calc(--spacing(4)+env(safe-area-inset-right,0px))] in-data-[side=top]:top-[calc(--spacing(4)+env(safe-area-inset-top,0px))]"
               size="icon-sm"
             />
           }

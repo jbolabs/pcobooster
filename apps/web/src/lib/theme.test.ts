@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   THEME_STORAGE_KEY,
   applyResolvedTheme,
+  applyThemeColor,
   parseThemePreference,
   resolveTheme,
   themeInitScript,
@@ -51,12 +52,40 @@ describe(resolveTheme, () => {
   });
 });
 
+/** A theme-color meta that records the content the theme writes. */
+const createThemeColorMeta = () => {
+  const attributes = new Map<string, string>();
+  const meta = {
+    setAttribute: (name: string, value: string) => {
+      attributes.set(name, value);
+    },
+  };
+  return { meta, attributes };
+};
+
 describe(applyResolvedTheme, () => {
   it("swaps the theme class and color scheme", () => {
     const { root, classes } = createRoot(["light", "other"]);
     applyResolvedTheme(root, "dark");
     expect([...classes].toSorted()).toStrictEqual(["dark", "other"]);
     expect(root.style.colorScheme).toBe("dark");
+  });
+});
+
+describe(applyThemeColor, () => {
+  it("points both scheme metas at the shown theme's header color", () => {
+    const light = createThemeColorMeta();
+    const dark = createThemeColorMeta();
+    applyThemeColor([light.meta, dark.meta], "dark");
+    expect([
+      light.attributes.get("content"),
+      dark.attributes.get("content"),
+    ]).toStrictEqual(["#1e221c", "#1e221c"]);
+    applyThemeColor([light.meta, dark.meta], "light");
+    expect([
+      light.attributes.get("content"),
+      dark.attributes.get("content"),
+    ]).toStrictEqual(["#eff2ee", "#eff2ee"]);
   });
 });
 

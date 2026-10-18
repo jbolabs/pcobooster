@@ -1406,6 +1406,302 @@ const batchGateUsesBatchHasAnsweredRule = {
   },
 };
 
+/** Text fields: native elements and the primitives that render one. */
+const FIELD_NAMES = new Set([
+  "input",
+  "textarea",
+  "select",
+  "Input",
+  "InputPrimitive",
+  "Textarea",
+  "InputGroupInput",
+  "InputGroupTextarea",
+  "CommandInput",
+  "NativeSelect",
+  "HighlightedTextarea",
+]);
+/** Input types that take no typed text, so iOS never zooms into them. */
+const UNTYPED_INPUT_TYPES = new Set([
+  "checkbox",
+  "radio",
+  "hidden",
+  "range",
+  "file",
+  "color",
+]);
+const FIELD_TEXT_SIZE = /^text-(?:xs|sm|\[(\d+(?:\.\d+)?)(px|rem)\])$/u;
+const MIN_FIELD_TEXT_PX = 16;
+const REM_PX = 16;
+const FINE_POINTER_VARIANT = /(?:^|:)pointer-fine:/u;
+/** Parts of a field that don't decide its zoom: the file button and the placeholder. */
+const FIELD_PART_VARIANT = /(?:^|:)(?:file|placeholder):/u;
+
+/**
+ * @param {string} base
+ * @returns {boolean}
+ */
+const isSmallFieldText = (base) => {
+  const match = FIELD_TEXT_SIZE.exec(base);
+  if (match === null) {
+    return false;
+  }
+  if (match[1] === undefined) {
+    return true;
+  }
+  const size = Number(match[1]) * (match[2] === "rem" ? REM_PX : 1);
+  return size < MIN_FIELD_TEXT_PX;
+};
+
+/**
+ * iOS Safari zooms the page into a focused field whose text is under 16px and never zooms
+ * back out. Fields keep 16px (`text-base`) on touch screens; a smaller desktop size goes
+ * behind `pointer-fine:` (`md:pointer-fine:text-sm`), so the capability decides, not the width.
+ */
+const noSmallFieldTextRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow text under 16px on text fields unless gated to fine pointers (iOS zooms into the field).",
+    },
+    messages: {
+      smallFieldText:
+        "`{{token}}` makes this field's text smaller than 16px, so iOS zooms the page on focus. Keep `text-base` and gate the smaller size behind `pointer-fine:` (for example `md:pointer-fine:text-sm`).",
+    },
+    schema: [],
+  },
+  create(context) {
+    /** @type {(name: string) => string} */
+    let resolveIdentifier = () => "";
+    return {
+      Program(node) {
+        resolveIdentifier = classConstantResolver(node);
+      },
+      JSXOpeningElement(node) {
+        const name = getJsxName(node.name);
+        if (name === null || !FIELD_NAMES.has(name)) {
+          return;
+        }
+        const type = stringAttribute(node, "type");
+        if (type !== null && UNTYPED_INPUT_TYPES.has(type)) {
+          return;
+        }
+        for (const { variant, base } of classTokens(
+          openingClassText(node, resolveIdentifier)
+        )) {
+          if (
+            isSmallFieldText(base) &&
+            !FINE_POINTER_VARIANT.test(variant) &&
+            !FIELD_PART_VARIANT.test(variant)
+          ) {
+            context.report({
+              node,
+              messageId: "smallFieldText",
+              data: { token: `${variant}${base}` },
+            });
+          }
+        }
+      },
+    };
+  },
+};
+
+const SCROLL_OVERFLOW_TOKEN = /^overflow(?:-([xy]))?-(?:auto|scroll)$/u;
+/** Nodes that pass class strings up to the attribute or call that applies them. */
+const CLASS_EXPRESSION_PARENTS = new Set([
+  "ArrayExpression",
+  "BinaryExpression",
+  "CallExpression",
+  "ConditionalExpression",
+  "JSXExpressionContainer",
+  "LogicalExpression",
+  "ObjectExpression",
+  "Property",
+  "TemplateLiteral",
+]);
+
+/**
+ * The whole class expression a string belongs to: its `className` attribute, or the
+ * outermost `cn(...)`, array, or object holding it.
+ * @param {any} node
+ * @returns {any}
+ */
+const classExpressionRoot = (node) => {
+  let current = node;
+  while (current.parent) {
+    if (current.parent.type === "JSXAttribute") {
+      return current.parent;
+    }
+    if (!CLASS_EXPRESSION_PARENTS.has(current.parent.type)) {
+      return current;
+    }
+    current = current.parent;
+  }
+  return current;
+};
+
+/**
+ * Axes a class text scrolls on without saying what happens at the scroll edge.
+ * @param {string} text
+ * @returns {Set<string>}
+ */
+const scrollAxes = (text) => {
+  const tokens = classTokens(text).map(({ base }) => base);
+  /** @type {Set<string>} */
+  const axes = new Set();
+  for (const token of tokens) {
+    const match = SCROLL_OVERFLOW_TOKEN.exec(token);
+    if (match !== null) {
+      for (const axis of match[1] === undefined ? ["x", "y"] : [match[1]]) {
+        axes.add(axis);
+      }
+    }
+  }
+  return axes;
+};
+
+/** An overscroll class anywhere in source text, behind any variants and between quotes. */
+const OVERSCROLL_IN_SOURCE =
+  /(?:^|[\s"'`:])overscroll(?:-([xy]))?-(?:auto|contain|none)(?=$|[\s"'`,])/gu;
+
+/**
+ * @param {string} source
+ * @returns {Set<string>}
+ */
+const overscrollAxes = (source) => {
+  /** @type {Set<string>} */
+  const axes = new Set();
+  for (const match of source.matchAll(OVERSCROLL_IN_SOURCE)) {
+    for (const axis of match[1] === undefined ? ["x", "y"] : [match[1]]) {
+      axes.add(axis);
+    }
+  }
+  return axes;
+};
+
+/**
+ * An inner scroller that reaches its end hands the swipe to the page behind it: a menu
+ * scrolls the document, a sheet rubber-bands the app, a sideways list triggers back
+ * navigation. Each scroll container says what happens at its edge: `overscroll-contain`
+ * for menus, sheets, and panels, `overscroll-x-contain` for sideways strips, or
+ * `overscroll-auto` where chaining to the page is the intent.
+ */
+const scrollContainerOverscrollRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Require an overscroll-* class beside overflow-auto/scroll so inner scrollers don't chain to the page.",
+    },
+    messages: {
+      missingOverscroll:
+        "This scroll container scrolls on {{axes}} without an overscroll class. Add `overscroll-contain` (or `overscroll-x-contain` for sideways strips) so its edge doesn't scroll the page, or `overscroll-auto` where chaining is intended.",
+    },
+    schema: [],
+  },
+  create(context) {
+    /** @type {Set<unknown>} */
+    const reported = new Set();
+    /**
+     * @param {any} node
+     * @param {string} text
+     */
+    const check = (node, text) => {
+      const scrolled = scrollAxes(text);
+      if (scrolled.size === 0) {
+        return;
+      }
+      const root = classExpressionRoot(node);
+      if (reported.has(root)) {
+        return;
+      }
+      const contained = overscrollAxes(context.sourceCode.getText(root));
+      const missing = [...scrolled].filter((axis) => !contained.has(axis));
+      if (missing.length === 0) {
+        return;
+      }
+      reported.add(root);
+      context.report({
+        node,
+        messageId: "missingOverscroll",
+        data: { axes: missing.join(" and ") },
+      });
+    };
+    return {
+      Literal(node) {
+        if (typeof node.value === "string") {
+          check(node, node.value);
+        }
+      },
+      TemplateElement(node) {
+        check(node, node.value.cooked ?? node.value.raw);
+      },
+    };
+  },
+};
+
+/** Fields whose label says they search or filter a list as you type. */
+const SEARCH_FIELD_LABEL = /^(?:search|filter)\b/iu;
+/** `CommandInput` always searches, so the primitive sets these hints itself. */
+const TYPED_FIELD_NAMES = new Set(["input", "Input", "InputGroupInput"]);
+const NON_DIGIT = /[^\d\s]/u;
+
+/**
+ * The software keyboard should fit the field. A search box labels its return key "search"
+ * and leaves names and queries alone (no capitals, no autocorrect); a numeric keypad can't
+ * type the separators a placeholder like `m:ss` asks for.
+ */
+const fieldKeyboardHintsRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Require keyboard hints on search fields and forbid the numeric keypad for values with separators.",
+    },
+    messages: {
+      searchKeyboard:
+        'Search and filter fields set `enterKeyHint="search"`, `autoCapitalize="none"`, and `autoCorrect="off"` so the phone keyboard fits a query.',
+      numericSeparators:
+        '`inputMode="numeric"` opens a digits-only keypad on iPhone, which can\'t type the "{{placeholder}}" this field asks for. Drop the inputMode or accept digits only.',
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      JSXOpeningElement(node) {
+        const name = getJsxName(node.name);
+        if (name === null || !TYPED_FIELD_NAMES.has(name)) {
+          return;
+        }
+        const placeholder = stringAttribute(node, "placeholder");
+        const label = stringAttribute(node, "aria-label");
+        const searches = [placeholder, label].some(
+          (text) => text !== null && SEARCH_FIELD_LABEL.test(text)
+        );
+        if (
+          searches &&
+          !["enterKeyHint", "autoCapitalize", "autoCorrect"].every(
+            (attribute) => hasAttribute(node, attribute)
+          )
+        ) {
+          context.report({ node, messageId: "searchKeyboard" });
+        }
+        if (
+          stringAttribute(node, "inputMode") === "numeric" &&
+          placeholder !== null &&
+          NON_DIGIT.test(placeholder)
+        ) {
+          context.report({
+            node,
+            messageId: "numericSeparators",
+            data: { placeholder },
+          });
+        }
+      },
+    };
+  },
+};
+
 export default {
   meta: {
     name: "local",
@@ -1422,6 +1718,9 @@ export default {
     "no-transition-colors": noTransitionColorsRule,
     "menu-label-inside-group": menuLabelInsideGroupRule,
     "prefer-shared-controls": preferSharedControlsRule,
+    "no-small-field-text": noSmallFieldTextRule,
+    "scroll-container-overscroll": scrollContainerOverscrollRule,
+    "field-keyboard-hints": fieldKeyboardHintsRule,
   },
 };
 
@@ -1437,4 +1736,7 @@ export {
   menuLabelInsideGroupRule,
   noTransitionColorsRule,
   preferSharedControlsRule,
+  noSmallFieldTextRule,
+  scrollContainerOverscrollRule,
+  fieldKeyboardHintsRule,
 };

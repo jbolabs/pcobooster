@@ -13,6 +13,9 @@ import {
   noPopoverContentPaddingRule,
   noTransitionColorsRule,
   preferSharedControlsRule,
+  noSmallFieldTextRule,
+  scrollContainerOverscrollRule,
+  fieldKeyboardHintsRule,
 } from "./oxlint-plugin-local.mjs";
 
 RuleTester.describe = describe;
@@ -807,6 +810,145 @@ ruleTester.run(
         name: "MenuPrimitive.GroupLabel outside a group",
         code: `<MenuPrimitive.GroupLabel>Section</MenuPrimitive.GroupLabel>`,
         errors: [{ messageId: "outsideGroup" }],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "no-small-field-text",
+  noSmallFieldTextRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "16px on touch, smaller for fine pointers on wide screens",
+        code: `<Input className="text-base md:pointer-fine:text-sm" />`,
+      },
+      {
+        name: "file button and placeholder parts",
+        code: `<input className="text-base file:text-sm placeholder:text-xs" />`,
+      },
+      {
+        name: "checkbox takes no typed text",
+        code: `<input type="checkbox" className="text-xs" />`,
+      },
+      {
+        name: "small text on a non-field",
+        code: `<span className="text-xs">Hint</span>`,
+      },
+    ],
+    invalid: [
+      {
+        name: "width-gated small text still reaches tablets and landscape phones",
+        code: `<Textarea className="text-base md:text-sm" />`,
+        errors: [
+          { messageId: "smallFieldText", data: { token: "md:text-sm" } },
+        ],
+      },
+      {
+        name: "arbitrary pixel size",
+        code: `<HighlightedTextarea className="text-[13px]" />`,
+        errors: [
+          { messageId: "smallFieldText", data: { token: "text-[13px]" } },
+        ],
+      },
+      {
+        name: "class constant on a primitive input",
+        code: `
+        const FIELD = "h-9 text-sm";
+        const Field = () => <InputPrimitive className={cn(FIELD, "px-3")} />;`,
+        errors: [{ messageId: "smallFieldText", data: { token: "text-sm" } }],
+      },
+      {
+        name: "member-expression input",
+        code: `<CommandPrimitive.Input className="text-xs" />`,
+        errors: [{ messageId: "smallFieldText", data: { token: "text-xs" } }],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "scroll-container-overscroll",
+  scrollContainerOverscrollRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "contained vertical scroller",
+        code: `<div className="max-h-72 overflow-y-auto overscroll-contain" />`,
+      },
+      {
+        name: "overscroll class in another cn argument",
+        code: `<div className={cn("overflow-y-auto", open && "md:overscroll-contain")} />`,
+      },
+      {
+        name: "sideways strip contained on x",
+        code: `<div className="flex overflow-x-auto overscroll-x-contain" />`,
+      },
+      {
+        name: "class map entry holds both",
+        code: `const layouts = { scroll: "md:overflow-y-auto md:overscroll-contain" };`,
+      },
+      {
+        name: "clipping is not scrolling",
+        code: `<div className="overflow-hidden" />`,
+      },
+    ],
+    invalid: [
+      {
+        name: "menu list chains to the page",
+        code: `<div className="max-h-72 overflow-y-auto" />`,
+        errors: [{ messageId: "missingOverscroll", data: { axes: "y" } }],
+      },
+      {
+        name: "x containment leaves the y axis of a two-axis scroller",
+        code: `<pre className="h-48 overflow-auto overscroll-x-contain" />`,
+        errors: [{ messageId: "missingOverscroll", data: { axes: "y" } }],
+      },
+      {
+        name: "cva base",
+        code: `const list = cva("flex overflow-x-auto", { variants: {} });`,
+        errors: [{ messageId: "missingOverscroll", data: { axes: "x" } }],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "field-keyboard-hints",
+  fieldKeyboardHintsRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "search field with keyboard hints",
+        code: `<InputGroupInput placeholder="Search people" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" />`,
+      },
+      {
+        name: "digits-only code",
+        code: `<Input inputMode="numeric" placeholder="1234567" />`,
+      },
+      {
+        name: "plain name field",
+        code: `<Input placeholder="Position name" />`,
+      },
+    ],
+    invalid: [
+      {
+        name: "filter field without hints",
+        code: `<InputGroupInput aria-label="Filter people" />`,
+        errors: [{ messageId: "searchKeyboard" }],
+      },
+      {
+        name: "search field missing autocorrect",
+        code: `<input placeholder="Search songs" enterKeyHint="search" autoCapitalize="none" />`,
+        errors: [{ messageId: "searchKeyboard" }],
+      },
+      {
+        name: "numeric keypad for a value with a colon",
+        code: `<Input inputMode="numeric" placeholder="m:ss" />`,
+        errors: [
+          { messageId: "numericSeparators", data: { placeholder: "m:ss" } },
+        ],
       },
     ],
   }

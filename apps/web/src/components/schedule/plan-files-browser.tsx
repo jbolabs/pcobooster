@@ -290,6 +290,10 @@ const FileList = ({
             <Search />
           </InputGroupAddon>
           <InputGroupInput
+            enterKeyHint="search"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             aria-label="Search files"
             placeholder="Search"
             value={search}

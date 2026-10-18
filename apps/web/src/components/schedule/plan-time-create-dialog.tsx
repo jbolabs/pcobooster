@@ -75,7 +75,7 @@ const PlanTimeCreateDialogForm = ({
         </ResponsiveDialogDescription>
       </ResponsiveDialogHeader>
 
-      <div className="flex min-h-0 flex-col gap-4 max-md:overflow-y-auto max-md:px-4 max-md:py-4">
+      <div className="flex min-h-0 flex-col gap-4 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:py-4">
         <PlanTimeFormFields
           idPrefix="plan-time-create"
           edit={draft}

@@ -17,7 +17,7 @@ const RootDocument = ({ children }: { children: ReactNode }) => (
     <body>
       <a
         href="#main"
-        className="bg-primary text-primary-foreground fixed top-3 left-3 z-30 -translate-y-[160%] rounded-lg px-4 py-2.5 text-sm focus:translate-y-0"
+        className="bg-primary text-primary-foreground fixed top-3 left-[max(--spacing(3),env(safe-area-inset-left))] z-30 -translate-y-[160%] rounded-lg px-4 py-2.5 text-sm focus:translate-y-[env(safe-area-inset-top,0px)]"
       >
         Skip to content
       </a>

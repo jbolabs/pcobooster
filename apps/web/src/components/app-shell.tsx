@@ -165,7 +165,7 @@ const PlanViewTabs = () => {
   return (
     <nav
       aria-label="Plan views"
-      className="flex min-w-0 items-center gap-0.5 overflow-x-auto"
+      className="flex min-w-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain"
     >
       {planViews.map((view) => {
         const active = planRoute.view === view;

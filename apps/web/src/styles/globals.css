@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "@pcobooster/design-tokens/tokens.css";
 
+@import "@pcobooster/ui/mobile-native.css";
 @import "@pcobooster/ui/mobile-menu.css";
 @import "@pcobooster/ui/star-field.css";
 
@@ -54,9 +55,16 @@
     background: color-mix(in oklch, var(--border) 70%, transparent);
     pointer-events: none;
   }
-  &:has(> [data-plan-item-id]:is(:hover, [data-selected="true"]))::before,
-  &:has(> [data-plan-item-id]:is(:hover, [data-selected="true"])) + &::before {
+  &:has(> [data-plan-item-id][data-selected="true"])::before,
+  &:has(> [data-plan-item-id][data-selected="true"]) + &::before {
     display: none;
+  }
+  /* Touch rows never show a hover highlight, so only a hovering pointer hides the line. */
+  @media (hover: hover) and (pointer: fine) {
+    &:has(> [data-plan-item-id]:hover)::before,
+    &:has(> [data-plan-item-id]:hover) + &::before {
+      display: none;
+    }
   }
 }
 
@@ -808,44 +816,6 @@
   }
 }
 
-/* Safe-area insets for notched phones (viewport-fit=cover). */
-@utility pt-safe {
-  padding-top: env(safe-area-inset-top);
-}
-
-@utility px-safe {
-  padding-right: env(safe-area-inset-right);
-  padding-left: env(safe-area-inset-left);
-}
-
-@utility pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-@utility pb-safe-4 {
-  padding-bottom: max(--spacing(4), env(safe-area-inset-bottom));
-}
-
-@utility pb-safe-2 {
-  padding-bottom: max(--spacing(2), env(safe-area-inset-bottom));
-}
-
-@utility pb-safe-3 {
-  padding-bottom: max(--spacing(3), env(safe-area-inset-bottom));
-}
-
-@utility pt-safe-2 {
-  padding-top: max(--spacing(2), env(safe-area-inset-top));
-}
-
-@utility pt-safe-6 {
-  padding-top: max(--spacing(6), env(safe-area-inset-top));
-}
-
-@utility pb-safe-6 {
-  padding-bottom: max(--spacing(6), env(safe-area-inset-bottom));
-}
-
 @utility no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -880,42 +850,42 @@
       border-radius: 9999px;
     }
 
-    *::-webkit-scrollbar-thumb:hover {
-      background-color: var(--scrollbar-thumb-hover);
-    }
-
     *::-webkit-scrollbar-corner {
       background: transparent;
     }
   }
 
+  @media (hover: hover) and (pointer: fine) {
+    *::-webkit-scrollbar-thumb:hover {
+      background-color: var(--scrollbar-thumb-hover);
+    }
+  }
+
+  /*
+   * Phones scroll the document so Safari can draw the page under its bars. The app has its
+   * own refresh and pull-down surfaces, so the page never rubber-bands or pulls to refresh;
+   * the viewport takes this from the root element, so it sits on html as well as body.
+   * Inner scrollers use overscroll-contain (`local/scroll-container-overscroll`).
+   */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
   body {
     @apply bg-background text-foreground;
-    overscroll-behavior-y: none;
   }
   /*
-   * No theme-color meta: Safari would paint its bars that flat color. With the
-   * document scrolling on phones, Safari tints its bars from the page and draws
-   * content beneath them; the html background covers overscroll.
+   * The browser bars take the header's color from the theme-color metas
+   * (`lib/document-head.ts`), and the html background covers overscroll.
    */
   html {
     @apply bg-background;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
   }
-  a,
-  button,
-  input,
-  label,
-  select,
-  summary,
-  textarea,
-  [role="button"],
-  [role="tab"],
-  [role="menuitem"],
-  [role="option"] {
-    touch-action: manipulation;
+  [data-sidebar="menu-button"],
+  [data-sidebar="menu-sub-button"] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),

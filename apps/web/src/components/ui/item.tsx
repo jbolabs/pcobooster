@@ -81,14 +81,14 @@ const ItemSeparator = ({
 );
 
 const itemVariants = cva(
-  "group/item focus-visible:border-ring focus-visible:ring-ring/50 [a]:hover:bg-muted [button]:hover:bg-muted/60 [button]:active:bg-muted flex w-full flex-wrap items-center rounded-2xl border text-sm outline-none focus-visible:ring-[3px] in-data-[slot=item-list]:rounded-none [button]:flex-nowrap [button]:text-left [button]:disabled:opacity-50",
+  "group/item focus-visible:border-ring focus-visible:ring-ring/50 [a]:hover:bg-muted [a]:active:bg-muted [button]:hover:bg-muted/60 [button]:active:bg-muted flex w-full flex-wrap items-center rounded-2xl border text-sm outline-none focus-visible:ring-[3px] in-data-[slot=item-list]:rounded-none [a]:select-none [button]:flex-nowrap [button]:text-left [button]:disabled:opacity-50",
   {
     variants: {
       variant: {
         default: "border-transparent",
         /** Rows inside a container that paints the hover and focus ring for the whole row. */
         plain:
-          "border-transparent focus-visible:border-transparent focus-visible:ring-0 [a]:hover:bg-transparent [button]:hover:bg-transparent [button]:active:bg-transparent",
+          "border-transparent focus-visible:border-transparent focus-visible:ring-0 [a]:hover:bg-transparent [a]:active:bg-transparent [button]:hover:bg-transparent [button]:active:bg-transparent",
         outline: "border-border dark:border-input dark:bg-card",
         muted:
           "bg-muted/50 dark:border-border/30 dark:bg-secondary border-transparent",
@@ -190,7 +190,7 @@ const ItemDescription = ({
   <p
     data-slot="item-description"
     className={cn(
-      "text-muted-foreground [&>a:hover]:text-primary line-clamp-2 text-left text-sm font-normal [&>a]:underline [&>a]:underline-offset-4",
+      "text-muted-foreground [&>a]:hover:text-primary line-clamp-2 text-left text-sm font-normal [&>a]:underline [&>a]:underline-offset-4",
       className
     )}
     {...props}

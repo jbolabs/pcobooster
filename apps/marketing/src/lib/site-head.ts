@@ -72,7 +72,15 @@ export const pageTitle = (title?: string): string =>
 export const siteHead = (): PageHead => ({
   meta: [
     { charSet: "utf-8" },
-    { name: "viewport", content: "width=device-width, initial-scale=1" },
+    // Edge to edge under the notch (the header pads itself back out), and the keyboard
+    // resizes the layout on Android as it does on iOS. Pinch zoom always stays on.
+    {
+      name: "viewport",
+      content:
+        "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
+    },
+    // The header's background (`--background`). The site is light-only, so one value
+    // matches the bars in either system scheme.
     { name: "theme-color", content: "#eff2ee" },
     { name: "color-scheme", content: "light" },
   ],

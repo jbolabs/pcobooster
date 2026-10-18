@@ -64,8 +64,10 @@ const MenuLink = ({
     props: {
       "aria-current": active ? "page" : undefined,
       className: cn(
-        "block py-2.5 text-4xl tracking-tight outline-none focus-visible:underline",
-        active ? "text-foreground" : "text-muted-foreground"
+        "block py-2.5 text-4xl tracking-tight outline-none select-none focus-visible:underline",
+        active
+          ? "text-foreground"
+          : "text-muted-foreground active:text-foreground"
       ),
       children: label,
     },
@@ -141,7 +143,7 @@ const AccountRow = ({
     props: {
       ...props,
       className:
-        "focus-visible:ring-ring/50 text-muted-foreground flex h-11 w-full items-center gap-3 rounded-lg text-left text-base outline-none focus-visible:ring-2 disabled:opacity-50",
+        "focus-visible:ring-ring/50 text-muted-foreground active:text-foreground flex h-11 w-full items-center gap-3 rounded-lg text-left text-base outline-none focus-visible:ring-2 disabled:opacity-50",
       children,
     },
   });

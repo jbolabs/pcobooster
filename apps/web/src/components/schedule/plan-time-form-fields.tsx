@@ -247,6 +247,7 @@ export const PlanTimeDetailsFields = ({
           value={edit.name}
           placeholder="Untitled time"
           aria-label="Time name"
+          enterKeyHint="done"
           aria-invalid={!valid || undefined}
           onChange={(event) => {
             onEditChange({ name: event.target.value });

@@ -163,6 +163,7 @@ const PaneHeader = ({
           <Input
             ref={titleRef}
             aria-label="Title"
+            enterKeyHint="done"
             defaultValue={item.title}
             onBlur={(event) => {
               persist({ title: event.currentTarget.value });
@@ -508,7 +509,9 @@ const TimingFields = ({
         <Input
           id={`pane-length-${item.id}`}
           placeholder="m:ss"
-          inputMode="numeric"
+          // Minutes and seconds need a colon, which the digits-only keypad lacks.
+          autoComplete="off"
+          enterKeyHint="done"
           aria-invalid={lengthError === null ? undefined : true}
           defaultValue={buildDraft(item).lengthText}
           onBlur={(event) => {
@@ -649,7 +652,7 @@ export const PlanItemPane = ({
         onClose={onClose}
         inSheet={inSheet}
       />
-      <CardContent className="min-h-0 overflow-y-auto">
+      <CardContent className="min-h-0 overflow-y-auto overscroll-contain">
         <div className="flex flex-col gap-4">
           {item.song ? (
             <SongFields

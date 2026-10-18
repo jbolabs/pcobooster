@@ -206,8 +206,8 @@ const planViewMocks: Record<
 
 /**
  * A miniature of the plan's view tabs that steps through each one, so people see the
- * workspace before they open it. Hovering or focusing it holds the current view; with
- * reduced motion it waits for a click.
+ * workspace before they open it. Hovering, touching, or focusing it holds the current view;
+ * with reduced motion it waits for a click.
  */
 const PlanViewShowcase = () => {
   // Phones get a row of icon tabs; wider screens list the views beside their preview.
@@ -238,8 +238,12 @@ const PlanViewShowcase = () => {
       onPointerEnter={() => {
         setHeld(true);
       }}
-      onPointerLeave={() => {
-        setHeld(false);
+      // A finger "leaves" as soon as it lifts; only a hovering pointer lets go on leave, so
+      // a tapped view stays put.
+      onPointerLeave={(event) => {
+        if (event.pointerType === "mouse") {
+          setHeld(false);
+        }
       }}
       onFocus={() => {
         setHeld(true);
@@ -455,7 +459,7 @@ export const WelcomeDialog = ({
         initialFocus={nextButtonRef}
         desktopClassName="sm:max-w-xl"
       >
-        <div className="flex min-h-0 flex-col overflow-y-auto">
+        <div className="flex min-h-0 flex-col overflow-y-auto overscroll-contain">
           <WelcomeSky step={step} />
           <div
             key={step}

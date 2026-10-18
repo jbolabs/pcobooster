@@ -64,10 +64,15 @@ const CommandInput = ({
 }: React.ComponentProps<typeof CommandPrimitive.Input>) => (
   <div data-slot="command-input-wrapper" className="p-1 pb-0">
     <InputGroup className="bg-input/50 h-9">
+      {/* Every command input searches a list, so the phone keyboard fits a query. */}
       <CommandPrimitive.Input
         data-slot="command-input"
+        enterKeyHint="search"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
         className={cn(
-          "w-full text-base outline-hidden disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          "w-full text-base outline-hidden disabled:cursor-not-allowed disabled:opacity-50 md:pointer-fine:text-sm",
           className
         )}
         {...props}
@@ -90,7 +95,7 @@ const CommandList = ({
   <CommandPrimitive.List
     data-slot="command-list"
     className={cn(
-      "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
+      "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto overscroll-contain outline-none",
       className
     )}
     {...props}

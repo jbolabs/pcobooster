@@ -123,6 +123,10 @@ export const SelectedPositionHeader = ({
             <Search aria-hidden />
           </InputGroupAddon>
           <InputGroupInput
+            enterKeyHint="search"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             value={filter}
             onChange={(event) => {
               onFilterChange(event.target.value);

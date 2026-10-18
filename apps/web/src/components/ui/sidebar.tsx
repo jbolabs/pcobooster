@@ -160,7 +160,7 @@ const SidebarProvider = ({
         data-slot="sidebar-wrapper"
         style={sidebarWrapperStyle}
         className={cn(
-          "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
+          "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-dvh w-full",
           className
         )}
         {...props}
@@ -248,10 +248,11 @@ const Sidebar = ({
         data-slot="sidebar-container"
         data-side={side}
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
-          // Adjust the padding for floating and inset variants.
+          "fixed inset-y-0 z-10 hidden h-dvh w-(--sidebar-width) data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
+          // Adjust the padding for floating and inset variants; a landscape phone's notch
+          // and home indicator stay clear (the insets are 0 everywhere else).
           variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
+            ? "p-2 pb-[max(--spacing(2),env(safe-area-inset-bottom,0px))] group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)] data-[side=left]:pl-[max(--spacing(2),env(safe-area-inset-left,0px))] data-[side=right]:pr-[max(--spacing(2),env(safe-area-inset-right,0px))]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className
         )}
@@ -331,7 +332,7 @@ const SidebarInset = ({
   <main
     data-slot="sidebar-inset"
     className={cn(
-      "bg-background max-md:px-safe relative flex w-full flex-1 flex-col md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-2xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
+      "bg-background max-md:px-safe relative flex w-full flex-1 flex-col md:pr-[env(safe-area-inset-right,0px)] md:peer-data-[state=collapsed]:pl-[env(safe-area-inset-left,0px)] md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-2xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
       className
     )}
     {...props}
@@ -408,7 +409,7 @@ const SidebarContent = ({
     data-slot="sidebar-content"
     data-sidebar="content"
     className={cn(
-      "no-scrollbar flex min-h-0 flex-1 flex-col gap-2 overflow-auto [--radius:var(--radius-xl)] group-data-[collapsible=icon]:overflow-hidden",
+      "no-scrollbar flex min-h-0 flex-1 flex-col gap-2 overflow-auto overscroll-contain [--radius:var(--radius-xl)] group-data-[collapsible=icon]:overflow-hidden",
       className
     )}
     {...props}

@@ -375,6 +375,10 @@ export const PeoplePage = ({
               <Search />
             </InputGroupAddon>
             <InputGroupInput
+              enterKeyHint="search"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);

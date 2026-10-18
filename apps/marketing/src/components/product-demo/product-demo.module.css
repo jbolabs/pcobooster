@@ -23,6 +23,12 @@
   font: inherit;
   color: inherit;
 }
+/* The replica's 14px text would make iOS zoom into its fields; touch screens get 16px. */
+@media (pointer: coarse) {
+  :where(.demo) :is(input, select, textarea) {
+    font-size: 16px;
+  }
+}
 :where(.demo) ul,
 :where(.demo) ol {
   margin: 0;
@@ -161,6 +167,8 @@
   min-height: 0;
   padding: 18px 16px 0;
   overflow: auto;
+  /* The replica sits in a scrolling page: at its end a swipe carries on down the page. */
+  overscroll-behavior: auto;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 .plan-heading {
@@ -186,6 +194,7 @@
 .assign-roster {
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: auto;
   padding: 1px 1px 20px;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
@@ -204,6 +213,8 @@
   margin-inline: -16px;
   padding: 1px 16px 20px;
   overflow-x: auto;
+  /* Sideways strips stop at their edge instead of swiping the browser back. */
+  overscroll-behavior-x: contain;
   scroll-padding-inline: 16px;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
@@ -656,7 +667,7 @@
 .candidate + .candidate {
   border-top: 1px solid var(--border);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .candidate:hover {
     background: color-mix(in oklab, var(--muted) 30%, transparent);
   }
@@ -829,9 +840,14 @@
   margin-bottom: 4px;
   font-variant-numeric: tabular-nums;
 }
-.score:hover .hover-card,
 :focus-visible > .score .hover-card {
   display: grid;
+}
+/* Like the product's hover cards, a tap doesn't open it; touch reads the summary instead. */
+@media (hover: hover) and (pointer: fine) {
+  .score:hover .hover-card {
+    display: grid;
+  }
 }
 
 /* Floating panels */
@@ -1191,9 +1207,13 @@
   border-radius: var(--radius);
 }
 /* A raised row keeps its menus and insert strip above the rows below. */
-.plan-row:hover,
 .plan-row:focus-within {
   z-index: 2;
+}
+@media (hover: hover) and (pointer: fine) {
+  .plan-row:hover {
+    z-index: 2;
+  }
 }
 .plan-row:has(.panel) {
   z-index: 5;
@@ -1208,7 +1228,7 @@
 .plan-row[data-selected] {
   background: var(--muted);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .plan-row:hover {
     background: color-mix(in oklab, var(--muted) 60%, transparent);
   }
@@ -1368,7 +1388,7 @@
   padding-right: 6px;
   color: var(--destructive);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .row-trash {
     opacity: 0;
   }
@@ -1392,10 +1412,20 @@
   height: 16px;
   opacity: 0;
 }
-.plan-row:hover .insert-strip,
 .insert-strip:focus-within,
 .insert-strip[data-open] {
   opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .plan-row:hover .insert-strip {
+    opacity: 1;
+  }
+}
+/* As in the product, touch screens add items from the toolbar; the strip only shows on hover. */
+@media (pointer: coarse) {
+  .insert-strip {
+    display: none;
+  }
 }
 .insert-strip .popover-anchor {
   display: flex;
@@ -1471,7 +1501,7 @@
   margin-top: 2px;
   color: var(--muted-foreground);
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .suggestion-state[data-hover-only] {
     opacity: 0;
   }
@@ -1876,6 +1906,7 @@
   .your-services > ul {
     display: flex;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
   }
   .your-services > ul > li {
@@ -2027,10 +2058,12 @@
     display: flex;
     gap: 6px;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
   }
   .assign-main {
     overflow: auto;
+    overscroll-behavior-x: contain;
   }
   /* Stacked team columns run very tall on phones; swipe between them instead. */
   .embedded .team-roster[data-layout="row"] {
@@ -2194,13 +2227,18 @@
   margin: 0;
   padding: 14px 16px;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 12.5px;
+  font-size: 16px;
   line-height: 1.85;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   tab-size: 2;
   color: var(--foreground);
   pointer-events: none;
+}
+@media (pointer: fine) {
+  .chart-highlight {
+    font-size: 12.5px;
+  }
 }
 .chart-highlight [data-tone="chord"] {
   color: var(--status-info);

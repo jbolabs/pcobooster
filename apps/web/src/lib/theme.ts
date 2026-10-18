@@ -9,10 +9,26 @@ export type ResolvedTheme = Exclude<ThemePreference, "system">;
 
 export const DARK_SCHEME_QUERY = "(prefers-color-scheme: dark)";
 
+/**
+ * Each theme's header background (`--background` in `@pcobooster/design-tokens`), which the
+ * browser bars take through the theme-color metas so they continue the header.
+ */
+export const THEME_COLORS = {
+  light: "#eff2ee",
+  dark: "#1e221c",
+} as const satisfies Record<"light" | "dark", string>;
+
+export const THEME_COLOR_SELECTOR = 'meta[name="theme-color"]';
+
 /** The parts of `document.documentElement` the theme writes. */
 export interface ThemeRoot {
   classList: Pick<DOMTokenList, "add" | "remove">;
   style: Pick<CSSStyleDeclaration, "colorScheme">;
+}
+
+/** A theme-color meta tag. */
+export interface ThemeColorMeta {
+  setAttribute: (name: "content", value: string) => void;
 }
 
 export const parseThemePreference = (value: string | null): ThemePreference =>
@@ -28,6 +44,7 @@ export const resolveTheme = (
   return preference;
 };
 
+/** Applies a theme to the document. */
 export const applyResolvedTheme = (
   root: ThemeRoot,
   theme: ResolvedTheme
@@ -35,6 +52,20 @@ export const applyResolvedTheme = (
   root.classList.remove("light", "dark");
   root.classList.add(theme);
   root.style.colorScheme = theme;
+};
+
+/**
+ * Points both per-scheme theme-color metas at the theme shown, so the browser bars follow a
+ * saved theme that differs from the system scheme. Runs after hydration only: React matches
+ * the server's metas by their content when it hydrates the head.
+ */
+export const applyThemeColor = (
+  metas: Iterable<ThemeColorMeta>,
+  theme: ResolvedTheme
+): void => {
+  for (const meta of metas) {
+    meta.setAttribute("content", THEME_COLORS[theme]);
+  }
 };
 
 /**

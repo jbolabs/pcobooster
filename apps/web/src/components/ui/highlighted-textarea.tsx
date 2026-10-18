@@ -14,10 +14,10 @@ type HighlightedTextareaProps = Omit<
  * Metrics both layers share; any difference drifts the highlight off the caret. Lines never
  * wrap, so a chord line stays over the lyric line it belongs to; long lines scroll sideways.
  * Both keep a scrollbar gutter so the textarea's scrollbars cannot shift only one of them.
- * Phones get 16px text, below which iOS zooms the page when the text box takes focus.
+ * Touch screens get 16px text, below which iOS zooms the page when the text box takes focus.
  */
 const LAYER_CLASS =
-  "absolute inset-0 m-0 size-full border-0 px-4 py-3 font-mono text-base leading-6 tracking-normal whitespace-pre [scrollbar-gutter:stable] [tab-size:4] md:text-[13px]";
+  "absolute inset-0 m-0 size-full border-0 px-4 py-3 font-mono text-base leading-6 tracking-normal whitespace-pre [scrollbar-gutter:stable] [tab-size:4] md:pointer-fine:text-[13px]";
 
 /** A trailing newline needs a character after it to take up a line. */
 const TRAILING_LINE_FILLER = "\u200B";
@@ -73,7 +73,7 @@ const HighlightedTextarea = ({
         onScroll={syncScroll}
         className={cn(
           LAYER_CLASS,
-          "caret-foreground selection:bg-primary/25 placeholder:text-muted-foreground resize-none overflow-auto bg-transparent text-transparent outline-none"
+          "caret-foreground selection:bg-primary/25 placeholder:text-muted-foreground resize-none overflow-auto overscroll-contain bg-transparent text-transparent outline-none"
         )}
         {...props}
       />
