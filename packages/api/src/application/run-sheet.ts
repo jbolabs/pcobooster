@@ -145,7 +145,7 @@ export const prepareRunSheetItemUpdate = (
 ): Effect.Effect<
   PreparedUpdatePlanItem,
   ApplicationFault,
-  PlanningCenterAccess | PlanningCenterSongs
+  PlanningCenterAccess | PlanningCenterSongs | PlanningCenterPlanItems
 > =>
   Effect.gen(function* prepareItemUpdate() {
     return yield* prepareUpdatePlanItem(
@@ -156,7 +156,8 @@ export const prepareRunSheetItemUpdate = (
         keyId: input.keyId ?? undefined,
         selectedLayoutId: input.selectedLayoutId ?? undefined,
       },
-      yield* requestSongOptions
+      yield* requestSongOptions,
+      yield* PlanningCenterPlanItems
     );
   }).pipe(withPlanningCenterFaults);
 

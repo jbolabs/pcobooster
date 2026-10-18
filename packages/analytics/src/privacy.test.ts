@@ -422,3 +422,26 @@ describe("analytics privacy boundary", () => {
     ).toBeFalsy();
   });
 });
+
+describe("Planning Center validation analytics", () => {
+  it("retains validation metadata while stripping private payloads", () => {
+    expect(
+      sanitizeAnalyticsProperties({
+        operation: "planItems.update",
+        error_code: "BAD_REQUEST",
+        pco_validation_detail: "can not be longer than 24 hours",
+        pco_validation_code: "too_long",
+        pco_validation_field: "length",
+        email: "private@example.com",
+        title: "Private title",
+        body: { title: "Private title" },
+      })
+    ).toStrictEqual({
+      operation: "planItems.update",
+      error_code: "BAD_REQUEST",
+      pco_validation_detail: "can not be longer than 24 hours",
+      pco_validation_code: "too_long",
+      pco_validation_field: "length",
+    });
+  });
+});

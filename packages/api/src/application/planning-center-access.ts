@@ -30,7 +30,7 @@ import {
   getPresentationSeed,
   isPresentationMode,
 } from "@pcobooster/presentation-mode";
-import { Context, Effect } from "effect";
+import { Context, Effect, Schema, Option } from "effect";
 import * as HttpClient from "effect/http/HttpClient";
 
 /** A signed-in user acting through their linked Planning Center account. */
@@ -157,9 +157,57 @@ const PERMISSION_DENIED_MESSAGE =
 const NO_APP_ACCESS_MESSAGE =
   "Your Planning Center account doesn't have access to this Planning Center app. A Planning Center admin can add it.";
 
+/** Only known validation phrases may cross the analytics boundary. Never copy arbitrary messages. */
+const decodeSafeValidation = Schema.decodeUnknownOption(
+  Schema.Struct({
+    errors: Schema.Array(
+      Schema.Struct({
+        code: Schema.optional(Schema.String),
+        detail: Schema.String,
+        source: Schema.optional(Schema.Struct({ pointer: Schema.String })),
+      })
+    ),
+  })
+);
+const safeValidation = (
+  error: PlanningCenterApiError
+): typeof InvalidInput.prototype.planningCenterValidation => {
+  const decoded = decodeSafeValidation(error.details);
+  if (Option.isNone(decoded)) {
+    return undefined;
+  }
+  for (const entry of decoded.value.errors) {
+    if (
+      entry.detail !== "can not be longer than 24 hours" &&
+      entry.detail !== "Length must be a number"
+    ) {
+      continue;
+    }
+    const pointer = entry.source?.pointer;
+    if (
+      pointer !== undefined &&
+      pointer !== "/data/attributes/length" &&
+      pointer !== "length"
+    ) {
+      continue;
+    }
+    const code =
+      entry.code === "too_long" ||
+      entry.code === "invalid" ||
+      entry.code === "validation_error"
+        ? entry.code
+        : undefined;
+    return { detail: entry.detail, field: "length", code };
+  }
+  return undefined;
+};
+
 /** Planning Center's own reason for rejecting a change, written for people. */
 const rejectedChangeMessage = (error: PlanningCenterApiError): string => {
   const details = listedErrorDetails(error.details);
+  if (safeValidation(error)?.detail === "can not be longer than 24 hours") {
+    return "This item's length is over 24 hours in Planning Center. Shorten it in Planning Center and try again.";
+  }
   return details.length > 0
     ? `Planning Center didn't accept that change: ${details.join("; ")}`
     : "Planning Center didn't accept that change.";
@@ -198,7 +246,10 @@ export const planningCenterFault = (
         return new Forbidden({ message: NO_APP_ACCESS_MESSAGE });
       }
       if (error.status === PLANNING_CENTER_VALIDATION_STATUS) {
-        return new InvalidInput({ message: rejectedChangeMessage(error) });
+        return new InvalidInput({
+          message: rejectedChangeMessage(error),
+          planningCenterValidation: safeValidation(error),
+        });
       }
       return new ExternalServiceFailure({
         message: "Planning Center request failed.",
