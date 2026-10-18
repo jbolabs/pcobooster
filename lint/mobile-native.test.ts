@@ -5,10 +5,7 @@ import { dirname, extname, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { siteHead } from "../apps/marketing/src/lib/site-head";
-import {
-  productHeadMeta,
-  themeColorMeta,
-} from "../apps/web/src/lib/document-head";
+import { productHeadMeta } from "../apps/web/src/lib/document-head";
 
 /**
  * The platform layer that decides whether the product and marketing site feel native on a
@@ -445,6 +442,10 @@ const metaContent = (
   return undefined;
 };
 
+/** A theme-color meta in a head helper, JSX, or a selector; prose may still name it. */
+const themeColorMetaPattern =
+  /name(?:\s*[:=]\s*\{?|=)\s*["']theme-color["']|\[name=["']?theme-color/u;
+
 describe("document metadata", () => {
   it.each([
     ["product", productHeadMeta()],
@@ -461,19 +462,32 @@ describe("document metadata", () => {
     }
   );
 
-  it("tints the product's browser bars with its header color in each scheme", () => {
-    expect(themeColorMeta()).toStrictEqual([
-      {
-        name: "theme-color",
-        media: "(prefers-color-scheme: light)",
-        content: "#eff2ee",
-      },
-      {
-        name: "theme-color",
-        media: "(prefers-color-scheme: dark)",
-        content: "#1e221c",
-      },
-    ]);
+  /*
+   * Both apps open the shared full-screen phone menu, whose frosted fixed layer makes
+   * Safari 26 fill its bar areas with a solid color. With theme-color metas on the product,
+   * a line stayed above Safari's bottom bar after the menu closed, on every page until a
+   * reload; without them (#175), Safari tints its bars from the page.
+   */
+  it.each([
+    ["product", productHeadMeta(), ["charSet", "viewport", "color-scheme"]],
+    ["marketing", siteHead().meta, ["charSet", "viewport", "color-scheme"]],
+  ])(
+    "leaves the %s's browser bars to the page, with no theme-color",
+    (_site, meta, expected) => {
+      expect(
+        meta.map((entry) => ("name" in entry ? entry.name : "charSet"))
+      ).toStrictEqual(expected);
+    }
+  );
+
+  it("renders, queries, or writes no theme-color meta anywhere in either app", () => {
+    const writers = scripts
+      .filter(({ contents }) => themeColorMetaPattern.test(contents))
+      .map(({ path }) => path);
+    expect(scripts.map(({ path }) => path)).toContain(
+      "apps/web/src/routes/__root.tsx"
+    );
+    expect(writers).toStrictEqual([]);
   });
 
   it("gives the installed app its header color, not the brand color", () => {
@@ -485,13 +499,12 @@ describe("document metadata", () => {
         )
       );
     expect([manifest.theme_color, manifest.background_color]).toStrictEqual([
-      themeColorMeta()[0]?.content,
+      "#eff2ee",
       "#eff2ee",
     ]);
   });
 
-  it("tints the light-only marketing site with its header color", () => {
-    expect(metaContent(siteHead().meta, "theme-color")).toBe("#eff2ee");
+  it("keeps the marketing site light-only", () => {
     expect(metaContent(siteHead().meta, "color-scheme")).toBe("light");
   });
 });

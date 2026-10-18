@@ -15,10 +15,8 @@ import {
 } from "@/lib/browser-storage";
 import {
   DARK_SCHEME_QUERY,
-  THEME_COLOR_SELECTOR,
   THEME_STORAGE_KEY,
   applyResolvedTheme,
-  applyThemeColor,
   parseThemePreference,
   resolveTheme,
 } from "@/lib/theme";
@@ -54,10 +52,6 @@ const syncDocumentTheme = (): void => {
     parseThemePreference(readBrowserStorage(THEME_STORAGE_KEY)),
     window.matchMedia(DARK_SCHEME_QUERY).matches
   );
-  applyThemeColor(
-    document.querySelectorAll<HTMLMetaElement>(THEME_COLOR_SELECTOR),
-    theme
-  );
   if (root.classList.contains(theme)) {
     return;
   }
@@ -76,8 +70,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const theme = parseThemePreference(storedTheme);
 
   useEffect(() => {
-    // The inline script already set the class; the bars catch up once React owns the head.
-    syncDocumentTheme();
     const systemScheme = window.matchMedia(DARK_SCHEME_QUERY);
     systemScheme.addEventListener("change", syncDocumentTheme);
     const unsubscribe = subscribeBrowserStorage(syncDocumentTheme);

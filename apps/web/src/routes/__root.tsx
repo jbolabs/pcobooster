@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
 
 import { ProductNotFound } from "@/components/product-not-found";
 import { Providers } from "@/components/providers";
-import { productHeadMeta, themeColorMeta } from "@/lib/document-head";
+import { productHeadMeta } from "@/lib/document-head";
 import { themeInitScript } from "@/lib/theme";
 import { getSidebarDefaultOpen } from "@/server/sidebar.functions";
 
@@ -33,10 +33,6 @@ const RootDocument = ({ children }: { children: ReactNode }) => (
   >
     <head>
       <ScriptOnce>{themeInitScript}</ScriptOnce>
-      {/* `head()` keeps one meta per name, so the per-scheme theme colors live here. */}
-      {themeColorMeta().map(({ name, media, content }) => (
-        <meta key={media} name={name} media={media} content={content} />
-      ))}
       <HeadContent />
     </head>
     <body className="antialiased">

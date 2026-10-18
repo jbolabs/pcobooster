@@ -875,8 +875,11 @@
     @apply bg-background text-foreground;
   }
   /*
-   * The browser bars take the header's color from the theme-color metas
-   * (`lib/document-head.ts`), and the html background covers overscroll.
+   * No theme-color meta: Safari would paint its bars that flat color, and with one,
+   * opening the phone menu left a line above Safari's bottom bar on every page until a
+   * reload (`lint/mobile-native.test.ts`). With the document
+   * scrolling on phones, Safari tints its bars from the page and draws content beneath
+   * them; the html background covers overscroll.
    */
   html {
     @apply bg-background;

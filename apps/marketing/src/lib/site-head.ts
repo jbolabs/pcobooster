@@ -79,9 +79,7 @@ export const siteHead = (): PageHead => ({
       content:
         "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
     },
-    // The header's background (`--background`). The site is light-only, so one value
-    // matches the bars in either system scheme.
-    { name: "theme-color", content: "#eff2ee" },
+    // No theme-color: Safari tints its bars from the page (see the product's globals.css).
     { name: "color-scheme", content: "light" },
   ],
   links: [{ rel: "icon", href: marketingAssetUrl("icon.svg") }],

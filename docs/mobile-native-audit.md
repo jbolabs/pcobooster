@@ -5,7 +5,7 @@ What makes the product (`apps/web`), the marketing site (`apps/marketing`, with 
 ## Where it lives
 
 - `packages/ui/src/mobile-native.css` (`@pcobooster/ui/mobile-native.css`, imported by both apps right after Tailwind): the gated `hover` variant, `can-hover`, the safe-area utilities (`pt-safe`, `pb-safe`, `px-safe`, `pt-safe-*`, `pb-safe-*`), and the base layer (tap highlight, text-size-adjust, touch-action and user-select on controls, 16px fields on coarse pointers).
-- `apps/web/src/lib/document-head.ts`: the product's viewport, color-scheme, and per-scheme theme-color metas. `apps/web/src/lib/theme.ts` (`applyThemeColor`) keeps the theme-color metas on the theme shown.
+- `apps/web/src/lib/document-head.ts`: the product's viewport and color-scheme metas. Neither app ships a theme-color meta (finding 26).
 - Guards: `lint/mobile-native.test.ts` and the local oxlint rules `local/no-small-field-text`, `local/scroll-container-overscroll`, and `local/field-keyboard-hints` (scoped to web, marketing, and `packages/ui`).
 
 ## Guards and what they found
@@ -23,7 +23,7 @@ Each guard was written first and run against the untouched code; every offender 
 | stylesheet field text | Field rules under 16px outside `@media (pointer: fine)` | 2: `.pill-select select` (13px), `.chart-textarea` (12.5px) |
 | stylesheet scrollers | `overflow: auto/scroll` without `overscroll-behavior` | 6 in `product-demo.module.css` |
 | viewport units, zoom lock, sniffing, touch listeners | `vh`/`h-screen`, `user-scalable`/`maximum-scale`, `navigator.userAgent`/`maxTouchPoints`/`ontouchstart`, non-passive touch or wheel listeners | 0 each (kept as regression guards) |
-| document metadata | Viewport parts in both apps, product theme-color per scheme matching the header, manifest colors | 3: marketing viewport, product theme-color, manifest `theme_color` |
+| document metadata | Viewport parts in both apps, no theme-color meta in either app (head helpers and any source that renders, queries, or writes one), manifest colors | 3: marketing viewport, manifest `theme_color`; the theme-color guard (added for finding 26) failed on 3: product `document-head.ts` and `theme.ts`, marketing `site-head.ts` |
 
 ## Findings
 
@@ -40,7 +40,7 @@ Verification: **E** = verified in an emulated mobile browser (Playwright iPhone 
 | 7 | medium | `ui/item.tsx:193`, `ui/field.tsx:128`, `ui/empty.tsx:67`, `auth-sign-in-card.tsx:174,178` | Arbitrary `[&>a:hover]` bypasses the hover variant; `[@media(hover:hover)]` skips the pointer check | `[&>a]:hover:`; new `can-hover:` variant | fixed | G |
 | 8 | medium | `apps/web/src/styles/globals.css:872` | `overscroll-behavior` sat on `body` only; the viewport reads the root, so pull-to-refresh and the page bounce stayed on | `html, body { overscroll-behavior: none }` | fixed | E (html auto before, none after), P (the gesture) |
 | 9 | medium | 18 class scrollers (guard table), `ui/scroll-area.tsx:42`, replica CSS | Menus, command lists, dialog bodies, sidebar, tables, and sideways strips chain scroll to the page or trigger back-swipe at their edge | `overscroll-contain` on panels, `overscroll-x-contain` on sideways strips; replica vertical scrollers keep `auto` on purpose (see below) | fixed | E (computed), G, P (feel) |
-| 10 | medium | `apps/web/src/routes/__root.tsx:37`, `lib/document-head.ts`, `lib/theme.ts:16`, `theme-provider.tsx:57` | Product had no theme-color (#175 dropped it), so the bars ignored a saved theme and Android painted defaults | Per-scheme metas with the header color (`#eff2ee`, `#1e221c`); the theme provider points both at the theme shown after hydration (React matches head metas by content, so the inline script leaves them alone) | fixed | E (all four system and saved-theme combinations), G |
+| 10 | medium | `apps/web/src/routes/__root.tsx`, `lib/document-head.ts`, `lib/theme.ts`, `theme-provider.tsx` | Product had no theme-color (#175 dropped it), so the bars ignored a saved theme and Android painted defaults | Per-scheme metas with the header color, kept on the theme shown after hydration | reverted (finding 26) | P |
 | 11 | medium | `apps/web/public/manifest.webmanifest:8` | Installed app `theme_color` was the brand sage `#73866d`, not the header | `#eff2ee` | fixed | G, P (installed PWA) |
 | 12 | medium | `apps/marketing/src/lib/site-head.ts:80` | Marketing viewport lacked `viewport-fit=cover` and `interactive-widget=resizes-content` | Added (pinch zoom stays on) | fixed | E (meta), G |
 | 13 | medium | `site.tsx:112,152,155,193`, `marketing/styles/globals.css:145`, `marketing/routes/__root.tsx:20` | With cover on, the sticky header, phone menu, footer, skip link, and landscape column need insets | `pt-safe` header and menu, `pb-safe-8` menu and footer, `wrap` clears side insets, skip link shifts by the top inset | fixed | E (header 59px; landscape column at 79px with 59px insets), P |
@@ -56,6 +56,7 @@ Verification: **E** = verified in an emulated mobile browser (Playwright iPhone 
 | 23 | low | search fields (guard table), `ui/command.tsx:70`, `lyrics-search-panel.tsx`, `chord-chart-import-dialog.tsx:227`, `plan-item-pane.tsx:166`, `plan-time-form-fields.tsx` | Keyboard capitalized and autocorrected queries and chord names; return key said "return" | `enterKeyHint="search"`, `autoCapitalize="none"`, `autoCorrect="off"`, `spellCheck={false}` on searches; `done` on Enter-to-blur fields | fixed | G, P (keyboard) |
 | 24 | low | `worst-case-data-toggle.tsx:19` | Dev-only toggle under the home indicator | Bottom inset | fixed | G |
 | 25 | low | Sonner CSS, React Query Devtools | Third-party `:hover` rules (Sonner close button, devtools) | Sonner's close button isn't enabled; devtools are dev-only | not fixed: third party, not reachable on phones | E |
+| 26 | high | `apps/web/src/routes/__root.tsx`, `lib/document-head.ts`, `lib/theme.ts`, `theme-provider.tsx`, `apps/marketing/src/lib/site-head.ts` | On an iPhone (Safari, signed in), opening the phone menu left a line above Safari's bottom bar on every page until a reload; not reported on `main`, which has no product theme-color | Drop the theme-color metas and their runtime writer from the product, and the marketing meta (the same menu opens there); keep the manifest `theme_color` for the installed app | fixed (hypothesis, see below) | E (page state), G, P (the line) |
 
 ## Already right (verified, unchanged)
 
@@ -67,9 +68,7 @@ Verification: **E** = verified in an emulated mobile browser (Playwright iPhone 
 ## Intentional choices
 
 - Marketing is a scrolling document, so its root keeps pull-to-refresh and the page bounce. The replica's vertical scrollers keep `overscroll-behavior: auto` so a swipe at their end carries on down the page; its sideways strips contain.
-- Marketing is light-only (`color-scheme: light`), so one theme-color (`#eff2ee`, its header) is right in both system schemes.
-- #175 dropped the product's theme-color so Safari would tint its bars from the page instead of a flat color. The values now equal the header background in each theme, so a browser that paints them flat shows the header's own color, and Android Chrome and installed apps get a matching bar.
-- A saved theme that differs from the system shows the system's bar color until hydration (one frame on a warm load); the server metas can't change before React hydrates the head.
+- No theme-color meta in either app (finding 26): Safari tints its bars from the page, as #175 set up. Android Chrome paints its default bar color in the browser; the installed app takes the manifest's `#eff2ee`.
 - `apple-mobile-web-app-status-bar-style` stays `default`: `black-translucent` would draw white status text over the light header.
 - Hover cards (Base UI preview cards) still don't open on touch, matching the product's design; the replica's fit card now matches.
 - iOS applies `:active` only with a touchstart listener in the tree; React's root listeners provide one in both apps.
@@ -81,3 +80,17 @@ Emulation can't show the zoom, the software keyboard (keypads, return-key labels
 ## Demos
 
 Before and after clips (Playwright iPhone 15 emulation, Chromium) live outside the repo in `/workspace/mobile-native-demos/` (see its README): input zoom, stuck hover, press feedback, toast safe area, day-bar tap, and the computed baseline. Signed-in product pages need Planning Center credentials and the API, so product clips use the sign-in page; the replica stands in for services, plans, people, and songs.
+
+## Finding 26: the line above Safari's bottom bar after the phone menu
+
+**Symptom (real iPhone, Safari, signed in):** everything looks right until the phone menu opens. From then on a line sits just above Safari's bottom bar on every page, until a reload. Not reported on `main`.
+
+**What emulation showed (Playwright WebKit, iPhone 15, a harness of the signed-in phone shell with each side's compiled `globals.css` and document metas; `/workspace/mobile-demo-tools/harness`):** open and close leave the page exactly as it was on both `main` and this branch. html and body inline styles and attributes return to their pre-open values, nothing fixed remains at the bottom edge, `elementFromPoint` at the bottom edge hits the same row, the overlay is `display: none` again, and before and after screenshots are pixel-identical. So nothing on the page itself sticks. WebKit emulation doesn't draw Safari's bars, so the line itself was **not reproduced**.
+
+**Ruled out:** Base UI's scroll lock. The phone menu doesn't use it: `useMobileMenu` sets and clears `html` `overflow` itself, unchanged from `main`. Base UI 1.9 (`@base-ui/utils/useScrollLock.js`) uses `preventScrollOverlayScrollbars` on iOS, which only sets `overflow` on the scroll element and restores it. No `data-base-ui-scroll-locked`, `position: fixed`, padding, or gutter is involved. No portal or backdrop stays mounted, and nothing on the page changes theme-color.
+
+**Cause (hypothesis, needs the iPhone to confirm):** while open, the menu is a frosted (`backdrop-filter`) full-screen fixed layer. In WebKit's `LocalFrameView::fixedContainerEdges`, a backdrop filter at an edge reports that edge as `Multiple`. WKWebView then fills Safari's bar areas with a solid color-extension view instead of the soft glass over the page (WebKit bug 300965: "both top and bottom become solid color once the side menu shows up", with reports that it stays after close). Safari only recomputes these edges on a load commit, on fixed layers appearing or disappearing, or on inset changes, so client-side navigation keeps whatever state Safari settles in. Of the inputs Safari reads for its bars, the only one this branch changed on the product is the theme-color metas. #175 dropped them because, on Jake's iPhone, Safari painted its bars that flat color. The fix returns the product to the `main` state. The root `overscroll-behavior: none` (finding 8) is the other bar-adjacent change; keep it unless the line survives this fix on the iPhone.
+
+**Guard:** `lint/mobile-native.test.ts` "leaves the product's / marketing's browser bars to the page, with no theme-color" pins each app's head metas to `charSet`, `viewport`, `color-scheme`. "renders, queries, or writes no theme-color meta anywhere in either app" scans web, marketing, and `packages/ui` source. On the unfixed code it failed on marketing's head and on `apps/web/src/lib/document-head.ts`, `apps/web/src/lib/theme.ts`, and `apps/marketing/src/lib/site-head.ts`.
+
+**Check on the iPhone:** open and close the phone menu on a plan list, scroll, and navigate to another section. The bottom bar should stay glass over the page, with no line.
