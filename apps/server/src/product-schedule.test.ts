@@ -49,6 +49,12 @@ const removalInput = {
   serviceTypeId: "service-1",
   planId: "plan-1",
 };
+/** The plan person's address in Planning Center: written through its plan. */
+const LOCATION = {
+  serviceTypeId: "service-1",
+  planId: "plan-1",
+  personId: "person-1",
+};
 
 const teamPositions = () => ({
   data: [
@@ -409,14 +415,12 @@ describe("schedule writes", () => {
       removed: { success: true },
       updated: { success: true },
     });
-    expect(remove).toHaveBeenCalledExactlyOnceWith(
+    expect(remove).toHaveBeenCalledExactlyOnceWith("plan-person-1", LOCATION);
+    expect(update).toHaveBeenCalledExactlyOnceWith(
       "plan-person-1",
-      removalInput
+      "D",
+      LOCATION
     );
-    expect(update).toHaveBeenCalledExactlyOnceWith("plan-person-1", "D", {
-      ...removalInput,
-      status: "D",
-    });
     expect(recordActivity).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
@@ -439,7 +443,11 @@ describe("schedule writes", () => {
     const { client, recordActivity, remove, update } = setup();
     remove.mockReturnValueOnce(missingPlanPerson());
     update.mockReturnValueOnce(missingPlanPerson());
-    const target = { planPersonId: "plan-person-1", planId: "plan-1" };
+    const target = {
+      planPersonId: "plan-person-1",
+      serviceTypeId: "service-1",
+      planId: "plan-1",
+    };
 
     const removal = client.run((api) =>
       api.schedule.remove({ params: target, query: target })

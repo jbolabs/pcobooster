@@ -235,7 +235,7 @@ const PLAN_PATH =
 const TEAM_POSITIONS_PATH =
   /^\/services\/v2\/service_types\/(?<serviceTypeId>[^/]+)\/team_positions$/u;
 const PLAN_PERSON_PATH =
-  /^\/services\/v2\/plan_people\/(?<planPersonId>[^/]+)$/u;
+  /^\/services\/v2\/service_types\/[^/]+\/plans\/[^/]+\/team_members\/(?<planPersonId>[^/]+)$/u;
 const SONG_PATH = /^\/services\/v2\/songs\/(?<songId>[^/]+)$/u;
 const SONG_ARRANGEMENTS_PATH = /^\/services\/v2\/songs\/[^/]+\/arrangements$/u;
 const PLANS_PATH = /^\/services\/v2\/service_types\/[^/]+\/plans$/u;

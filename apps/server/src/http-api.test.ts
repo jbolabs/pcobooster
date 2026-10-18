@@ -418,8 +418,9 @@ describe("schedule.updateStatus (an audited write)", () => {
 
     expect(updated).toStrictEqual({ success: true });
     expect(updateStatus).toHaveBeenCalledExactlyOnceWith("plan-person-1", "C", {
-      ...target,
-      status: "C",
+      serviceTypeId: "service-1",
+      planId: "plan-1",
+      personId: "person-1",
     });
     expect(recordActivity).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
@@ -600,7 +601,7 @@ describe("demo sessions", () => {
     const answer = client.run((api) =>
       api.schedule.updateStatus({
         params: { planPersonId: "plan-person-1" },
-        payload: { status: "C" },
+        payload: { status: "C", serviceTypeId: "service-1", planId: "plan-1" },
       })
     );
 
