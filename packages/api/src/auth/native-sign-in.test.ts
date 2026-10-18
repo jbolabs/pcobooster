@@ -712,10 +712,12 @@ describe("native sign-in", { timeout: LOCAL_WORKER_TEST_TIMEOUT_MS }, () => {
     const separator = token.lastIndexOf(".");
     const rawToken = token.slice(0, separator);
     const signature = token.slice(separator + 1);
+    // A different first character: a signature that already starts with "x" stays valid as "x…".
+    const tamperedFirst = signature.startsWith("x") ? "y" : "x";
     const candidates = [
       token,
       rawToken,
-      `${rawToken}.x${signature.slice(1)}`,
+      `${rawToken}.${tamperedFirst}${signature.slice(1)}`,
       `${rawToken}x.${signature}`,
     ];
     const sessions = [];
