@@ -14,7 +14,6 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { getInitials } from "@pcobooster/planning-center-models/initials";
 import { getSchedulingNotificationState } from "@pcobooster/planning-center-models/scheduling-notifications";
 import type { SlotRef } from "@pcobooster/planning-center-models/scheduling-notifications";
@@ -33,7 +32,7 @@ import {
   Plus,
   UserPlus,
 } from "lucide-react";
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, SubmitEvent as ReactSubmitEvent } from "react";
 
 import { AvatarStatus } from "@/components/schedule/avatar-status";
@@ -85,6 +84,11 @@ import {
 } from "@/lib/lineup-column-order";
 import { ReplayMask } from "@/lib/replay-mask";
 import { openSlotCount } from "@/lib/schedule/open-positions";
+import {
+  sortableDropAnimation,
+  sortableMotion,
+  sortableTransition,
+} from "@/lib/sortable-motion";
 import { cn } from "@/lib/utils";
 
 /**
@@ -671,14 +675,15 @@ const SortableTeamPanel = ({
   } = useSortable({
     id: panelProps.group.teamId,
     disabled: reorderDisabled,
+    transition: sortableTransition,
   });
+  const motion = sortableMotion({ transform, transition });
   const style: CSSProperties & {
     "--sortable-transform": string;
     "--sortable-transition": string;
   } = {
-    "--sortable-transform": CSS.Translate.toString(transform) ?? "none",
-    "--sortable-transition":
-      transition ?? "transform 180ms cubic-bezier(0.2, 0, 0, 1)",
+    "--sortable-transform": motion.transform,
+    "--sortable-transition": motion.transition,
   };
 
   return (
@@ -917,11 +922,7 @@ export const TeamRoster = ({
         onDragCancel={() => {
           setActiveTeamId(null);
         }}
-        onDragEnd={(event) => {
-          startTransition(() => {
-            handleDragEnd(event);
-          });
-        }}
+        onDragEnd={handleDragEnd}
       >
         <SortableContext
           items={orderedGroups.map((group) => group.teamId)}
@@ -945,7 +946,7 @@ export const TeamRoster = ({
             ))}
           </div>
         </SortableContext>
-        <DragOverlay zIndex={60}>
+        <DragOverlay zIndex={60} dropAnimation={sortableDropAnimation}>
           {activeGroup ? <TeamPanelOverlay group={activeGroup} /> : null}
         </DragOverlay>
       </DndContext>

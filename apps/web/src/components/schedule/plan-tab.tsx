@@ -47,6 +47,10 @@ import {
 } from "@/hooks/use-plan-tab-controller";
 import type { AddedPlanItemKind } from "@/hooks/use-plan-tab-controller";
 import { useRevealOnLoad } from "@/hooks/use-reveal-on-load";
+import {
+  restrictToVerticalAxis,
+  sortableDropAnimation,
+} from "@/lib/sortable-motion";
 import { cn } from "@/lib/utils";
 
 interface PlanTabProps {
@@ -55,6 +59,9 @@ interface PlanTabProps {
   /** The plan's date, for spotting songs sung in the weeks before it. */
   planDate: Date | null;
 }
+
+/** The run sheet only reorders up and down. */
+const verticalOnly = [restrictToVerticalAxis];
 
 /** The details slide in beside the run sheet only where there is room for both. */
 const WIDE_LAYOUT_QUERY = "(min-width: 1024px)";
@@ -68,6 +75,20 @@ const runQuietly = (task: () => Promise<void>) => {
       // Already reported by the mutation's error toast.
     }
   });
+};
+
+/**
+ * Runs a reorder urgently, outside a transition, so the new order renders with the drop
+ * instead of after it; mutations report their own failures and restore the plan.
+ */
+const reorderNow = (task: () => Promise<void>) => {
+  void (async () => {
+    try {
+      await task();
+    } catch {
+      // Already reported by the mutation's error toast.
+    }
+  })();
 };
 
 const focusRow = (itemId: string) => {
@@ -95,7 +116,7 @@ const PlanBuilderDragPreview = ({
   serviceTypeId: string | null;
   handlers: PlanItemRowHandlers;
 }) => (
-  <DragOverlay zIndex={60}>
+  <DragOverlay zIndex={60} dropAnimation={sortableDropAnimation}>
     {item ? (
       <div className="bg-background rotate-[0.2deg] rounded-lg shadow-2xl">
         <PlanItemRow
@@ -440,7 +461,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
   const drag = usePlanBuilderDrag({
     items,
     onReorder: (nextItems) => {
-      runQuietly(async () => {
+      reorderNow(async () => {
         await controller.reorderItems(nextItems);
       });
     },
@@ -458,7 +479,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
     selectedItemId: selectedItem?.id ?? null,
     onSelect: selectAndFocus,
     onMove: (itemId, offset) => {
-      runQuietly(async () => {
+      reorderNow(async () => {
         await controller.moveItem(itemId, offset);
       });
       focusRow(itemId);
@@ -555,6 +576,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
   return (
     <DndContext
       collisionDetection={closestCenter}
+      modifiers={verticalOnly}
       sensors={drag.sensors}
       {...drag.dragHandlers}
     >
