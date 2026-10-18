@@ -33,6 +33,7 @@ import type { ConfirmedPlanItemCreation } from "@/lib/plan-item-creation";
 import {
   applyPlanItemsOptimisticUpdate,
   collectPlanSongOptionPrefetchIds,
+  discardPlanItemsSnapshot,
   restorePlanItemsSnapshot,
   settlePlanItemsQuery,
 } from "@/lib/plan-items-query-state";
@@ -278,7 +279,8 @@ export const usePlanTabController = ({
       restorePlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       toast.error(toErrorMessage(error, "Something went wrong."));
     },
-    onSettled: () => {
+    onSettled: (_result, _error, _input, context) => {
+      discardPlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       setPendingItemId(null);
       settlePlanItems();
     },
@@ -376,7 +378,8 @@ export const usePlanTabController = ({
       restorePlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       toast.error(toErrorMessage(error, "Something went wrong."));
     },
-    onSettled: () => {
+    onSettled: (_result, _error, _input, context) => {
+      discardPlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       setPendingSongId(null);
       setPendingItemId(null);
       settlePlanItems();
@@ -533,7 +536,8 @@ export const usePlanTabController = ({
       restorePlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       toast.error(toErrorMessage(error, "Something went wrong."));
     },
-    onSettled: () => {
+    onSettled: (_result, _error, _input, context) => {
+      discardPlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       setPendingItemId(null);
       settlePlanItems();
     },
@@ -624,7 +628,8 @@ export const usePlanTabController = ({
         (current = EMPTY_PLAN_ITEMS) => replacePlanItem(current, updatedItem)
       );
     },
-    onSettled: () => {
+    onSettled: (_result, _error, _input, context) => {
+      discardPlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       setPendingItemId(null);
       settlePlanItems();
     },

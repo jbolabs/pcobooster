@@ -233,6 +233,32 @@ describe("plan item query state", () => {
     queryClient.clear();
   });
 
+  it("does not restore an earlier rejected edit when two overlapping edits both fail", () => {
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    queryClient.setQueryData(queryKey, [createItem("song", 1)]);
+    const first = applyPlanItemsOptimisticUpdate(
+      queryClient,
+      queryKey,
+      (current) => current.map((item) => ({ ...item, description: "failed-a" }))
+    );
+    const second = applyPlanItemsOptimisticUpdate(
+      queryClient,
+      queryKey,
+      (current) => current.map((item) => ({ ...item, description: "failed-b" }))
+    );
+    restorePlanItemsSnapshot(queryClient, queryKey, first);
+    expect(
+      queryClient.getQueryData<PlanItem[]>(queryKey)?.[0].description
+    ).toBe("failed-b");
+    restorePlanItemsSnapshot(queryClient, queryKey, second);
+    expect(queryClient.getQueryData<PlanItem[]>(queryKey)?.[0]).toMatchObject({
+      id: "song",
+      description: "",
+    });
+    queryClient.clear();
+  });
+
   it("renumbers remaining items after an optimistic delete", () => {
     expect(
       removePlanItem(
