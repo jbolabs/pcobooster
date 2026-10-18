@@ -15,7 +15,11 @@ import type {
   PlanItem,
   SongOptionSet,
 } from "@pcobooster/planning-center-models/types";
-import { QueryClient } from "@tanstack/react-query";
+import {
+  MutationObserver,
+  QueryClient,
+  QueryObserver,
+} from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -136,6 +140,123 @@ describe("plan item query state", () => {
     expect(
       queryClient.getQueryData<PlanItem[]>(queryKey)?.map((item) => item.id)
     ).toStrictEqual(["item-1", "item-2"]);
+  });
+
+  it("does not replace a confirmed earlier addition with its temporary row when a later add fails", () => {
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    queryClient.setQueryData(queryKey, [
+      createItem("opening", 1),
+      createItem("temp-a", 2),
+    ]);
+    const failedAdd = applyPlanItemsOptimisticUpdate(
+      queryClient,
+      queryKey,
+      (current) => insertPlanItem(current, createItem("temp-b", 3))
+    );
+    queryClient.setQueryData<PlanItem[]>(queryKey, (current = []) =>
+      replacePlanItemById(current, "temp-a", createItem("saved-a", 2))
+    );
+    restorePlanItemsSnapshot(queryClient, queryKey, failedAdd);
+    expect(
+      queryClient.getQueryData<PlanItem[]>(queryKey)?.map((item) => item.id)
+    ).toStrictEqual(["opening", "saved-a"]);
+    queryClient.clear();
+  });
+
+  it("rolls back only the failed edit while preserving a newer edit on the same song", () => {
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    queryClient.setQueryData(queryKey, [createItem("song", 1)]);
+    const failedEdit = applyPlanItemsOptimisticUpdate(
+      queryClient,
+      queryKey,
+      (current) =>
+        current.map((item) => ({ ...item, description: "Failed notes" }))
+    );
+    queryClient.setQueryData<PlanItem[]>(queryKey, (current = []) =>
+      current.map((item) => ({ ...item, length: 180 }))
+    );
+    restorePlanItemsSnapshot(queryClient, queryKey, failedEdit);
+    expect(queryClient.getQueryData<PlanItem[]>(queryKey)?.[0]).toMatchObject({
+      id: "song",
+      description: "",
+      length: 180,
+    });
+    queryClient.clear();
+  });
+
+  it("removes a failed addition without discarding a later addition", () => {
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    queryClient.setQueryData(queryKey, [createItem("opening", 1)]);
+    const failedAdd = applyPlanItemsOptimisticUpdate(
+      queryClient,
+      queryKey,
+      (current) => insertPlanItem(current, createItem("failed", 2))
+    );
+    applyPlanItemsOptimisticUpdate(queryClient, queryKey, (current) =>
+      insertPlanItem(current, createItem("later", 3))
+    );
+    restorePlanItemsSnapshot(queryClient, queryKey, failedAdd);
+    expect(
+      queryClient
+        .getQueryData<PlanItem[]>(queryKey)
+        ?.map((item) => ({ id: item.id, sequence: item.sequence }))
+    ).toStrictEqual([
+      { id: "opening", sequence: 1 },
+      { id: "later", sequence: 2 },
+    ]);
+    queryClient.clear();
+  });
+
+  it("does not undo a newer reorder when an older reorder fails", () => {
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    queryClient.setQueryData(queryKey, [
+      createItem("a", 1),
+      createItem("b", 2),
+      createItem("c", 3),
+    ]);
+    const failedReorder = applyPlanItemsOptimisticUpdate(
+      queryClient,
+      queryKey,
+      (current) => reorderPlanItems(current, "c", "a")
+    );
+    applyPlanItemsOptimisticUpdate(queryClient, queryKey, (current) =>
+      reorderPlanItems(current, "b", "c")
+    );
+    restorePlanItemsSnapshot(queryClient, queryKey, failedReorder);
+    expect(
+      queryClient.getQueryData<PlanItem[]>(queryKey)?.map((item) => item.id)
+    ).toStrictEqual(["b", "c", "a"]);
+    queryClient.clear();
+  });
+
+  it("does not restore an earlier rejected edit when two overlapping edits both fail", () => {
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    queryClient.setQueryData(queryKey, [createItem("song", 1)]);
+    const first = applyPlanItemsOptimisticUpdate(
+      queryClient,
+      queryKey,
+      (current) => current.map((item) => ({ ...item, description: "failed-a" }))
+    );
+    const second = applyPlanItemsOptimisticUpdate(
+      queryClient,
+      queryKey,
+      (current) => current.map((item) => ({ ...item, description: "failed-b" }))
+    );
+    restorePlanItemsSnapshot(queryClient, queryKey, first);
+    expect(
+      queryClient.getQueryData<PlanItem[]>(queryKey)?.[0].description
+    ).toBe("failed-b");
+    restorePlanItemsSnapshot(queryClient, queryKey, second);
+    expect(queryClient.getQueryData<PlanItem[]>(queryKey)?.[0]).toMatchObject({
+      id: "song",
+      description: "",
+    });
+    queryClient.clear();
   });
 
   it("renumbers remaining items after an optimistic delete", () => {
@@ -355,6 +476,60 @@ describe("plan item query state", () => {
       queryKey,
       type: "active",
     });
+  });
+
+  it("keeps an added song visible while a key edit outlasts an earlier refresh timer", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    let serverItems = [createItem("opening", 1)];
+    const observer = new QueryObserver(queryClient, {
+      queryKey,
+      queryFn: () => serverItems,
+      staleTime: Infinity,
+    });
+    const unsubscribe = observer.subscribe(() => {});
+    await observer.refetch();
+    queryClient.setQueryData(queryKey, [
+      createItem("opening", 1),
+      createSongItem("new-song", 2, "song-1"),
+    ]);
+    // The add has settled, and its refresh will fire during the following key edit.
+    settlePlanItemsQuery(queryClient, queryKey);
+    const finishEdit = Promise.withResolvers<undefined>();
+    const mutation = new MutationObserver(queryClient, {
+      mutationKey: queryKey,
+      mutationFn: async () => {
+        await finishEdit.promise;
+      },
+      onSettled: () => {
+        settlePlanItemsQuery(queryClient, queryKey);
+      },
+    });
+    const edit = mutation.mutate();
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(
+      queryClient.getQueryData<PlanItem[]>(queryKey)?.map((item) => item.id)
+    ).toStrictEqual(["opening", "new-song"]);
+    serverItems = [
+      createItem("opening", 1),
+      {
+        ...createSongItem("new-song", 2, "song-1"),
+        key: { id: "key-d", name: "D", startingKey: "D", endingKey: "D" },
+      },
+    ];
+    finishEdit.resolve();
+    await edit;
+    // Once editing finishes, the next refresh is allowed to reconcile again.
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(
+      queryClient.getQueryData<PlanItem[]>(queryKey)?.map((item) => item.id)
+    ).toStrictEqual(["opening", "new-song"]);
+    expect(queryClient.getQueryData<PlanItem[]>(queryKey)?.[1].key?.name).toBe(
+      "D"
+    );
+    unsubscribe();
+    queryClient.clear();
   });
 
   it("clears persisted plan-item and song metadata snapshots when optimistic mutations settle", () => {

@@ -3,7 +3,6 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import type { RunSheetEntry } from "@pcobooster/planning-center-models/plan-item-draft";
 import { formatDuration } from "@pcobooster/planning-center-models/plan-overview";
 import type { KeyTransition } from "@pcobooster/planning-center-models/plan-set-insights";
@@ -41,6 +40,7 @@ import { HoverLabel } from "@/components/ui/hover-card";
 import { Item } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { IntentPrefetchProps } from "@/hooks/use-intent-prefetch";
+import { sortableMotion, sortableTransition } from "@/lib/sortable-motion";
 import { cn } from "@/lib/utils";
 
 export type PlanInsertKind = "song" | "header" | "item";
@@ -433,15 +433,15 @@ const SortablePlanItem = ({
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ id: item.id, transition: sortableTransition });
 
+  const motion = sortableMotion({ transform, transition });
   const style: CSSProperties & {
     "--sortable-transform": string;
     "--sortable-transition": string;
   } = {
-    "--sortable-transform": CSS.Translate.toString(transform) ?? "none",
-    "--sortable-transition":
-      transition ?? "transform 180ms cubic-bezier(0.2, 0, 0, 1)",
+    "--sortable-transform": motion.transform,
+    "--sortable-transition": motion.transition,
   };
 
   return (
