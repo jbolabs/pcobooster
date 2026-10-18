@@ -92,7 +92,10 @@ export const settlePlanItemsQuery = (
 
   const nextTimer = setTimeout(() => {
     clientTimers.delete(timerKey);
-    void queryClient.refetchQueries({ queryKey, type: "active" });
+    // The last pending edit schedules its own reconciliation when it settles.
+    if (queryClient.isMutating({ mutationKey: queryKey }) === 0) {
+      void queryClient.refetchQueries({ queryKey, type: "active" });
+    }
   }, PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
   clientTimers.set(timerKey, nextTimer);
 };

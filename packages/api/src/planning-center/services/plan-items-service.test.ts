@@ -1,26 +1,10 @@
 import { createBasicPlanningCenterClient } from "@pcobooster/api/planning-center/core-client";
 import { PlanningCenterPlanItemsService } from "@pcobooster/api/planning-center/services/plan-items-service";
-import {
-  httpClientFor,
-  unreachableHttpClient,
-} from "@pcobooster/api/testing/http-client";
+import { httpClientFor } from "@pcobooster/api/testing/http-client";
 import { testPlanningCenterToken } from "@pcobooster/api/testing/server";
 import type { PCResource } from "@pcobooster/planning-center-models/types";
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
-
-const urlOf = (input: RequestInfo | URL): string =>
-  input instanceof Request ? input.url : input.toString();
-
-const createCoreClientMock = () => {
-  const core = createBasicPlanningCenterClient(
-    testPlanningCenterToken,
-    unreachableHttpClient
-  );
-  const fetchAllWithIncluded = vi.spyOn(core, "fetchAllWithIncluded");
-
-  return { core, fetchAllWithIncluded };
-};
 
 const itemResource = (id: string): PCResource => ({
   id,
@@ -30,82 +14,87 @@ const itemResource = (id: string): PCResource => ({
   },
 });
 
-describe("PlanningCenterPlanItemsService read cache", () => {
-  it("caches plan item reads and returns mutation-safe copies", async () => {
-    const { core, fetchAllWithIncluded } = createCoreClientMock();
-    fetchAllWithIncluded.mockReturnValue(
-      Effect.succeed({
-        data: [itemResource("item-1")],
-        included: [itemResource("song-1")],
-      })
+describe("PlanningCenterPlanItemsService reads after writes", () => {
+  it("reads a song added through another Worker instance immediately", async () => {
+    let added = false;
+    const fetch = vi.fn<typeof globalThis.fetch>(async (_input, init) => {
+      if (init?.method === "POST") {
+        added = true;
+        return await Promise.resolve(
+          Response.json({ data: itemResource("new-song") })
+        );
+      }
+      return await Promise.resolve(
+        Response.json({
+          data: added
+            ? [itemResource("opening"), itemResource("new-song")]
+            : [itemResource("opening")],
+          included: [],
+        })
+      );
+    });
+    const core = createBasicPlanningCenterClient(
+      testPlanningCenterToken,
+      httpClientFor(fetch)
     );
-    const service = new PlanningCenterPlanItemsService(core);
+    const reader = new PlanningCenterPlanItemsService(core);
+    const writer = new PlanningCenterPlanItemsService(core);
+    await Effect.runPromise(reader.getPlanItems("st-1", "plan-1"));
+    await Effect.runPromise(
+      writer.createPlanItem("st-1", "plan-1", { title: "New song" })
+    );
 
-    const first = await Effect.runPromise(
-      service.getPlanItems("st-1", "plan-1")
+    const refreshed = await Effect.runPromise(
+      reader.getPlanItems("st-1", "plan-1")
     );
-    first.data[0].attributes.title = "Mutated";
-    const second = await Effect.runPromise(
-      service.getPlanItems("st-1", "plan-1")
-    );
-
-    expect(fetchAllWithIncluded).toHaveBeenCalledOnce();
-    expect(second.data[0].attributes.title).toBe("Opening Song");
-    expect(second.data[0]).not.toBe(first.data[0]);
+    expect(refreshed.data.map((item) => item.id)).toStrictEqual([
+      "opening",
+      "new-song",
+    ]);
   });
 
-  it("invalidates cached plan items after create, update, delete, and reorder", async () => {
-    const item = { id: "item-1", type: "Item", attributes: { title: "Song" } };
-    const fetch = vi.fn<typeof globalThis.fetch>(
-      async (input, init) =>
-        await Promise.resolve(
-          new URL(urlOf(input)).pathname.endsWith("/items") &&
-            (init?.method ?? "GET") === "GET"
-            ? Response.json({ data: [item], included: [] })
-            : Response.json({ data: item })
-        )
+  it("reads the changed key through another Worker instance immediately", async () => {
+    let keyId = "key-c";
+    const fetch = vi.fn<typeof globalThis.fetch>(async (_input, init) => {
+      if (init?.method === "PATCH") {
+        keyId = "key-d";
+      }
+      const song = {
+        ...itemResource("new-song"),
+        relationships: { key: { data: { type: "Key", id: keyId } } },
+      };
+      return await Promise.resolve(
+        Response.json({
+          data: init?.method === "PATCH" ? song : [song],
+          included: [],
+        })
+      );
+    });
+    const core = createBasicPlanningCenterClient(
+      testPlanningCenterToken,
+      httpClientFor(fetch)
     );
-    const service = new PlanningCenterPlanItemsService(
-      createBasicPlanningCenterClient(
-        testPlanningCenterToken,
-        httpClientFor(fetch)
-      )
+    const reader = new PlanningCenterPlanItemsService(core);
+    const writer = new PlanningCenterPlanItemsService(core);
+    const before = await Effect.runPromise(
+      reader.getPlanItems("st-1", "plan-1")
+    );
+    expect(before.data[0].relationships?.key?.data).toStrictEqual({
+      type: "Key",
+      id: "key-c",
+    });
+    await Effect.runPromise(
+      writer.updatePlanItem("st-1", "plan-1", "new-song", { key_id: "key-d" })
     );
 
-    await Effect.runPromise(service.getPlanItems("st-1", "plan-1"));
-    await Effect.runPromise(service.getPlanItems("st-1", "plan-1"));
-    await Effect.runPromise(
-      service.createPlanItem("st-1", "plan-1", { title: "New Item" })
+    const refreshed = await Effect.runPromise(
+      reader.getPlanItems("st-1", "plan-1")
     );
-    await Effect.runPromise(service.getPlanItems("st-1", "plan-1"));
-    await Effect.runPromise(
-      service.updatePlanItem("st-1", "plan-1", "item-1", {
-        title: "Updated",
-      })
-    );
-    await Effect.runPromise(service.getPlanItems("st-1", "plan-1"));
-    await Effect.runPromise(service.deletePlanItem("st-1", "plan-1", "item-1"));
-    await Effect.runPromise(service.getPlanItems("st-1", "plan-1"));
-    await Effect.runPromise(
-      service.reorderPlanItems("st-1", "plan-1", ["item-1"])
-    );
-    await Effect.runPromise(service.getPlanItems("st-1", "plan-1"));
-
     expect(
-      fetch.mock.calls.map(
-        ([input, init]) =>
-          `${init?.method ?? "GET"} ${new URL(urlOf(input)).pathname}`
-      )
-    ).toStrictEqual([
-      "GET /services/v2/service_types/st-1/plans/plan-1/items",
-      "POST /services/v2/service_types/st-1/plans/plan-1/items",
-      "GET /services/v2/service_types/st-1/plans/plan-1/items",
-      "PATCH /services/v2/service_types/st-1/plans/plan-1/items/item-1",
-      "GET /services/v2/service_types/st-1/plans/plan-1/items",
-      "DELETE /services/v2/service_types/st-1/plans/plan-1/items/item-1",
-      "GET /services/v2/service_types/st-1/plans/plan-1/items",
-      "POST /services/v2/service_types/st-1/plans/plan-1/item_reorder",
-      "GET /services/v2/service_types/st-1/plans/plan-1/items",
-    ]);
+      refreshed.data.map((item) => ({
+        id: item.id,
+        key: item.relationships?.key?.data,
+      }))
+    ).toStrictEqual([{ id: "new-song", key: { type: "Key", id: "key-d" } }]);
   });
 });

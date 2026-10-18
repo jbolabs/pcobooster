@@ -3,25 +3,13 @@ import type {
   PlanningCenterCoreClient,
   PlanningCenterError,
 } from "@pcobooster/api/planning-center/core-client";
-import { cachedRead } from "@pcobooster/api/planning-center/services/cached-read";
-import { PlanningCenterReadCache } from "@pcobooster/api/planning-center/services/read-cache";
 import { isNonEmptyString } from "@pcobooster/planning-center-models/json";
 import type { JsonObject } from "@pcobooster/planning-center-models/json";
 import type { PCResource } from "@pcobooster/planning-center-models/types";
 import { Effect } from "effect";
 
 const log = moduleLog("planning-center/plan-items");
-const PLAN_ITEMS_CACHE_TTL_MS = 30 * 1000;
 const PLAN_ITEM_INCLUDES = "song,arrangement,key,item_notes,item_times";
-
-export interface PlanningCenterPlanItemsServiceCaches {
-  readonly items: PlanningCenterReadCache<PlanItemsResponse>;
-}
-
-export const createPlanningCenterPlanItemsServiceCaches =
-  (): PlanningCenterPlanItemsServiceCaches => ({
-    items: new PlanningCenterReadCache<PlanItemsResponse>(),
-  });
 
 interface PlanItemsResponse {
   data: PCResource[];
@@ -41,51 +29,33 @@ const buildItemPayload = (attributes: JsonObject, id?: string) => ({
   },
 });
 
-const clonePlanItemsResponse = (
-  response: PlanItemsResponse
-): PlanItemsResponse => ({
-  data: structuredClone(response.data),
-  included: structuredClone(response.included),
-});
-
 export class PlanningCenterPlanItemsService {
   private readonly core: PlanningCenterCoreClient;
-  private readonly caches: PlanningCenterPlanItemsServiceCaches;
-
-  constructor(
-    core: PlanningCenterCoreClient,
-    caches: PlanningCenterPlanItemsServiceCaches = createPlanningCenterPlanItemsServiceCaches()
-  ) {
+  constructor(core: PlanningCenterCoreClient) {
     this.core = core;
-    this.caches = caches;
   }
 
   getPlanItems(
     serviceTypeId: string,
     planId: string
   ): Effect.Effect<PlanItemsResponse, PlanningCenterError> {
-    const load = () =>
-      this.core
-        .fetchAllWithIncluded(
-          `/services/v2/service_types/${serviceTypeId}/plans/${planId}/items`,
-          { include: PLAN_ITEM_INCLUDES },
-          5
+    // A write may reach another isolate, so an isolate-local list cache cannot
+    // provide read-after-write consistency for the run sheet.
+    return this.core
+      .fetchAllWithIncluded(
+        `/services/v2/service_types/${serviceTypeId}/plans/${planId}/items`,
+        { include: PLAN_ITEM_INCLUDES },
+        5
+      )
+      .pipe(
+        Effect.tap((result) =>
+          log.info("Plan items fetched", {
+            serviceTypeId,
+            planId,
+            itemCount: result.data.length,
+          })
         )
-        .pipe(
-          Effect.tap((result) =>
-            log.info("Plan items fetched", {
-              serviceTypeId,
-              planId,
-              itemCount: result.data.length,
-            })
-          )
-        );
-    return cachedRead(
-      this.caches.items,
-      this.buildPlanItemsCacheKey(serviceTypeId, planId),
-      PLAN_ITEMS_CACHE_TTL_MS,
-      load
-    ).pipe(Effect.map(clonePlanItemsResponse));
+      );
   }
 
   getPlanItem(
@@ -115,10 +85,10 @@ export class PlanningCenterPlanItemsService {
         { method: "POST", body: buildItemPayload(attributes) }
       )
       .pipe(
-        Effect.map((response) => {
-          this.invalidatePlanItemsCache(serviceTypeId, planId);
-          return { data: response.data, included: response.included ?? [] };
-        })
+        Effect.map((response) => ({
+          data: response.data,
+          included: response.included ?? [],
+        }))
       );
   }
 
@@ -134,10 +104,10 @@ export class PlanningCenterPlanItemsService {
         { method: "PATCH", body: buildItemPayload(attributes, itemId) }
       )
       .pipe(
-        Effect.map((response) => {
-          this.invalidatePlanItemsCache(serviceTypeId, planId);
-          return { data: response.data, included: response.included ?? [] };
-        })
+        Effect.map((response) => ({
+          data: response.data,
+          included: response.included ?? [],
+        }))
       );
   }
 
@@ -151,14 +121,7 @@ export class PlanningCenterPlanItemsService {
         `/services/v2/service_types/${serviceTypeId}/plans/${planId}/items/${itemId}`,
         { method: "DELETE" }
       )
-      .pipe(
-        Effect.asVoid,
-        Effect.tap(() =>
-          Effect.sync(() => {
-            this.invalidatePlanItemsCache(serviceTypeId, planId);
-          })
-        )
-      );
+      .pipe(Effect.asVoid);
   }
 
   reorderPlanItems(
@@ -179,30 +142,6 @@ export class PlanningCenterPlanItemsService {
           },
         }
       )
-      .pipe(
-        Effect.asVoid,
-        Effect.tap(() =>
-          Effect.sync(() => {
-            this.invalidatePlanItemsCache(serviceTypeId, planId);
-          })
-        )
-      );
-  }
-
-  private buildPlanItemsCacheKey(
-    serviceTypeId: string,
-    planId: string
-  ): string {
-    return [
-      this.core.getCacheScope(),
-      "plan-items",
-      encodeURIComponent(serviceTypeId),
-      encodeURIComponent(planId),
-    ].join(":");
-  }
-
-  private invalidatePlanItemsCache(serviceTypeId: string, planId: string) {
-    const cacheKey = this.buildPlanItemsCacheKey(serviceTypeId, planId);
-    this.caches.items.deleteWhere((key) => key === cacheKey);
+      .pipe(Effect.asVoid);
   }
 }

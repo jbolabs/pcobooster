@@ -15,7 +15,11 @@ import type {
   PlanItem,
   SongOptionSet,
 } from "@pcobooster/planning-center-models/types";
-import { QueryClient } from "@tanstack/react-query";
+import {
+  MutationObserver,
+  QueryClient,
+  QueryObserver,
+} from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -355,6 +359,60 @@ describe("plan item query state", () => {
       queryKey,
       type: "active",
     });
+  });
+
+  it("keeps an added song visible while a key edit outlasts an earlier refresh timer", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    let serverItems = [createItem("opening", 1)];
+    const observer = new QueryObserver(queryClient, {
+      queryKey,
+      queryFn: () => serverItems,
+      staleTime: Infinity,
+    });
+    const unsubscribe = observer.subscribe(() => {});
+    await observer.refetch();
+    queryClient.setQueryData(queryKey, [
+      createItem("opening", 1),
+      createSongItem("new-song", 2, "song-1"),
+    ]);
+    // The add has settled, and its refresh will fire during the following key edit.
+    settlePlanItemsQuery(queryClient, queryKey);
+    const finishEdit = Promise.withResolvers<undefined>();
+    const mutation = new MutationObserver(queryClient, {
+      mutationKey: queryKey,
+      mutationFn: async () => {
+        await finishEdit.promise;
+      },
+      onSettled: () => {
+        settlePlanItemsQuery(queryClient, queryKey);
+      },
+    });
+    const edit = mutation.mutate();
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(
+      queryClient.getQueryData<PlanItem[]>(queryKey)?.map((item) => item.id)
+    ).toStrictEqual(["opening", "new-song"]);
+    serverItems = [
+      createItem("opening", 1),
+      {
+        ...createSongItem("new-song", 2, "song-1"),
+        key: { id: "key-d", name: "D", startingKey: "D", endingKey: "D" },
+      },
+    ];
+    finishEdit.resolve();
+    await edit;
+    // Once editing finishes, the next refresh is allowed to reconcile again.
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(
+      queryClient.getQueryData<PlanItem[]>(queryKey)?.map((item) => item.id)
+    ).toStrictEqual(["opening", "new-song"]);
+    expect(queryClient.getQueryData<PlanItem[]>(queryKey)?.[1].key?.name).toBe(
+      "D"
+    );
+    unsubscribe();
+    queryClient.clear();
   });
 
   it("clears persisted plan-item and song metadata snapshots when optimistic mutations settle", () => {
