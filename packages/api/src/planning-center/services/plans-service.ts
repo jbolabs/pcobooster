@@ -115,6 +115,9 @@ export const nextRangeOffset = (
     : page.nextOffset;
 };
 
+const planAttachmentsPath = (serviceTypeId: string, planId: string) =>
+  `/services/v2/service_types/${serviceTypeId}/plans/${planId}/all_attachments`;
+
 export class PlanningCenterPlansService {
   private readonly core: PlanningCenterCoreClient;
   private readonly resolveTimeZone: Effect.Effect<string, PlanningCenterError>;
@@ -438,6 +441,58 @@ export class PlanningCenterPlansService {
         included: response.included ?? [],
       })
     );
+  }
+
+  /**
+   * One page of every file the plan reaches: its own, its items', and its songs'
+   * arrangements' and keys'. Plan-scoped paths let Planning Center apply the caller's access.
+   */
+  getPlanAttachmentsPage(
+    serviceTypeId: string,
+    planId: string,
+    offset: number
+  ): Effect.Effect<PlanningCenterPage, PlanningCenterError> {
+    return this.core.fetchPage(
+      planAttachmentsPath(serviceTypeId, planId),
+      {},
+      offset
+    );
+  }
+
+  getPlanAttachment(
+    serviceTypeId: string,
+    planId: string,
+    attachmentId: string
+  ): Effect.Effect<PCResource, PlanningCenterError> {
+    return Effect.map(
+      this.core.fetch(
+        `${planAttachmentsPath(serviceTypeId, planId)}/${attachmentId}`
+      ),
+      (response) => response.data
+    );
+  }
+
+  /**
+   * A short-lived link to the file, or to Planning Center's preview of it. Opening records a
+   * view and changes nothing, so the read-only demo client allows it.
+   */
+  openPlanAttachment(
+    serviceTypeId: string,
+    planId: string,
+    attachmentId: string,
+    preview: boolean
+  ): Effect.Effect<string, PlanningCenterError> {
+    return this.core
+      .fetch(
+        `${planAttachmentsPath(serviceTypeId, planId)}/${attachmentId}/${preview ? "preview" : "open"}`,
+        { method: "POST", body: {}, readAction: true }
+      )
+      .pipe(
+        Effect.map((response) => {
+          const url = response.data.attributes.attachment_url;
+          return isNonEmptyString(url) ? url : "";
+        })
+      );
   }
 
   invalidatePlanTimesCache(serviceTypeId: string, planId: string) {
