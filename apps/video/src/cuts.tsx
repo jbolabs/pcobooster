@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import {
   AbsoluteFill,
   Html5Audio,
+  Sequence,
   Series,
   interpolate,
   staticFile,
@@ -9,7 +10,7 @@ import {
 
 import { Backdrop } from "./components/backdrop";
 import type { Lines } from "./components/headline";
-import { FPS } from "./lib/format";
+import { FORMATS, FPS, PORTRAIT_SAFE, useFormat } from "./lib/format";
 import {
   BrandScene,
   EndCard,
@@ -203,20 +204,45 @@ const Music = ({ duration }: { duration: number }) => (
 
 const SCORED: ReadonlySet<CutId> = new Set(FEED_CUT_IDS);
 
-export const Cut = ({ cut }: { cut: CutId }) => (
-  <AbsoluteFill>
-    <Backdrop />
-    {SCORED.has(cut) ? <Music duration={cutDuration(cut)} /> : null}
-    <Series>
-      {CUTS[cut].map((entry) => (
-        <Series.Sequence
-          key={entry.name}
-          name={entry.name}
-          durationInFrames={entry.duration}
-        >
-          {entry.render(entry.duration)}
-        </Series.Sequence>
-      ))}
-    </Series>
-  </AbsoluteFill>
+/**
+ * Cuts whose 9:16 plays the 4:5 cut as is: the desktop replica and the feed's tuned zooms,
+ * on a full-height stage. The frame sits so its headline starts at the top safe line.
+ */
+const FEED_FRAMED_IN_PORTRAIT: ReadonlySet<CutId> = new Set<CutId>(["Demo50"]);
+const FEED_FRAME_TOP = PORTRAIT_SAFE.top - 70;
+
+const Scenes = ({ cut }: { cut: CutId }) => (
+  <Series>
+    {CUTS[cut].map((entry) => (
+      <Series.Sequence
+        key={entry.name}
+        name={entry.name}
+        durationInFrames={entry.duration}
+      >
+        {entry.render(entry.duration)}
+      </Series.Sequence>
+    ))}
+  </Series>
 );
+
+export const Cut = ({ cut }: { cut: CutId }) => {
+  const framed = useFormat() === "portrait" && FEED_FRAMED_IN_PORTRAIT.has(cut);
+  return (
+    <AbsoluteFill>
+      <Backdrop />
+      {SCORED.has(cut) ? <Music duration={cutDuration(cut)} /> : null}
+      {framed ? (
+        <Sequence
+          name="4:5 frame"
+          width={FORMATS.feed.width}
+          height={FORMATS.feed.height}
+          style={{ top: FEED_FRAME_TOP }}
+        >
+          <Scenes cut={cut} />
+        </Sequence>
+      ) : (
+        <Scenes cut={cut} />
+      )}
+    </AbsoluteFill>
+  );
+};
