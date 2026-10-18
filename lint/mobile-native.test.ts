@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, extname, join, relative } from "node:path";
 
+import { parseSync } from "oxc-parser";
 import { describe, expect, it } from "vitest";
 
 import { siteHead } from "../apps/marketing/src/lib/site-head";
@@ -463,10 +464,10 @@ describe("document metadata", () => {
   );
 
   /*
-   * Both apps open the shared full-screen phone menu, whose frosted fixed layer makes
-   * Safari 26 fill its bar areas with a solid color. With theme-color metas on the product,
-   * a line stayed above Safari's bottom bar after the menu closed, on every page until a
-   * reload; without them (#175), Safari tints its bars from the page.
+   * Both apps open the shared full-screen phone menu. While it was a frosted fixed layer,
+   * Safari 26 filled its bar areas with a solid color; with theme-color metas on the product,
+   * a line then stayed above Safari's bottom bar after the menu closed, on every page until a
+   * reload. Without them (#175), Safari tints its bars from the page.
    */
   it.each([
     ["product", productHeadMeta(), ["charSet", "viewport", "color-scheme"]],
@@ -507,4 +508,194 @@ describe("document metadata", () => {
   it("keeps the marketing site light-only", () => {
     expect(metaContent(siteHead().meta, "color-scheme")).toBe("light");
   });
+});
+
+/** A JSX element as these checks read it: its tag, attributes, and enclosing elements. */
+interface JsxElement {
+  tag: string;
+  attributes: Map<string, unknown>;
+  /** The static class tokens of `className`: every string literal in it, split on spaces. */
+  classes: string[];
+  /** Enclosing JSX elements, innermost first. */
+  ancestors: JsxElement[];
+}
+
+const isNode = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+/** Every string literal in an expression, so `cn("a", open && "b")` reads as `a b`. */
+const stringLiterals = (node: unknown): string[] => {
+  if (Array.isArray(node)) {
+    return node.flatMap(stringLiterals);
+  }
+  if (!isNode(node)) {
+    return [];
+  }
+  if (node.type === "Literal" && typeof node.value === "string") {
+    return [node.value];
+  }
+  if (node.type === "TemplateElement" && isNode(node.value)) {
+    return [String(node.value.cooked ?? "")];
+  }
+  return Object.values(node).flatMap(stringLiterals);
+};
+
+const tagName = (name: unknown): string => {
+  if (!isNode(name)) {
+    return "";
+  }
+  if (name.type === "JSXMemberExpression") {
+    return `${tagName(name.object)}.${tagName(name.property)}`;
+  }
+  return String(name.name ?? "");
+};
+
+/** Every JSX element in a TSX file, with the elements around it. */
+const jsxElements = (path: string): JsxElement[] => {
+  const { program, errors } = parseSync(
+    path,
+    readFileSync(join(repositoryRoot, path), "utf8")
+  );
+  expect(errors).toStrictEqual([]);
+  const found: JsxElement[] = [];
+  const visit = (node: unknown, ancestors: JsxElement[]) => {
+    if (Array.isArray(node)) {
+      for (const child of node) {
+        visit(child, ancestors);
+      }
+      return;
+    }
+    if (!isNode(node)) {
+      return;
+    }
+    if (node.type !== "JSXElement" || !isNode(node.openingElement)) {
+      for (const child of Object.values(node)) {
+        visit(child, ancestors);
+      }
+      return;
+    }
+    const opening = node.openingElement;
+    const attributes = new Map<string, unknown>();
+    for (const attribute of Array.isArray(opening.attributes)
+      ? opening.attributes
+      : []) {
+      if (isNode(attribute) && attribute.type === "JSXAttribute") {
+        attributes.set(tagName(attribute.name), attribute.value);
+      }
+    }
+    const element: JsxElement = {
+      tag: tagName(opening.name),
+      attributes,
+      classes: stringLiterals(attributes.get("className")).flatMap((value) =>
+        value.split(/\s+/u).filter(Boolean)
+      ),
+      ancestors,
+    };
+    found.push(element);
+    visit(opening.attributes, [element, ...ancestors]);
+    visit(node.children, [element, ...ancestors]);
+  };
+  visit(program, []);
+  return found;
+};
+
+/** A class token without its variants: `md:hidden` is `hidden`, `[&>a]:hover:x` is `x`. */
+const utilityOf = (token: string): string => {
+  let depth = 0;
+  let start = 0;
+  for (const [index, character] of [...token].entries()) {
+    if (character === "[") {
+      depth += 1;
+    } else if (character === "]") {
+      depth -= 1;
+    } else if (character === ":" && depth === 0) {
+      start = index + 1;
+    }
+  }
+  return token.slice(start);
+};
+
+const isViewportConstrained = (element: JsxElement): boolean =>
+  element.classes.some((token) =>
+    ["fixed", "sticky"].includes(utilityOf(token))
+  );
+
+const backdropClasses = (elements: JsxElement[]): string[] =>
+  elements.flatMap(({ classes }) =>
+    classes.filter((token) => utilityOf(token).startsWith("backdrop-"))
+  );
+
+const lvhHeightPattern = /^h-\[(\d+)lvh\]$/u;
+
+/*
+ * Safari 26 decides how to draw its toolbar edges from what the page shows there
+ * (WebKit `LocalFrameView::fixedContainerEdges`): it hit-tests 4px inside each viewport edge
+ * the browser UI covers and walks up from the hit element to the first fixed or sticky
+ * ancestor of about the viewport's size (90% to 105% across the edge and along it). A
+ * backdrop filter anywhere on that walk makes the edge "multiple colors": Safari then fills
+ * the area under its bar with a solid color and drops the soft glass, which reads as a hard
+ * line above the bar while the menu is open. A layer taller than 105% of the viewport is
+ * skipped, and with no fixed or sticky ancestor left the bars stay glass over the page.
+ * See docs/mobile-native-audit.md, finding 27.
+ */
+describe("the phone menu under Safari's toolbars", () => {
+  const sharedMenu = jsxElements("packages/ui/src/mobile-menu.tsx");
+  const [overlay] = sharedMenu.filter(
+    ({ attributes }) =>
+      stringLiterals(attributes.get("data-slot")).join() ===
+      "mobile-menu-overlay"
+  );
+  const insideOverlay = sharedMenu.filter(({ ancestors }) =>
+    ancestors.includes(overlay)
+  );
+
+  it("draws the menu on an opaque page-colored layer with no backdrop filter", () => {
+    expect(
+      overlay.classes.filter((token) => utilityOf(token).startsWith("bg-"))
+    ).toStrictEqual(["bg-background"]);
+    expect(backdropClasses([overlay, ...insideOverlay])).toStrictEqual([]);
+  });
+
+  it("makes the fixed layer taller than Safari's 105% viewport-size cutoff", () => {
+    const heights = overlay.classes.flatMap((token) => {
+      const match = lvhHeightPattern.exec(token);
+      return match ? [Number(match[1])] : [];
+    });
+    expect(overlay.classes).toContain("fixed");
+    expect(heights).toHaveLength(1);
+    expect(heights[0]).toBeGreaterThan(105);
+  });
+
+  it("keeps the menu's own content off fixed and sticky positioning", () => {
+    expect(insideOverlay.map(({ tag }) => tag)).toContain("div");
+    expect(
+      insideOverlay.filter(isViewportConstrained).map(({ classes }) => classes)
+    ).toStrictEqual([]);
+  });
+
+  it.each([
+    ["apps/web/src/components/mobile-menu.tsx"],
+    ["apps/marketing/src/components/site.tsx"],
+  ])(
+    "renders %s's menu outside sticky and fixed elements, without a frost",
+    (path) => {
+      const menus = jsxElements(path).filter(
+        ({ tag }) => tag === "MobileMenuOverlay"
+      );
+      expect(menus).toHaveLength(1);
+      const [menu] = menus;
+      expect(
+        menu.ancestors
+          .filter(isViewportConstrained)
+          .map(
+            ({ tag, classes }) => `<${tag} className="${classes.join(" ")}">`
+          )
+      ).toStrictEqual([]);
+      expect(
+        menu.classes.filter((token) =>
+          /^(?:bg-|backdrop-)/u.test(utilityOf(token))
+        )
+      ).toStrictEqual([]);
+    }
+  );
 });

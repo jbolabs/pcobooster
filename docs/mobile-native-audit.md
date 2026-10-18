@@ -24,6 +24,7 @@ Each guard was written first and run against the untouched code; every offender 
 | stylesheet scrollers | `overflow: auto/scroll` without `overscroll-behavior` | 6 in `product-demo.module.css` |
 | viewport units, zoom lock, sniffing, touch listeners | `vh`/`h-screen`, `user-scalable`/`maximum-scale`, `navigator.userAgent`/`maxTouchPoints`/`ontouchstart`, non-passive touch or wheel listeners | 0 each (kept as regression guards) |
 | document metadata | Viewport parts in both apps, no theme-color meta in either app (head helpers and any source that renders, queries, or writes one), manifest colors | 3: marketing viewport, manifest `theme_color`; the theme-color guard (added for finding 26) failed on 3: product `document-head.ts` and `theme.ts`, marketing `site-head.ts` |
+| phone menu under Safari's toolbars (finding 27) | The shared overlay is an opaque `bg-background` layer with no backdrop filter, taller than 105% of the viewport (`h-[125lvh]`), with no fixed or sticky element inside it; each app renders it outside every sticky or fixed element (oxc-parser over the shared component and both apps) | 5 of 5 failed: `bg-background/75` and `backdrop-blur-xl` on the overlay, `inset-0` height, no inner panel, and both apps nesting it in their sticky `<header>` |
 
 ## Findings
 
@@ -57,6 +58,7 @@ Verification: **E** = verified in an emulated mobile browser (Playwright iPhone 
 | 24 | low | `worst-case-data-toggle.tsx:19` | Dev-only toggle under the home indicator | Bottom inset | fixed | G |
 | 25 | low | Sonner CSS, React Query Devtools | Third-party `:hover` rules (Sonner close button, devtools) | Sonner's close button isn't enabled; devtools are dev-only | not fixed: third party, not reachable on phones | E |
 | 26 | high | `apps/web/src/routes/__root.tsx`, `lib/document-head.ts`, `lib/theme.ts`, `theme-provider.tsx`, `apps/marketing/src/lib/site-head.ts` | On an iPhone (Safari, signed in), opening the phone menu left a line above Safari's bottom bar on every page until a reload; not reported on `main`, which has no product theme-color | Drop the theme-color metas and their runtime writer from the product, and the marketing meta (the same menu opens there); keep the manifest `theme_color` for the installed app | fixed (hypothesis, see below) | E (page state), G, P (the line) |
+| 27 | high | `packages/ui/src/mobile-menu.tsx`, `mobile-menu.css`, `apps/web/src/components/mobile-menu.tsx`, `apps/marketing/src/components/site.tsx` | With finding 26 fixed, the line no longer stayed after closing, but while the phone menu was open a hard line still sat above Safari's bottom bar | Overlay opaque page color, no backdrop filter, 125lvh tall, rendered beside the sticky header (stacked just under it) with its content on an absolute `h-dvh` panel | fixed | E (WebKit rule ported to the page: `Multiple` before, no candidate after, every frame of the fade), G, P (the line) |
 
 ## Already right (verified, unchanged)
 
@@ -94,3 +96,35 @@ Before and after clips (Playwright iPhone 15 emulation, Chromium) live outside t
 **Guard:** `lint/mobile-native.test.ts` "leaves the product's / marketing's browser bars to the page, with no theme-color" pins each app's head metas to `charSet`, `viewport`, `color-scheme`. "renders, queries, or writes no theme-color meta anywhere in either app" scans web, marketing, and `packages/ui` source. On the unfixed code it failed on marketing's head and on `apps/web/src/lib/document-head.ts`, `apps/web/src/lib/theme.ts`, and `apps/marketing/src/lib/site-head.ts`.
 
 **Check on the iPhone:** open and close the phone menu on a plan list, scroll, and navigate to another section. The bottom bar should stay glass over the page, with no line.
+
+The line that still showed while the menu was open, once this was fixed, is finding 27.
+
+## Finding 27: a hard line above Safari's bottom bar while the phone menu is open
+
+**Symptom (Jake's iPhone, iOS 26 Safari, Liquid Glass bar, after finding 26):** nothing stays after closing, but while the menu is open a border sits just above Safari's bottom toolbar. It goes when the menu closes.
+
+**The rule (WebKit source, the same in every Safari 26 branch from `safari-7622` (26.0) through `safari-7625`):**
+
+1. When the browser UI covers an edge of the page (obscured insets: Safari's bottom bar, the iPhone status area), WebKit computes a "fixed container edge" for that side, after a load, when fixed or sticky elements appear or disappear, and when the insets change (`WebPage::sidesRequiringFixedContainerEdges`, `WebPage::didAddOrRemoveViewportConstrainedObjects`, `Page::setObscuredInsets`).
+2. It hit-tests the midpoint of the side 4px inside the viewport and walks up from the hit element (`LocalFrameView::fixedContainerEdges`). The first fixed or sticky ancestor that is about viewport-sized along that side wins: 90% to 105% of the viewport across the edge, and no taller than 105% along it (`compareWithViewportSize`, `TooLarge`). Elements with opacity under 0.1, `visibility: hidden`, or nothing to paint are skipped (`isHiddenOrNearlyTransparent`); so is a viewport-sized one with a negative z-index (26.1+). Any ancestor qualifies, not only one docked to that edge: a sticky top header holding the menu wins the bottom edge.
+3. If any element on that walk (other than skipped ones) has a `backdrop-filter`, the edge is `PredominantColorType::Multiple`. Otherwise it takes the walk's background color (at 75% alpha or more, made opaque; below, blended over the page color), else samples the 2px strip of painted pixels at the edge.
+4. On iOS, any fixed edge shows a `WKColorExtensionView` over the inset area, filled with that color or, for `Multiple`, the web view's `underPageBackgroundColor`, and hides the soft scroll edge effect on that side (`-[WKWebView _updateFixedColorExtensionViews]`, `_updateHiddenScrollPocketEdges`). The view appears at once and fades out over 0.1s (`WKColorExtensionView`).
+
+**Why the open menu drew a line:** the overlay was `bg-background/75` with `backdrop-blur-xl`, `fixed inset-0`, inside the product's and marketing's sticky `<header>`. Fully faded in, it is the viewport-sized candidate and its backdrop filter makes the bottom edge `Multiple`: Safari puts a solid page-colored band under its bar and drops the glass, so the frosted menu (the page blurred through it) meets a flat band in a hard horizontal line. During the first frames of the fade (opacity under 0.1) the overlay is skipped and the sticky header wins the bottom edge instead, sampled from whatever the page shows. Closing removes the overlay, so the edge goes back to none and the glass returns.
+
+**The fix:** the overlay is no longer a candidate in any frame, so Safari treats the open menu like any page and keeps its glass:
+
+- Opaque `bg-background`, no backdrop filter, so even a future Safari that read it would extend the same color it paints.
+- `fixed inset-x-0 top-0 h-[125lvh]`: taller than 105% of the viewport (the comparison uses the smaller of the fixed-position rect and `100vh`, so 125lvh clears it at every toolbar state). The extra quarter sits off screen under the bar; the content sits on an absolute `h-dvh` panel (`data-slot="mobile-menu-panel"`) padded by the top inset, so it still fills exactly the visible screen.
+- Rendered beside each app's sticky header, never inside it, at one z-index under it (product `z-29` under `z-30`, marketing `z-19` under `z-20`), so the header's menu button stays on top.
+- The fade (opacity) stays: skipped or too large, the overlay is never the edge's container.
+
+The frosted translucency is gone: the open menu is the page's background color. On the iPhone the overlay blurred the page enough that it already read as almost solid; the cascade, fade, and header are unchanged.
+
+**Documented vs inferred:** steps 1 to 4 are read from WebKit source (`Source/WebCore/page/LocalFrameView.cpp`, `Source/WebCore/page/Page.cpp`, `Source/WebKit/UIProcess/API/Cocoa/WKWebView.mm`, `Source/WebKit/UIProcess/Cocoa/WKColorExtensionView.mm`) and commits such as [25a957aa](https://github.com/WebKit/WebKit/commit/25a957aaa1) (backdrop filter means `Multiple`) and [2ae949b7](https://github.com/WebKit/WebKit/commit/2ae949b787) ([bug 300965](https://bugs.webkit.org/show_bug.cgi?id=300965), dialog backdrops). A WebKit engineer confirms the intent in [bug 301756](https://bugs.webkit.org/show_bug.cgi?id=301756): a solid color extension "is only needed in cases where there's a viewport-constrained (fixed or sticky) element near one of the edges of the viewport that borders an obscured content inset". Apple publishes no web-facing documentation of it. That the line Jake saw is this color-extension edge, and that Safari's shipping 26.x build matches these branches, is inferred: emulation doesn't draw Safari's bars.
+
+**Verified (Playwright WebKit, iPhone 15):** `/workspace/mobile-demo-tools/safari-edge.ts` ports the walk to the page (hit test, fixed or sticky ancestors, the 0.9 and 1.05 size ratios, opacity under 0.1, backdrop filter). On the real marketing menu before the fix: bottom edge `Multiple` once the overlay faded in, the sticky header for the first frames. After: no candidate at every sampled frame of the fade and while open, top edge unchanged, and the page keeps its scroll position. The product shell harness (built web CSS, new markup) gives the same results. Clip 08 in the demos shows both, with Safari's bar drawn from the rule's verdict.
+
+**Guard:** `lint/mobile-native.test.ts` "the phone menu under Safari's toolbars". It failed 5 of 5 on the unfixed code (see the guard table).
+
+**Check on the iPhone:** on a plan list and on pcobooster.com, scroll partway, open the phone menu, and watch the bottom bar while it fades in, sits open, and closes: the bar should stay glass over the menu with no line. Then collapse Safari's bar (scroll before opening) and open again; and try landscape.
