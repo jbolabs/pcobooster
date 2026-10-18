@@ -113,6 +113,35 @@ export const planFileSection = (file: PlanFile): FileSection => {
   return "other";
 };
 
+/**
+ * The file to open among `files`, given the one open before: the file itself, else (on
+ * another song) the same part or chart by name ("Bass: Bass", "Lyrics"), else the same
+ * generated chart in another key. Stepping through a set so keeps your place. Null when
+ * nothing corresponds, and the first file opens instead.
+ */
+export const continuingFile = (
+  files: PlanFile[],
+  previous: PlanFile | undefined
+): PlanFile | null => {
+  if (previous === undefined) {
+    return null;
+  }
+  const same = files.find((file) => file.id === previous.id);
+  if (same !== undefined) {
+    return same;
+  }
+  const byName = files.find((file) => file.name === previous.name);
+  if (byName !== undefined) {
+    return byName;
+  }
+  if (!previous.providerType.startsWith("AttachmentChart")) {
+    return null;
+  }
+  return (
+    files.find((file) => file.providerType === previous.providerType) ?? null
+  );
+};
+
 /** Generated charts lead, chord before lyric; then other charts and uploads. */
 const chartRank = (file: PlanFile): number => {
   const ranks = [

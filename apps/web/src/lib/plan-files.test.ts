@@ -3,6 +3,7 @@ import type { PlanItem } from "@pcobooster/planning-center-models/types";
 import { describe, expect, it } from "vitest";
 
 import {
+  continuingFile,
   groupPlanFiles,
   planFileKind,
   sectionPlanFiles,
@@ -183,5 +184,83 @@ describe("File sections", () => {
       ["video", ["yt"]],
       ["other", ["doc"]],
     ]);
+  });
+});
+
+describe("Continuing through a set", () => {
+  const chordInE = {
+    ...file,
+    id: "1",
+    name: "Chord Chart in E",
+    providerType: "AttachmentChart::Chord",
+  };
+  const lyricsA = {
+    ...file,
+    id: "2",
+    name: "Lyrics",
+    providerType: "AttachmentChart::Lyric",
+  };
+  const bassA = {
+    ...file,
+    id: "3",
+    name: "Bass: Bass",
+    providerType: "AttachmentRehearsalMixV2",
+  };
+
+  it("opens the file itself when it is there", () => {
+    const next = [
+      { ...lyricsA, id: "40" },
+      { ...lyricsA, id: "2" },
+    ];
+    expect(continuingFile(next, lyricsA)?.id).toBe("2");
+  });
+
+  it("keeps the same part or chart by name", () => {
+    const next = [
+      {
+        ...file,
+        id: "10",
+        name: "Keys: Piano",
+        providerType: "AttachmentRehearsalMixV2",
+      },
+      {
+        ...file,
+        id: "11",
+        name: "Bass: Bass",
+        providerType: "AttachmentRehearsalMixV2",
+      },
+    ];
+    expect(continuingFile(next, bassA)?.id).toBe("11");
+    expect(continuingFile([{ ...lyricsA, id: "12" }], lyricsA)?.id).toBe("12");
+  });
+
+  it("follows a generated chart into another key", () => {
+    const next = [
+      {
+        ...file,
+        id: "20",
+        name: "Lyrics",
+        providerType: "AttachmentChart::Lyric",
+      },
+      {
+        ...file,
+        id: "21",
+        name: "Chord Chart in G",
+        providerType: "AttachmentChart::Chord",
+      },
+    ];
+    expect(continuingFile(next, chordInE)?.id).toBe("21");
+  });
+
+  it("falls back when a missing part has no counterpart", () => {
+    const next = [
+      {
+        ...file,
+        id: "30",
+        name: "Keys: Piano",
+        providerType: "AttachmentRehearsalMixV2",
+      },
+    ];
+    expect(continuingFile(next, bassA)).toBeNull();
   });
 });

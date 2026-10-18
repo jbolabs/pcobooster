@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { PageScrollArea } from "@/components/page-shell";
 import { QueryDataBoundary } from "@/components/query-data-boundary";
 import { AddSongPalette } from "@/components/schedule/add-song-palette";
+import { PlanFileDialog } from "@/components/schedule/plan-file-dialog";
 import {
   PlanItemList,
   PlanItemListEmpty,
@@ -41,12 +42,15 @@ import { useDismissOnOutsidePress } from "@/hooks/use-dismiss-on-outside-press";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { usePlanBuilderDrag } from "@/hooks/use-plan-builder-drag";
 import { usePlanBuilderHotkeys } from "@/hooks/use-plan-builder-hotkeys";
+import { usePlanFileDialog } from "@/hooks/use-plan-file-dialog";
+import type { PlanFileDialogControl } from "@/hooks/use-plan-file-dialog";
 import {
   isOptimisticItemId,
   usePlanTabController,
 } from "@/hooks/use-plan-tab-controller";
 import type { AddedPlanItemKind } from "@/hooks/use-plan-tab-controller";
 import { useRevealOnLoad } from "@/hooks/use-reveal-on-load";
+import { songItemsOf } from "@/lib/plan-file-dialog";
 import { cn } from "@/lib/utils";
 
 interface PlanTabProps {
@@ -70,15 +74,17 @@ const runQuietly = (task: () => Promise<void>) => {
   });
 };
 
+/** A run sheet row's focusable surface. */
+const rowFocusTarget = (itemId: string) =>
+  document
+    .querySelector<HTMLElement>(`[data-plan-item-id="${CSS.escape(itemId)}"]`)
+    ?.querySelector<HTMLElement>('[data-slot="item"]') ?? null;
+
 const focusRow = (itemId: string) => {
   requestAnimationFrame(() => {
-    const row = document.querySelector<HTMLElement>(
-      `[data-plan-item-id="${CSS.escape(itemId)}"]`
-    );
-    row?.scrollIntoView({ block: "nearest" });
-    row
-      ?.querySelector<HTMLElement>('[data-slot="item"]')
-      ?.focus({ preventScroll: true });
+    const target = rowFocusTarget(itemId);
+    target?.scrollIntoView({ block: "nearest" });
+    target?.focus({ preventScroll: true });
   });
 };
 
@@ -342,6 +348,33 @@ const RemoveItemDialog = ({
   />
 );
 
+/** The file dialog over the plan, stepping through its saved songs. */
+const PlanFiles = ({
+  items,
+  serviceTypeId,
+  planId,
+  dialog,
+}: Pick<PlanTabProps, "serviceTypeId" | "planId"> & {
+  items: readonly PlanItem[];
+  dialog: PlanFileDialogControl;
+}) => {
+  if (serviceTypeId === null || planId === null) {
+    return null;
+  }
+  const saved = items.filter((item) => !isOptimisticItemId(item.id));
+  return (
+    <PlanFileDialog
+      items={saved}
+      songs={songItemsOf(saved)}
+      serviceTypeId={serviceTypeId}
+      planId={planId}
+      state={dialog.state}
+      onStateChange={dialog.handleChange}
+      finalFocus={dialog.finalFocus}
+    />
+  );
+};
+
 /**
  * The plan builder: the run sheet, with an opened row's details sliding in beside it.
  * New songs come from the add-song dialog and land after the selected row.
@@ -392,6 +425,9 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
     setReplacingItemId(replaceItemId);
     controller.setSongPickerOpen(true);
   };
+  const handleAddSong = () => {
+    openSongPicker();
+  };
   const chooseSong = (song: SongCatalogEntry) => {
     const replaceItemId = replacingItemId;
     runQuietly(async () => {
@@ -408,6 +444,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
     setSelectedItemId(itemId);
     setTitleFocusItemId(null);
   };
+  const fileDialog = usePlanFileDialog(select, rowFocusTarget);
   const selectAndFocus = (itemId: string | null) => {
     select(itemId);
     if (itemId !== null) {
@@ -425,7 +462,8 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
       focusRow(selectedItemId);
     }
   };
-  const removeAndSelectNeighbor = (itemId: string) => {
+  const handleConfirmRemove = (itemId: string) => {
+    setRemovingItemId(null);
     const index = items.findIndex((item) => item.id === itemId);
     const neighbor = items[index + 1] ?? items[index - 1] ?? null;
     controller.removeItem(itemId);
@@ -452,6 +490,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
       initialLoadFailed,
       songPickerOpen,
       removingItemId !== null,
+      fileDialog.state !== null,
       drag.activeItemId !== null,
     ]),
     items,
@@ -472,9 +511,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
       });
     },
     onRemove: setRemovingItemId,
-    onAddSong: () => {
-      openSongPicker();
-    },
+    onAddSong: handleAddSong,
     onAddBasic: (kind) => {
       addBasicItem(kind);
     },
@@ -524,6 +561,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
         }}
         onRemove={setRemovingItemId}
         onReplaceSong={openSongPicker}
+        onOpenFile={fileDialog.openFor(detailItem.id)}
         onClose={closeDetails}
         inSheet={!isWide}
         className="max-h-full"
@@ -579,10 +617,13 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
         onCancel={() => {
           setRemovingItemId(null);
         }}
-        onConfirm={(itemId) => {
-          setRemovingItemId(null);
-          removeAndSelectNeighbor(itemId);
-        }}
+        onConfirm={handleConfirmRemove}
+      />
+      <PlanFiles
+        items={items}
+        serviceTypeId={serviceTypeId}
+        planId={planId}
+        dialog={fileDialog}
       />
       {isWide ? null : (
         <DetailsSheet open={pane !== null} onOpenChange={setDetailsOpen}>
@@ -609,9 +650,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
                 serviceTypeId={serviceTypeId}
                 handlers={handlers}
                 getItemIntentProps={controller.getItemIntentProps}
-                onAddSong={() => {
-                  openSongPicker();
-                }}
+                onAddSong={handleAddSong}
                 onAddBasic={addBasicItem}
               />
             </QueryDataBoundary>
@@ -619,9 +658,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
           <PlanTabToolbar
             isCreatingBasicItem={controller.isCreatingBasicItem}
             disabled={isLoading}
-            onAddSong={() => {
-              openSongPicker();
-            }}
+            onAddSong={handleAddSong}
             onAddHeader={() => {
               addBasicItem("header");
             }}

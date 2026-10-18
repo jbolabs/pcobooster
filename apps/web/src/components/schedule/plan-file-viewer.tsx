@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { FilePdfReader } from "@/components/schedule/file-pdf-reader";
 import { PlanFileIconTile } from "@/components/schedule/plan-file-icon";
+import { paneBarClassName } from "@/components/schedule/plan-file-pane-bar";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
@@ -22,11 +23,6 @@ import { HoverLabel } from "@/components/ui/hover-card";
 import { Spinner } from "@/components/ui/spinner";
 import { usePlanFileLink } from "@/hooks/use-plan-files";
 import { planFileKind, youtubeEmbedUrl } from "@/lib/plan-files";
-import { cn } from "@/lib/utils";
-
-/** The top bar of each pane. Both share it so the list toggle sits on the same line in either. */
-export const paneBarClassName =
-  "pt-safe-2 flex min-h-12 items-center gap-1 px-3 pb-2";
 
 const OpenOriginal = ({
   url,
@@ -202,6 +198,7 @@ export const PlanFileViewer = ({
   file,
   onBack,
   insetStart = false,
+  atTop = true,
   trailing,
 }: {
   serviceTypeId: string;
@@ -209,9 +206,11 @@ export const PlanFileViewer = ({
   file: PlanFile;
   /** Back to the list on phones; absent when there is no list. */
   onBack?: () => void;
-  /** Extra toolbar controls, such as the phone close button. */
   /** Leaves room on desktop for the browser's fixed list toggle. */
   insetStart?: boolean;
+  /** Whether the toolbar is the top of the screen; false below a dialog header. */
+  atTop?: boolean;
+  /** Extra toolbar controls, such as the phone close button. */
   trailing?: ReactNode;
 }) => {
   const kind = planFileKind(file);
@@ -280,7 +279,7 @@ export const PlanFileViewer = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className={cn(paneBarClassName, insetStart && "sm:pl-12")}>
+      <div className={paneBarClassName({ atTop, insetStart })}>
         {onBack ? (
           <Button
             className="sm:hidden"
