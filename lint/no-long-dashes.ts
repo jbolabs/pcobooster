@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { lstatSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
 const DASHES = /[\u2013\u2014]/g;
@@ -29,7 +30,12 @@ export const findLongDashes = (
 
 const trackedPaths = (): string[] => {
   const output = execFileSync("git", ["ls-files", "--cached", "-z"]);
-  return decoder.decode(output).split("\0").filter(Boolean);
+  // Symlinks (such as .claude/skills) point at tracked files that are checked under their own path.
+  return decoder
+    .decode(output)
+    .split("\0")
+    .filter(Boolean)
+    .filter((path) => !lstatSync(path).isSymbolicLink());
 };
 
 export const checkTrackedFiles = async (): Promise<DashViolation[]> => {
