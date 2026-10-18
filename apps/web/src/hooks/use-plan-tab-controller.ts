@@ -216,6 +216,7 @@ export const usePlanTabController = ({
     },
     { snapshot: PlanItemsOptimisticSnapshot | undefined }
   >({
+    mutationKey: queryKey,
     scope: mutationScope,
     mutationFn: async ({ kind, insertion, optimisticItemId }) => {
       if (!isNonEmptyString(serviceTypeId) || !isNonEmptyString(planId)) {
@@ -284,6 +285,7 @@ export const usePlanTabController = ({
     },
     { snapshot: PlanItemsOptimisticSnapshot | undefined }
   >({
+    mutationKey: queryKey,
     scope: mutationScope,
     mutationFn: async ({ song, insertion, optimisticItemId }) => {
       if (!isNonEmptyString(serviceTypeId) || !isNonEmptyString(planId)) {
@@ -365,6 +367,7 @@ export const usePlanTabController = ({
   });
 
   const deleteItemMutation = useMutation<undefined, Error, PlanItem>({
+    mutationKey: queryKey,
     scope: mutationScope,
     mutationFn: async (item) => {
       if (!isNonEmptyString(serviceTypeId) || !isNonEmptyString(planId)) {
@@ -483,6 +486,7 @@ export const usePlanTabController = ({
     PlanItem[],
     { snapshot: PlanItemsOptimisticSnapshot | undefined }
   >({
+    mutationKey: queryKey,
     scope: mutationScope,
     mutationFn: async (nextItems) => {
       if (!isNonEmptyString(serviceTypeId) || !isNonEmptyString(planId)) {
@@ -530,6 +534,7 @@ export const usePlanTabController = ({
     },
     { snapshot: PlanItemsOptimisticSnapshot | undefined }
   >({
+    mutationKey: queryKey,
     scope: mutationScope,
     mutationFn: async ({
       item,

@@ -19,11 +19,7 @@ import {
   PlanningCenterPeopleService,
 } from "@pcobooster/api/planning-center/services/people-service";
 import type { PlanningCenterPeopleServiceCaches } from "@pcobooster/api/planning-center/services/people-service";
-import {
-  createPlanningCenterPlanItemsServiceCaches,
-  PlanningCenterPlanItemsService,
-} from "@pcobooster/api/planning-center/services/plan-items-service";
-import type { PlanningCenterPlanItemsServiceCaches } from "@pcobooster/api/planning-center/services/plan-items-service";
+import { PlanningCenterPlanItemsService } from "@pcobooster/api/planning-center/services/plan-items-service";
 import {
   createPlanningCenterPlansServiceCaches,
   PlanningCenterPlansService,
@@ -60,7 +56,6 @@ import type { HttpClient } from "effect/http/HttpClient";
 export interface PlanningCenterReadCaches {
   readonly catalog: PlanningCenterCatalogServiceCaches;
   readonly people: PlanningCenterPeopleServiceCaches;
-  readonly planItems: PlanningCenterPlanItemsServiceCaches;
   readonly plans: PlanningCenterPlansServiceCaches;
   readonly songs: PlanningCenterSongsServiceCaches;
   readonly organizationTimeZones: OrganizationTimeZoneCache;
@@ -76,7 +71,6 @@ export const createPlanningCenterReadCaches = (
 ): PlanningCenterReadCaches => ({
   catalog: createPlanningCenterCatalogServiceCaches(),
   people: createPlanningCenterPeopleServiceCaches(),
-  planItems: createPlanningCenterPlanItemsServiceCaches(),
   plans: createPlanningCenterPlansServiceCaches(),
   songs: createPlanningCenterSongsServiceCaches(),
   organizationTimeZones: createOrganizationTimeZoneCache(),
@@ -106,7 +100,6 @@ export const planningCenterReadCachesForRequest = (
     allTeamPeople: caches.people.allTeamPeople.forRequest(),
     planWindowRosters: caches.people.planWindowRosters.forRequest(),
   },
-  planItems: { items: caches.planItems.items.forRequest() },
   plans: {
     rangePages: caches.plans.rangePages.forRequest(),
     planTimes: caches.plans.planTimes.forRequest(),
@@ -192,7 +185,7 @@ const createServicesForClient = (
     /** The organization's IANA zone, or the configured fallback; cached per isolate. */
     organizationTimeZone,
     people: new PlanningCenterPeopleService(core, caches.people),
-    planItems: new PlanningCenterPlanItemsService(core, caches.planItems),
+    planItems: new PlanningCenterPlanItemsService(core),
     plans: new PlanningCenterPlansService(
       core,
       organizationTimeZone,

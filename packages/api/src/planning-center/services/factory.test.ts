@@ -125,34 +125,45 @@ describe("createPlanningCenterServices shared caches", () => {
     expect(secondResult[0].id).toBe("second");
   });
 
-  it("invalidates another request service instance after a mutation", async () => {
-    const fetch = fetchFor(
-      { id: "item-1", type: "Item", attributes: { name: "item-1" } },
-      "/items"
+  it("reads plan items freshly across independently constructed service caches", async () => {
+    let title = "Opening";
+    const fetch = vi.fn<typeof globalThis.fetch>(async (_input, init) => {
+      if (init?.method === "POST") {
+        title = "New item";
+      }
+      const item = { id: "item-1", type: "Item", attributes: { title } };
+      return await Promise.resolve(
+        Response.json({
+          data: init?.method === "POST" ? item : [item],
+          included: [],
+        })
+      );
+    });
+    const reader = createPlanningCenterServices(
+      "mutation-cache-token",
+      TIME_ZONE,
+      httpClientFor(fetch),
+      createPlanningCenterReadCaches(null)
     );
-    const first = servicesWith("mutation-cache-token", fetch);
-    const second = servicesWith("mutation-cache-token", fetch);
-
-    await Effect.runPromise(
-      first.planItems.getPlanItems("service-type", "plan")
+    const writer = createPlanningCenterServices(
+      "mutation-cache-token",
+      TIME_ZONE,
+      httpClientFor(fetch),
+      createPlanningCenterReadCaches(null)
     );
-    await Effect.runPromise(
-      second.planItems.getPlanItems("service-type", "plan")
+    const before = await Effect.runPromise(
+      reader.planItems.getPlanItems("service-type", "plan")
     );
+    expect(before.data[0].attributes.title).toBe("Opening");
     await Effect.runPromise(
-      second.planItems.createPlanItem("service-type", "plan", {
+      writer.planItems.createPlanItem("service-type", "plan", {
         title: "New item",
       })
     );
-    await Effect.runPromise(
-      first.planItems.getPlanItems("service-type", "plan")
+    const after = await Effect.runPromise(
+      reader.planItems.getPlanItems("service-type", "plan")
     );
-
-    expect(requestsOf(fetch)).toStrictEqual([
-      "GET /services/v2/service_types/service-type/plans/plan/items",
-      "POST /services/v2/service_types/service-type/plans/plan/items",
-      "GET /services/v2/service_types/service-type/plans/plan/items",
-    ]);
+    expect(after.data[0].attributes.title).toBe("New item");
   });
 
   it("shares schedule invalidation across request-owned services", async () => {
