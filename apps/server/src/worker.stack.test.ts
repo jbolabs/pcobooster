@@ -1577,7 +1577,7 @@ test(
       Result.isFailure(write) &&
         write.failure.cause instanceof Forbidden &&
         write.failure.cause.message ===
-          "This demo is read-only, so changes aren't saved."
+          "This Planning Center connection is read-only, so changes aren't saved."
     );
     assert.deepStrictEqual(
       [unknownDemo.status, unknownDemo.tag],

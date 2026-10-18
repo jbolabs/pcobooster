@@ -607,7 +607,8 @@ describe("demo sessions", () => {
 
     await expect(answer).rejects.toBeInstanceOf(Forbidden);
     await expect(answer).rejects.toMatchObject({
-      message: "This demo is read-only, so changes aren't saved.",
+      message:
+        "This Planning Center connection is read-only, so changes aren't saved.",
     });
   });
 });

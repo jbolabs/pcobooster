@@ -91,6 +91,9 @@ const readEnvironment = Effect.gen(function* readEnvironment() {
       ? yield* optionalString("POSTHOG_PROJECT_KEY")
       : "",
     DEV_AUTH_BYPASS: local ? yield* optionalString("DEV_AUTH_BYPASS") : "",
+    DEV_PLANNING_CENTER_ACCESS: local
+      ? yield* optionalString("DEV_PLANNING_CENTER_ACCESS")
+      : "",
     PLANNING_CENTER_CLIENT: local
       ? yield* optionalSecret("PLANNING_CENTER_CLIENT")
       : "",

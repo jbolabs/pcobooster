@@ -24,7 +24,7 @@ Use the smallest set of flows that covers the changed behavior. Record unsupport
 - Actions: open a service type, choose a plan, inspect the lineup and each available view.
 - Assert: plan identity, dates, item order, and view navigation remain coherent.
 - Boundary: empty plans and slow provider responses preserve a usable shell.
-- Safety: do not add, update, delete, reorder, or schedule against a live Planning Center account.
+- Safety: provider writes require the pinned sandbox launch and an isolated scratch plan; all other accounts remain read-only.
 - Evidence: the changed view and the relevant boundary state.
 
 ## People availability, read-only
@@ -37,7 +37,7 @@ Use the smallest set of flows that covers the changed behavior. Record unsupport
 
 ## Provider mutations
 
-- Current surface: focused module, transport, and cache-optimism tests only.
-- Covered behavior: schedule assignment, plan-item create/update/delete/reorder, and associated cache updates.
-- Browser status: blocked until the repository has an isolated synthetic Planning Center adapter. Presentation mode is not that adapter.
-- Evidence: exact focused test commands and a limitation note. Never use a live provider write as verification evidence.
+- Start: `bun run dev` must verify Jake Bodea's Org (524200) before launching. Confirm the organization in the rendered product.
+- Actions: exercise the requested mutation in a dedicated scratch plan, then independently read Planning Center to verify persistence.
+- Boundary: never mutate church data or send notifications. Serialize access to shared fixtures; `sandbox:apply` restores declared baseline fields.
+- Evidence: capture the rendered result and provider readback. Label this live sandbox coverage; synthetic tests still cover deterministic errors, large rosters, and CI.

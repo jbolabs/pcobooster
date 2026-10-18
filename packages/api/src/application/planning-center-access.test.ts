@@ -4,6 +4,7 @@ import {
 } from "@pcobooster/api/application/context";
 import {
   explainMissingServicesPerson,
+  createPlanningCenterAccessDependencies,
   explainPlanningCenterDenial,
   planningCenterFault,
   resolvePlanningCenterAccess,
@@ -91,6 +92,39 @@ const missingPersonFault = async (status: number) =>
 describe("PlanningCenterAccess", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("blocks a church-profile write at the provider boundary", async () => {
+    const config = testServerConfig({
+      NODE_ENV: "development",
+      DEV_AUTH_BYPASS: "1",
+      DEV_PLANNING_CENTER_ACCESS: "read",
+      PLANNING_CENTER_CLIENT: "church-client",
+      PLANNING_CENTER_PAT: "church-token",
+    });
+    const dependencies = createPlanningCenterAccessDependencies(
+      testServer({ config })
+    );
+    const services = dependencies.createServices(
+      {
+        kind: "account",
+        userId: "dev",
+        accessToken: "unused",
+        scopes: ["services"],
+        accountId: "dev",
+        account: { id: "dev", accountId: "church" },
+      },
+      unreachableHttpClient
+    );
+    const result = await Effect.runPromise(
+      Effect.flip(
+        services.people.deletePlanPerson("assignment", { personId: "person" })
+      )
+    );
+    expect(result).toMatchObject({
+      _tag: "PlanningCenterReadOnlyError",
+      method: "DELETE",
+    });
   });
 
   it("creates isolated request-owned services for concurrent credentials", async () => {
@@ -305,7 +339,8 @@ describe("PlanningCenterAccess", () => {
       )
     ).toMatchObject({
       _tag: "Forbidden",
-      message: "This demo is read-only, so changes aren't saved.",
+      message:
+        "This Planning Center connection is read-only, so changes aren't saved.",
     });
   });
 

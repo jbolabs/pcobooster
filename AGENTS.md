@@ -29,7 +29,8 @@
 ## Build, Test, and Development Commands
 
 - Use Bun for dependency management and scripts. `bun.lock` is the only committed lockfile; do not add `package-lock.json` or run npm-based install workflows for this repo.
-- `bun run dev`: start API, product, and admin through Alchemy, plus the marketing dev server, signed in with the Development `/local` Planning Center personal access token. The main checkout uses ports 3000 to 3003 (API, product, marketing, admin); each linked worktree gets its own block from its path, so worktrees can run dev at once. `DEV_PORT_BASE=<port>` overrides the block. The command prints the product URL.
+- `bun run dev`: start API, product, and admin through Alchemy, plus the marketing dev server, signed in with the pinned free Planning Center sandbox PAT from Keychain (`sandbox` scope; see `docs/planning-center-sandbox.md`). The main checkout uses ports 3000 to 3003 (API, product, marketing, admin); each linked worktree gets its own block from its path, so worktrees can run dev at once. `DEV_PORT_BASE=<port>` overrides the block. The command prints the product URL.
+- `bun run dev:church`: inspect the pinned Agape account with provider writes blocked. `dev:church:write` enables real church writes and requires explicit user authorization for the specific mutation.
 - `bun run dev:auth`: the same with real Planning Center OAuth, on the main ports (the OAuth callback is registered for `127.0.0.1:3001`). Use it only to test sign-in.
 - `bun run build`: build the Vite apps through Turborepo. Alchemy bundles the API Worker itself on `dev`/deploy.
 - `bun run check` (also `lint`): run Ultracite formatting and type-aware lint checks; warnings fail the check. All selected presets in `oxlint.config.ts` remain strict.

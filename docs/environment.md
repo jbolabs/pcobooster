@@ -7,6 +7,7 @@ Deployed application secrets live in Cloudflare Secrets Store. `alchemy.secrets.
 | Use | Credential source | Runtime |
 | --- | --- | --- |
 | Local development | Keychain `com.pcobooster.secrets.local` | Local Workers and persistent local D1 |
+| Agent verification | Keychain `com.pcobooster.secrets.sandbox` | Pinned free Planning Center test organization |
 | Codex cloud | Host-injected development credentials, allowlisted by the `cloud` scope | Local Workers and local D1 |
 | Previews and staging | `pcobooster-secrets/preview` references; GitHub environment deployment credentials | Independent Workers and D1; Cloudflare Access |
 | Production | `pcobooster-secrets/prod` references; `cloudflare-production` deployment credentials | Retained production Workers and D1 |
@@ -50,9 +51,11 @@ Deploying Flagship resources needs Flagship access: the deploy tokens need Flags
 
 ## Developer credentials
 
-The Keychain `local` scope contains `PLANNING_CENTER_CLIENT` and `PLANNING_CENTER_PAT`, and may contain `PRESENTATION_SEED`. Only local commands read it. Codex cloud accepts only its own development credentials; never the local PAT, staging, or production credentials. Alchemy binds these development keys only in stage `local`.
+Normal `bun run dev` and `dev:present` load the PAT from the separate `sandbox` scope and verify the pinned test organization before startup. `dev:church` uses the existing `local` church PAT with provider writes blocked; `dev:church:write` explicitly enables real church writes. Local app/OAuth settings still come from `local`; its church PAT is never the fallback for these commands. See [Planning Center sandbox](planning-center-sandbox.md).
 
-`DEV_AUTH_BYPASS` is process-owned, like `PRESENTATION_MODE`: `scripts/cloudflare/dev.ts` sets it after the Keychain loader. `bun run dev` and `bun run dev:present` turn it on, signing every request in as the token's owner (`packages/api/src/auth/dev-bypass.ts`), and refuse to start without the token. `bun run dev:auth` (and `bun run cloud:dev`) turn it off for real Planning Center OAuth. The product Worker also receives `DEV_AUTH_BYPASS` in stage `local`; its sign-in gate honors it only in the development server, never in a production build. The bypass synthesizes its session on the server and sets no session cookie, so checkouts running side by side on `127.0.0.1` (cookies ignore the port) do not sign each other out; only UI preferences such as `sidebar_state` are shared.
+The Keychain `sandbox` scope contains the test organization’s `PLANNING_CENTER_CLIENT` and `PLANNING_CENTER_PAT`. The `local` scope retains app/OAuth settings, historical church credentials, and optional `PRESENTATION_SEED`. Normal agent development overrides its PAT with the sandbox values. Codex cloud accepts only its own development credentials; never the local PAT, staging, or production credentials. Alchemy binds these development keys only in stage `local`.
+
+`DEV_AUTH_BYPASS` is process-owned, like `PRESENTATION_MODE`: `scripts/cloudflare/dev.ts` sets it after the sandbox launcher verifies the test organization. `bun run dev` and `bun run dev:present` turn it on, signing every request in as the token's owner (`packages/api/src/auth/dev-bypass.ts`), and refuse to start without the token. `bun run dev:auth` (and `bun run cloud:dev`) turn it off for real Planning Center OAuth. The product Worker also receives `DEV_AUTH_BYPASS` in stage `local`; its sign-in gate honors it only in the development server, never in a production build. The bypass synthesizes its session on the server and sets no session cookie, so checkouts running side by side on `127.0.0.1` (cookies ignore the port) do not sign each other out; only UI preferences such as `sidebar_state` are shared.
 
 All checkouts share the one token and therefore Planning Center's 100 requests per 20 seconds per user. Each API Worker's pacer (`packages/api/src/planning-center/rate-pacer.ts`) sees only its own requests, so several busy checkouts together can hit 429s.
 

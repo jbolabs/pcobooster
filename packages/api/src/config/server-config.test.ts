@@ -12,6 +12,27 @@ const localTools = {
 };
 
 describe(resolveServerConfig, () => {
+  it("defaults developer connections to read-only and ignores the setting in deployed builds", () => {
+    expect(
+      testServerConfig({
+        NODE_ENV: "development",
+        DEV_PLANNING_CENTER_ACCESS: undefined,
+      }).planningCenterReadOnly
+    ).toBeTruthy();
+    expect(
+      testServerConfig({
+        NODE_ENV: "development",
+        DEV_PLANNING_CENTER_ACCESS: "write",
+      }).planningCenterReadOnly
+    ).toBeFalsy();
+    expect(
+      testServerConfig({
+        NODE_ENV: "production",
+        DEV_PLANNING_CENTER_ACCESS: "read",
+      }).planningCenterReadOnly
+    ).toBeFalsy();
+  });
+
   it("enables dev-only tools only for local development", () => {
     const local = testServerConfig({ NODE_ENV: "development", ...localTools });
     expect(local.devAuthBypass).toBeTruthy();

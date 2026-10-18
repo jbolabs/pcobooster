@@ -122,7 +122,10 @@ export const createPlanningCenterAccessDependencies = (
           "DEV_AUTH_BYPASS needs PLANNING_CENTER_CLIENT and PLANNING_CENTER_PAT"
         );
       }
-      return createBasicPlanningCenterServices(
+      const createServices = server.config.planningCenterReadOnly
+        ? createReadOnlyPlanningCenterServices
+        : createBasicPlanningCenterServices;
+      return createServices(
         localPlanningCenterToken,
         fallbackTimeZone,
         httpClient,
@@ -133,7 +136,8 @@ export const createPlanningCenterAccessDependencies = (
       authentication.accessToken,
       fallbackTimeZone,
       httpClient,
-      readCaches
+      readCaches,
+      server.config.planningCenterReadOnly
     );
   },
   presentationMode: () => isPresentationMode(server.config.presentation),
@@ -171,7 +175,8 @@ export const planningCenterFault = (
   switch (error._tag) {
     case "PlanningCenterReadOnlyError": {
       return new Forbidden({
-        message: "This demo is read-only, so changes aren't saved.",
+        message:
+          "This Planning Center connection is read-only, so changes aren't saved.",
       });
     }
     case "PlanningCenterApiError": {
