@@ -2,6 +2,7 @@ import { Schema } from "effect";
 
 export const secretScopeSchema = Schema.Literals([
   "local",
+  "sandbox",
   "cloud",
   "preview",
   "production",
@@ -60,6 +61,7 @@ const inheritedCredentialKeys = [
 /** Only these keys may be injected into commands in each trust boundary. */
 export const scopeKeys: Record<SecretScope, readonly string[]> = {
   local: localKeys,
+  sandbox: ["PLANNING_CENTER_CLIENT", "PLANNING_CENTER_PAT"],
   cloud: [
     "BETTER_AUTH_SECRET",
     "PLANNING_CENTER_OAUTH_CLIENT_ID",
@@ -82,6 +84,7 @@ export const scopeKeys: Record<SecretScope, readonly string[]> = {
 
 export const requiredScopeKeys: Record<SecretScope, readonly string[]> = {
   local: localKeys.slice(0, 3),
+  sandbox: scopeKeys.sandbox,
   cloud: scopeKeys.cloud,
   preview: [],
   production: [],
@@ -162,6 +165,8 @@ export const commandEnvironment = (
     if (
       key.startsWith("INFISICAL_") ||
       key === "DEV_AUTH_BYPASS" ||
+      key === "DEV_DATA_PROFILE" ||
+      key === "DEV_PLANNING_CENTER_ACCESS" ||
       key === "PRESENTATION_MODE"
     ) {
       Reflect.deleteProperty(environment, key);

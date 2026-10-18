@@ -17,7 +17,7 @@ Completion: the selected surface responds, the rendered page matches the target 
 
 ## Drive
 
-Use the available browser-verification skill or browser automation. Prefer visible roles and labels over layout selectors. Exercise the success state plus one relevant empty, error, auth, or boundary state. Keep Planning Center access read-only: presentation mode masks data but does not isolate provider writes.
+Use the available browser-verification skill or browser automation. Prefer visible roles and labels over layout selectors. Exercise the success state plus one relevant empty, error, auth, or boundary state. Provider mutations require the pinned sandbox launch from `bun run dev` and an isolated scratch plan; see `docs/planning-center-sandbox.md`. Use `bun run dev:church` for Agape reproductions with provider writes blocked. `dev:church:write` requires explicit user authorization for the specific church mutation. Presentation mode only masks data.
 
 Completion: every changed behavior is observed on the rendered surface or recorded as an explicit limitation.
 
@@ -38,4 +38,4 @@ Fetch the PR base before proving. Use `origin/main` for a bottom PR and the prec
 
 ## Cleanup
 
-Stop local servers and leave proof media under ignored `.artifacts/`. Do not claim mutation coverage until a synthetic Planning Center adapter exists for that flow.
+Stop local servers and leave proof media under ignored `.artifacts/`. Report live sandbox mutation checks separately from synthetic CI coverage.

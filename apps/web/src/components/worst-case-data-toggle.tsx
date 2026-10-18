@@ -26,7 +26,9 @@ export const WorstCaseDataToggle = () => {
       }}
     >
       <TabsList aria-label="Development data" className="h-8">
-        <TabsTrigger value="demo">Demo data</TabsTrigger>
+        <TabsTrigger value="demo">
+          {import.meta.env.VITE_DEVELOPMENT_PROFILE}
+        </TabsTrigger>
         <TabsTrigger value="worst">Worst case</TabsTrigger>
       </TabsList>
     </Tabs>

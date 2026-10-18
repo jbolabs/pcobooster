@@ -48,4 +48,4 @@ The Cloudflare merge gates are `ci` and `cloudflare-build` (see [merge gates](ci
 
 ## Current boundary
 
-Public routes, authentication boundaries, and read-only product views can be verified in a browser. Planning Center mutations remain test-only until an isolated synthetic adapter exists. Presentation mode masks live data but still uses live provider services, so it must not be treated as a mutation sandbox.
+Public routes, authentication boundaries, and product views can be verified in a browser. Verify Planning Center mutations against the pinned free sandbox using `bun run dev` and disposable records outside the Alchemy baseline; see [the sandbox workflow](planning-center-sandbox.md). `bun run dev:church` permits read-only verification against Agape. Real church mutations require explicit authorization for the specific change and `bun run dev:church:write`. Presentation mode masks data but still uses the selected provider services, so it must not be treated as a mutation sandbox.

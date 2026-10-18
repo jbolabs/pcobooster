@@ -37,6 +37,8 @@ export interface ServerConfig {
   readonly demo: DemoConfiguration | null;
   /** Local stage only: signs every request in as the owner of the local personal access token. */
   readonly devAuthBypass: boolean;
+  /** Local development defaults to read-only unless its launcher explicitly enables writes. */
+  readonly planningCenterReadOnly: boolean;
   /** Local stage only: the personal access token behind the dev auth bypass. */
   readonly localPlanningCenterToken: PlanningCenterPersonalAccessToken | null;
   readonly presentation: PresentationEnvironment;
@@ -60,6 +62,7 @@ export interface ServerEnvironment {
   readonly DEMO_PLANNING_CENTER_CLIENT?: string;
   readonly DEMO_PLANNING_CENTER_PAT?: string;
   readonly DEV_AUTH_BYPASS?: string;
+  readonly DEV_PLANNING_CENTER_ACCESS?: string;
   readonly PLANNING_CENTER_CLIENT?: string;
   readonly PLANNING_CENTER_PAT?: string;
   readonly PRESENTATION_MODE?: string;
@@ -136,6 +139,8 @@ export const resolveServerConfig = (
       : null,
     demo: readDemoConfiguration(environment),
     devAuthBypass: localDevelopment && devAuthBypassRequested,
+    planningCenterReadOnly:
+      localDevelopment && environment.DEV_PLANNING_CENTER_ACCESS !== "write",
     localPlanningCenterToken: localDevelopment
       ? resolveLocalToken(environment)
       : null,

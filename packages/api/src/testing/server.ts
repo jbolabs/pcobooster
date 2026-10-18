@@ -22,6 +22,7 @@ export const testPlanningCenterToken: PlanningCenterPersonalAccessToken = {
 
 export const testServerEnvironment: ServerEnvironment = {
   NODE_ENV: "test",
+  DEV_PLANNING_CENTER_ACCESS: "write",
   APP_ENV: "preview",
   BETTER_AUTH_URL: "http://localhost:3000",
   BETTER_AUTH_SECRET: "pcobooster-unit-test-secret-with-no-production-access",

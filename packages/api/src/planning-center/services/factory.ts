@@ -206,12 +206,13 @@ export const createPlanningCenterServices = (
   accessToken: string,
   fallbackTimeZone: string,
   httpClient: HttpClient,
-  readCaches: PlanningCenterReadCaches
+  readCaches: PlanningCenterReadCaches,
+  readOnly = false
 ) =>
   createServicesForClient(
     new PlanningCenterCoreClient(
       { kind: "bearer", accessToken },
-      { httpClient }
+      { httpClient, readOnly }
     ),
     fallbackTimeZone,
     readCaches

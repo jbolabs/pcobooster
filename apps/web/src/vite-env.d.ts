@@ -2,6 +2,7 @@
 
 /** Values `vite.config.ts` inlines into both bundles at build time. */
 interface ImportMetaEnv {
+  readonly VITE_DEVELOPMENT_PROFILE: string;
   readonly VITE_POSTHOG_KEY: string;
   /** Browser fallback while the organization's own time zone loads; empty when unset. */
   readonly VITE_PLANNING_CENTER_TIME_ZONE: string;

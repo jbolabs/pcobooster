@@ -8,6 +8,28 @@ import {
 } from "./manifest";
 
 describe("secret ownership boundaries", () => {
+  it("replaces inherited church credentials with only the sandbox token", () => {
+    expect(
+      commandEnvironment(
+        "sandbox",
+        {
+          PATH: "/usr/bin",
+          PLANNING_CENTER_CLIENT: "church-client",
+          PLANNING_CENTER_PAT: "church-pat",
+          CLOUDFLARE_API_TOKEN: "deployment-token",
+        },
+        {
+          PLANNING_CENTER_CLIENT: "sandbox-client",
+          PLANNING_CENTER_PAT: "sandbox-pat",
+        }
+      )
+    ).toStrictEqual({
+      PATH: "/usr/bin",
+      PLANNING_CENTER_CLIENT: "sandbox-client",
+      PLANNING_CENTER_PAT: "sandbox-pat",
+    });
+  });
+
   it("keeps identical app keys distinct by app and environment", () => {
     expect([
       storeSecretName("pcobooster", "prod", "auth", "BETTER_AUTH_SECRET"),

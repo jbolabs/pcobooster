@@ -16,6 +16,7 @@
     "alchemy.ci.ts",
     "alchemy.mobile-updates.ts",
     "alchemy.posthog.ts",
+    "alchemy.sandbox.ts",
     "alchemy.secrets.ts",
     "packages/api/src/cloudflare.d.ts"
   ]
