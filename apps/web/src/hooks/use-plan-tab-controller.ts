@@ -98,13 +98,25 @@ export const usePlanTabController = ({
   const [pendingDeleteIds, setPendingDeleteIds] = useState<ReadonlySet<string>>(
     () => new Set()
   );
+  // A reorder shows in the render that ends the drag, not a tick later when the cache
+  // notifies, so dropped rows never flash back to their old places. It holds only until
+  // the cache changes from the list it was chosen on.
+  const [chosenOrder, setChosenOrder] = useState<{
+    from: PlanItem[] | undefined;
+    items: PlanItem[];
+  } | null>(null);
+  if (chosenOrder !== null && chosenOrder.from !== itemsData) {
+    setChosenOrder(null);
+  }
+  const shownData =
+    chosenOrder !== null && chosenOrder.from === itemsData
+      ? chosenOrder.items
+      : (itemsData ?? EMPTY_PLAN_ITEMS);
   // A refetch can bring back an item whose delete is still waiting out its undo window.
   const items =
     pendingDeleteIds.size === 0
-      ? (itemsData ?? EMPTY_PLAN_ITEMS)
-      : (itemsData ?? EMPTY_PLAN_ITEMS).filter(
-          (item) => !pendingDeleteIds.has(item.id)
-        );
+      ? shownData
+      : shownData.filter((item) => !pendingDeleteIds.has(item.id));
   // The phone song picker belongs to one plan, so stepping to another plan closes it.
   const [pickerScope, setPickerScope] = useState<string | null>(null);
   const songPickerOpen = pickerScope === planScope;
@@ -533,6 +545,7 @@ export const usePlanTabController = ({
       };
     },
     onError: (error, _nextItems, context) => {
+      setChosenOrder(null);
       restorePlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       toast.error(toErrorMessage(error, "Something went wrong."));
     },
@@ -542,6 +555,13 @@ export const usePlanTabController = ({
       settlePlanItems();
     },
   });
+
+  /** Shows the new order now, then saves it. */
+  const reorderTo = async (nextItems: PlanItem[]) => {
+    setChosenOrder({ from: itemsData, items: nextItems });
+    await commitPendingDeletes();
+    await reorderItemsMutation.mutateAsync(nextItems);
+  };
 
   const updateItemMutation = useMutation<
     PlanItem,
@@ -672,16 +692,14 @@ export const usePlanTabController = ({
       if (planItemsHaveSameOrder(items, nextItems)) {
         return;
       }
-      await commitPendingDeletes();
-      await reorderItemsMutation.mutateAsync(nextItems);
+      await reorderTo(nextItems);
     },
     moveItem: async (itemId: string, offset: -1 | 1) => {
       const nextItems = shiftPlanItem(items, itemId, offset);
       if (nextItems === items) {
         return;
       }
-      await commitPendingDeletes();
-      await reorderItemsMutation.mutateAsync(nextItems);
+      await reorderTo(nextItems);
     },
     getItemIntentProps,
     saveItem: async (input: {
