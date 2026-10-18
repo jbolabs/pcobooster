@@ -108,6 +108,7 @@ packages/
 - `bun run check`: strict Ultracite lint and formatting checks
 - `bun run fix`: auto-fix and format
 - `bun run ci`: the local CI gate (check, typecheck, and tests)
+- `bun run ci:affected --base origin/main`: lint, then check changed packages and dependents plus repository guards; use `--dry-run` to inspect the selection. For an upper stack layer, pass its preceding branch as the base.
 - `bun run typecheck`
 - `bun run test`
 - `bun run test:watch`
