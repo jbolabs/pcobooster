@@ -12,7 +12,6 @@ import {
   Settings02Icon,
   ShieldUserIcon,
   Sun01Icon,
-  Tick02Icon,
   UsersIcon,
 } from "@hugeicons/core-free-icons";
 import { getInitials } from "@pcobooster/planning-center-models/initials";
@@ -23,7 +22,7 @@ import type { RegisterableHotkey } from "@tanstack/react-hotkeys";
 import { Link, getRouteApi, useLocation } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { NoServicesAccess } from "@/components/access/access-notices";
 import {
@@ -73,6 +72,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HoverLabel } from "@/components/ui/hover-card";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
 import {
   Sidebar,
   SidebarContent,
@@ -265,6 +268,9 @@ const SidebarAccountPanel = ({
   onOpenShortcuts: () => void;
 }) => {
   const { setTheme, theme } = useTheme();
+  const currentTheme =
+    themeOptions.find((option) => option.value === theme) ?? themeOptions[2];
+  const themeSelectId = useId();
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const { openReview, restricted } = useAccessReview();
   const { openWelcome, startPlanTour } = useOnboarding();
@@ -353,30 +359,37 @@ const SidebarAccountPanel = ({
             <DropdownMenuSeparator inset />
 
             <DropdownMenuGroup>
-              <DropdownMenuLabel>Appearance</DropdownMenuLabel>
-              {themeOptions.map((option) => {
-                const selected = theme === option.value;
-                return (
-                  <DropdownMenuItem
-                    key={option.value}
-                    onSelect={() => {
+              <div className="flex items-center gap-2 px-2 py-1">
+                <SidebarNavIcon
+                  icon={currentTheme.icon}
+                  className="text-muted-foreground"
+                />
+                <label
+                  htmlFor={themeSelectId}
+                  className="text-muted-foreground flex-1 text-sm"
+                >
+                  Appearance
+                </label>
+                <NativeSelect
+                  id={themeSelectId}
+                  size="sm"
+                  value={currentTheme.value}
+                  onChange={(event) => {
+                    const option = themeOptions.find(
+                      (candidate) => candidate.value === event.target.value
+                    );
+                    if (option) {
                       setTheme(option.value);
-                    }}
-                  >
-                    <SidebarNavIcon
-                      icon={option.icon}
-                      className="text-muted-foreground"
-                    />
-                    <span>{option.label}</span>
-                    <SidebarNavIcon
-                      icon={Tick02Icon}
-                      className={cn(
-                        selected ? "ml-auto opacity-80" : "invisible ml-auto"
-                      )}
-                    />
-                  </DropdownMenuItem>
-                );
-              })}
+                    }
+                  }}
+                >
+                  {themeOptions.map((option) => (
+                    <NativeSelectOption key={option.value} value={option.value}>
+                      {option.label}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </div>
             </DropdownMenuGroup>
 
             <DropdownMenuSeparator inset />
