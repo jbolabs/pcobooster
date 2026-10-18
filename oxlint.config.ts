@@ -54,6 +54,8 @@ export default defineConfig({
     "local/no-overlay-section-border-b": "error",
     // Hover and selection colors snap instantly; no color fade utilities.
     "local/no-transition-colors": "error",
+    // Menu group labels render inside a Group or RadioGroup; Base UI throws error 31 otherwise.
+    "local/menu-label-inside-group": "error",
     // Controls get their look from components/ui primitives, not call sites.
     "local/prefer-shared-controls": "error",
   },

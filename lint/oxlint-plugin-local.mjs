@@ -1216,6 +1216,147 @@ const scanExpression = (node, calleeName) => {
   return { names, calls };
 };
 
+const MENU_GROUP_ROOT_IDENTIFIERS = new Set([
+  "DropdownMenuGroup",
+  "DropdownMenuRadioGroup",
+]);
+const MENU_GROUP_ROOT_PROPERTIES = new Set(["Group", "RadioGroup"]);
+const MENU_GROUP_PART_IDENTIFIERS = new Set(["DropdownMenuLabel"]);
+const MENU_GROUP_PART_PROPERTIES = new Set(["GroupLabel"]);
+/** The shared primitive renders `Menu.GroupLabel`; callers wrap `DropdownMenuLabel`. */
+const MENU_PRIMITIVE_FILE = "/components/ui/dropdown-menu.";
+
+/**
+ * @param {any} nameNode
+ * @returns {{ objectName: string | null, property: string | null } | null}
+ */
+const jsxMember = (nameNode) => {
+  if (!nameNode || nameNode.type !== "JSXMemberExpression") {
+    return null;
+  }
+  const property =
+    nameNode.property?.type === "JSXIdentifier" ? nameNode.property.name : null;
+  let object = nameNode.object;
+  while (object?.type === "JSXMemberExpression") {
+    object = object.object;
+  }
+  const objectName = object?.type === "JSXIdentifier" ? object.name : null;
+  return { objectName, property };
+};
+
+/**
+ * @param {string | null} objectName
+ */
+const isMenuObject = (objectName) =>
+  objectName !== null && /menu/iu.test(objectName);
+
+/**
+ * @param {any} nameNode
+ */
+const isMenuGroupPart = (nameNode) => {
+  if (!nameNode) {
+    return false;
+  }
+  if (nameNode.type === "JSXIdentifier") {
+    return MENU_GROUP_PART_IDENTIFIERS.has(nameNode.name);
+  }
+  const member = jsxMember(nameNode);
+  return (
+    member !== null &&
+    isMenuObject(member.objectName) &&
+    member.property !== null &&
+    MENU_GROUP_PART_PROPERTIES.has(member.property)
+  );
+};
+
+/**
+ * @param {any} nameNode
+ */
+const isMenuGroupRoot = (nameNode) => {
+  if (!nameNode) {
+    return false;
+  }
+  if (nameNode.type === "JSXIdentifier") {
+    return MENU_GROUP_ROOT_IDENTIFIERS.has(nameNode.name);
+  }
+  const member = jsxMember(nameNode);
+  return (
+    member !== null &&
+    isMenuObject(member.objectName) &&
+    member.property !== null &&
+    MENU_GROUP_ROOT_PROPERTIES.has(member.property)
+  );
+};
+
+/**
+ * A function that owns its returned JSX. Map callbacks stay open so a label inside
+ * `items.map(() => <DropdownMenuLabel />)` can still see the group around the call.
+ * @param {any} node
+ */
+const isComponentBoundary = (node) => {
+  if (
+    node.type !== "FunctionDeclaration" &&
+    node.type !== "FunctionExpression" &&
+    node.type !== "ArrowFunctionExpression"
+  ) {
+    return false;
+  }
+  const { parent } = node;
+  return (
+    parent?.type === "VariableDeclarator" ||
+    parent?.type === "ExportDefaultDeclaration" ||
+    parent?.type === "ExportNamedDeclaration" ||
+    parent?.type === "Program" ||
+    parent?.type === "MethodDefinition"
+  );
+};
+
+const menuLabelInsideGroupRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Require menu group labels to render inside Menu.Group or Menu.RadioGroup.",
+    },
+    messages: {
+      outsideGroup:
+        "Wrap {{name}} in DropdownMenuGroup, DropdownMenuRadioGroup, Menu.Group, or Menu.RadioGroup. Base UI throws MenuGroupContext error 31 when a group label renders outside a group.",
+    },
+    schema: [],
+  },
+  create(context) {
+    const filename = context.filename.replaceAll("\\", "/");
+    if (filename.includes(MENU_PRIMITIVE_FILE)) {
+      return {};
+    }
+    return {
+      JSXOpeningElement(node) {
+        if (!isMenuGroupPart(node.name)) {
+          return;
+        }
+        let current = node.parent;
+        while (current) {
+          if (isComponentBoundary(current)) {
+            break;
+          }
+          if (
+            current.type === "JSXElement" &&
+            isMenuGroupRoot(current.openingElement?.name)
+          ) {
+            return;
+          }
+          current = current.parent;
+        }
+        context.report({
+          node,
+          messageId: "outsideGroup",
+          data: { name: getJsxName(node.name) ?? "group label" },
+        });
+      },
+    };
+  },
+};
+
 const BATCH_GATE_HELPER = "batchHasAnswered";
 
 const batchGateUsesBatchHasAnsweredRule = {
@@ -1279,6 +1420,7 @@ export default {
     "no-overlay-section-border-b": noOverlaySectionBorderRule,
     "no-nudged-icon": noNudgedIconRule,
     "no-transition-colors": noTransitionColorsRule,
+    "menu-label-inside-group": menuLabelInsideGroupRule,
     "prefer-shared-controls": preferSharedControlsRule,
   },
 };
@@ -1292,6 +1434,7 @@ export {
   noNudgedIconRule,
   noOverlaySectionBorderRule,
   noPopoverContentPaddingRule,
+  menuLabelInsideGroupRule,
   noTransitionColorsRule,
   preferSharedControlsRule,
 };
