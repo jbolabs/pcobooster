@@ -269,7 +269,7 @@ const TappedSongPreview = ({
         Songs
       </Button>
     </div>
-    <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <SongPreview song={song} {...previewProps} />
     </div>
     <div className="p-3">
@@ -425,7 +425,7 @@ export const AddSongPalette = ({
             )}
           </CommandList>
           {previewSong === null ? null : (
-            <div className="animate-in fade-in-0 slide-in-from-right-2 border-border/60 hidden min-w-0 overflow-y-auto border-l duration-150 ease-out motion-reduce:animate-none md:block">
+            <div className="animate-in fade-in-0 slide-in-from-right-2 border-border/60 hidden min-w-0 overflow-y-auto overscroll-contain border-l duration-150 ease-out motion-reduce:animate-none md:block">
               <SongPreview
                 key={previewSong.id}
                 song={previewSong}

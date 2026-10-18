@@ -171,11 +171,11 @@ const DeviceAccountRow = ({
       {pending ? null : (
         <ChevronRight
           aria-hidden
-          className="text-muted-foreground pointer-events-none absolute top-1/2 right-4 hidden size-4 -translate-y-1/2 transition-transform duration-150 ease-out [@media(hover:hover)]:block [@media(hover:hover)]:group-focus-within/account:opacity-0 [@media(hover:hover)]:group-hover/account:opacity-0"
+          className="text-muted-foreground can-hover:block can-hover:group-focus-within/account:opacity-0 can-hover:group-hover/account:opacity-0 pointer-events-none absolute top-1/2 right-4 hidden size-4 -translate-y-1/2 transition-transform duration-150 ease-out"
         />
       )}
       {pending ? null : (
-        <span className="absolute top-1/2 right-2 -translate-y-1/2 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/account:opacity-100 [@media(hover:hover)]:group-hover/account:opacity-100">
+        <span className="can-hover:opacity-0 can-hover:group-focus-within/account:opacity-100 can-hover:group-hover/account:opacity-100 absolute top-1/2 right-2 -translate-y-1/2">
           <Button
             type="button"
             variant="ghost"

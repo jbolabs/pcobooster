@@ -185,8 +185,8 @@ const WeekDateLabel = ({
  * Someone's days around the plan as thin bars sharing the row's width: a tall
  * colored bar for a service (green confirmed, amber pending), a short darker
  * bar for a rehearsal only, a short gray bar for a free day. The plan's day
- * sits in a dashed frame, with a date every week. Hovering a busy day opens
- * what's on it.
+ * sits in a dashed frame, with a date every week. Hovering or tapping a busy
+ * day opens what's on it.
  */
 export const DayBars = ({
   days,
@@ -212,7 +212,15 @@ export const DayBars = ({
           ? "Nothing scheduled in the 4 weeks either side of this plan."
           : busy.map(daySummary).join(". ")}
       </p>
-      <div className={styles["day-row"]} onPointerLeave={deactivate}>
+      <div
+        className={styles["day-row"]}
+        // A finger "leaves" the moment it lifts; a tapped day stays open until another tap.
+        onPointerLeave={(event) => {
+          if (event.pointerType === "mouse") {
+            deactivate();
+          }
+        }}
+      >
         {days.map((day) => (
           <DayBar
             key={day.offset}

@@ -61,6 +61,19 @@ export default defineConfig({
   },
   overrides: [
     {
+      // The surfaces people open on phones: the product, marketing, and their shared UI
+      // (docs/mobile-native-audit.md). Admin is desktop-only behind Cloudflare Access.
+      files: ["apps/web/**", "apps/marketing/**", "packages/ui/**"],
+      rules: {
+        // Text fields stay 16px on touch screens; iOS zooms into anything smaller.
+        "local/no-small-field-text": "error",
+        // Inner scrollers say what happens at their edge instead of scrolling the page behind.
+        "local/scroll-container-overscroll": "error",
+        // Search fields and numeric fields open the keyboard that fits them.
+        "local/field-keyboard-hints": "error",
+      },
+    },
+    {
       // A test must be able to fail when the code under test does nothing (AGENTS.md "Testing
       // Guidelines"); vitest/expect-expect and anti-slop/no-module-mocking cover the rest.
       files: ["**/*.test.{ts,tsx}"],

@@ -67,6 +67,10 @@ export const LyricsSearchPanel = ({
             <Search />
           </InputGroupAddon>
           <InputGroupInput
+            enterKeyHint="search"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             aria-label="Song title and artist"
             placeholder="Song title and artist"
             value={query}
@@ -85,7 +89,7 @@ export const LyricsSearchPanel = ({
       </form>
       <LoadingBar active={search.isFetching && results.length > 0} />
       <div
-        className="flex h-56 flex-col gap-1.5 overflow-y-auto"
+        className="flex h-56 flex-col gap-1.5 overflow-y-auto overscroll-contain"
         aria-busy={search.isFetching}
       >
         {search.isFetching && results.length === 0

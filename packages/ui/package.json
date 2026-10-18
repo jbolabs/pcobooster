@@ -6,6 +6,7 @@
   "exports": {
     "./mobile-menu": "./src/mobile-menu.tsx",
     "./mobile-menu.css": "./src/mobile-menu.css",
+    "./mobile-native.css": "./src/mobile-native.css",
     "./star-field": "./src/star-field.tsx",
     "./star-field.css": "./src/star-field.css"
   },

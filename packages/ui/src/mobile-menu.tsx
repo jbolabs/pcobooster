@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 /**
  * The phone menu shared by marketing and the product (`@pcobooster/ui/mobile-menu`): a full-screen
- * frosted overlay that fades in under a pinned header. Every entry rolls in
+ * page-colored overlay that fades in under a pinned header. Every entry rolls in
  * top to bottom and rolls back out bottom to top. Each app owns its header and button primitives; this package owns
  * the open state, the overlay, and the motion.
  *
@@ -61,8 +61,17 @@ const MAX_STAGGER_STEPS = 6;
 const ITEM_EXIT_DELAY_MS = 10;
 
 /**
- * The overlay; `className` sets its top padding to clear the header bar.
- * Its enter and exit motion lives in `@pcobooster/ui/mobile-menu.css`, which each app imports.
+ * The overlay. Render it beside the app's pinned header, never inside it, and stack it
+ * just under the header with `className` (a z-index); `children` fill the screen below the
+ * status bar. Its enter and exit motion lives in `@pcobooster/ui/mobile-menu.css`, which each app imports.
+ *
+ * Safari 26 draws its toolbar edges from the fixed or sticky element about the viewport's
+ * size at each edge (WebKit `LocalFrameView::fixedContainerEdges`): a backdrop filter there
+ * fills the area under its bottom bar with a solid color, a hard line above the bar while
+ * the menu is open. So the surface is opaque page color with no filter, and it runs past the
+ * bottom of the screen: Safari skips fixed layers taller than 105% of the viewport, and with
+ * no sticky ancestor it keeps its glass over the menu as over any page. The content sits on
+ * an absolute panel the visible viewport's height.
  */
 export const MobileMenuOverlay = ({
   id,
@@ -81,16 +90,18 @@ export const MobileMenuOverlay = ({
     inert={!open}
     data-open={open ? "" : undefined}
     className={[
-      // The one frosted surface: the page stays faintly visible behind the
-      // menu so opening it reads as a layer, not a new page.
-      // oxlint-disable-next-line local/no-backdrop-blur
-      "bg-background/75 fixed inset-0 backdrop-blur-xl backdrop-saturate-150 md:hidden",
+      "bg-background fixed inset-x-0 top-0 h-[125lvh] md:hidden",
       className,
     ]
       .filter(Boolean)
       .join(" ")}
   >
-    {children}
+    <div
+      data-slot="mobile-menu-panel"
+      className="absolute inset-x-0 top-0 h-dvh"
+    >
+      {children}
+    </div>
   </div>
 );
 

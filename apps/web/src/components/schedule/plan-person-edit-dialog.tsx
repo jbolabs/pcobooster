@@ -316,7 +316,7 @@ const PlanPersonEditDialogBody = ({
           </div>
         </div>
       </ResponsiveDialogHeader>
-      <div className="flex min-h-0 flex-col gap-3 max-md:overflow-y-auto max-md:px-4 max-md:pt-4">
+      <div className="flex min-h-0 flex-col gap-3 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-4">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <PlanPersonStatusPicker

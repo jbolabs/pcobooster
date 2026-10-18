@@ -159,7 +159,7 @@ export const PlanningCenterPdfPreview = ({
           sheet renders. Add a key there to preview chord charts.
         </p>
       ) : null}
-      <div className="relative min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+      <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
         {pdf.isError ? (
           <div className="flex flex-col items-start gap-2 p-2">
             <p className="text-muted-foreground text-sm">

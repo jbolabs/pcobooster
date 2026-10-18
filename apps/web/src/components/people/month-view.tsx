@@ -479,7 +479,10 @@ const PeopleMonthMatrix = ({
           </p>
         ) : (
           // `relative` keeps the cells' absolutely positioned screen-reader text in the scroller.
-          <div className="relative overflow-x-auto" style={columns}>
+          <div
+            className="relative overflow-x-auto overscroll-x-contain"
+            style={columns}
+          >
             <div className="min-w-fit">
               <div
                 className={cn(

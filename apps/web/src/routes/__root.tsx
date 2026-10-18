@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 
 import { ProductNotFound } from "@/components/product-not-found";
 import { Providers } from "@/components/providers";
+import { productHeadMeta } from "@/lib/document-head";
 import { themeInitScript } from "@/lib/theme";
 import { getSidebarDefaultOpen } from "@/server/sidebar.functions";
 
@@ -53,12 +54,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     loader: async () => ({ sidebarDefaultOpen: await getSidebarDefaultOpen() }),
     head: () => ({
       meta: [
-        { charSet: "utf-8" },
-        {
-          name: "viewport",
-          content:
-            "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
-        },
+        ...productHeadMeta(),
         { title: "PCOBooster" },
         { name: "description", content: DESCRIPTION },
         { name: "application-name", content: "PCOBooster" },

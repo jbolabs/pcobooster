@@ -14,6 +14,14 @@ import { useTheme } from "@/components/theme-provider";
 
 type SonnerStyle = CSSProperties & Record<`--${string}`, string>;
 
+/** Sonner's own gaps from the viewport edge, plus the notch and home indicator. */
+const safeOffset = (gap: string): NonNullable<ToasterProps["offset"]> => ({
+  top: `calc(${gap} + env(safe-area-inset-top, 0px))`,
+  right: `calc(${gap} + env(safe-area-inset-right, 0px))`,
+  bottom: `calc(${gap} + env(safe-area-inset-bottom, 0px))`,
+  left: `calc(${gap} + env(safe-area-inset-left, 0px))`,
+});
+
 const toasterStyle: SonnerStyle = {
   "--normal-bg": "var(--popover)",
   "--normal-text": "var(--popover-foreground)",
@@ -65,6 +73,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
         ),
       }}
       style={toasterStyle}
+      offset={safeOffset("24px")}
+      mobileOffset={safeOffset("16px")}
       toastOptions={{
         classNames: {
           toast: "cn-toast",
