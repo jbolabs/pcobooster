@@ -14,8 +14,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "4.0.4",
-    "posthog-js": "^1.438.7"
+    "effect": "4.0.5",
+    "posthog-js": "^1.438.10"
   },
   "devDependencies": {
     "@pcobooster/config": "workspace:*",
