@@ -21,6 +21,13 @@ let pdfjsLoading: ReturnType<typeof loadPdfjs> | null = null;
 export const base64ToBytes = (data: string): Uint8Array =>
   Uint8Array.from(atob(data), (character) => character.codePointAt(0) ?? 0);
 
+/** A reader can keep one document and render only the page on screen. */
+export const loadPdfDocument = async (data: string) => {
+  pdfjsLoading ??= loadPdfjs();
+  const pdfjs = await pdfjsLoading;
+  return pdfjs.getDocument({ data: base64ToBytes(data) });
+};
+
 /** One canvas per page, `width` CSS pixels wide and sharp on high-density screens. */
 export const renderPdfPages = async (
   data: string,

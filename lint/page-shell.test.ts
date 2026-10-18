@@ -26,6 +26,18 @@ const outsideInset = new Map([
 
 /** Vertical scrollers that are not the page: overlays and boxed panels scroll inside themselves. */
 const panelScrollers = new Map([
+  [
+    "apps/web/src/components/schedule/plan-files-browser.tsx",
+    "the plan file dialog list",
+  ],
+  [
+    "apps/web/src/components/schedule/plan-file-viewer.tsx",
+    "the file dialog image viewer",
+  ],
+  [
+    "apps/web/src/components/schedule/file-pdf-reader.tsx",
+    "the file dialog PDF reader",
+  ],
   ["apps/web/src/components/mobile-menu.tsx", "the phone menu overlay"],
   [
     "apps/web/src/components/schedule/add-song-palette.tsx",
