@@ -1,3 +1,4 @@
+import type { PlanFile } from "@pcobooster/contracts/http/plan-files";
 import { appendNote } from "@pcobooster/planning-center-models/key-transition-advice";
 import {
   buildDraft,
@@ -25,9 +26,9 @@ import type {
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { Link } from "@tanstack/react-router";
 import {
-  ChevronRight,
   ExternalLink,
   FileMusic,
+  ChevronRight,
   Replace,
   Trash2,
   X,
@@ -35,7 +36,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { KeyTransitionPopover } from "@/components/schedule/key-transition-popover";
-import { PlanFilesBrowser } from "@/components/schedule/plan-files-browser";
+import { PlanItemFiles } from "@/components/schedule/plan-files-browser";
 import { SongHistory } from "@/components/schedule/song-history";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -68,6 +69,9 @@ import { useSongOptions } from "@/hooks/use-song-options";
 import { planningCenterSongUrl } from "@/lib/songs-index";
 import { cn } from "@/lib/utils";
 
+/** History rows shown before "Show all" once the section is open. */
+const HISTORY_PREVIEW_ROWS = 6;
+
 export interface PlanItemSaveInput {
   item: PlanItem;
   draft: DraftState;
@@ -75,9 +79,6 @@ export interface PlanItemSaveInput {
   optimisticArrangement: PlanItemArrangement | null;
   optimisticKey: PlanItemKey | null;
 }
-
-/** History rows shown before "Show all" once the section is open. */
-const HISTORY_PREVIEW_ROWS = 6;
 
 type Persist = (patch: Partial<DraftState>) => void;
 
@@ -98,9 +99,9 @@ interface PlanItemPaneProps {
   item: PlanItem;
   serviceTypeId: string | null;
   planId: string | null;
+  /** The song this one follows in its section. */
   /** The plan's service date, which the song's history is counted from. */
   planDate: Date;
-  /** The song this one follows in its section. */
   previousSong: PreviousSong | null;
   transition: KeyTransition | null;
   /** A row just added: its title is selected so typing names it. */
@@ -114,6 +115,8 @@ interface PlanItemPaneProps {
   onRemove: (itemId: string) => void;
   /** Swap this song for another in the same place. */
   onReplaceSong: (itemId: string) => void;
+  /** Open one of the item's files in the file dialog. */
+  onOpenFile: (file: PlanFile) => void;
   /** Close the pane; Escape does too, handing the keyboard back to the run sheet. */
   onClose: () => void;
   /** Inside the narrow-screen sheet, which already draws the surface. */
@@ -585,7 +588,8 @@ const HistorySection = ({
 
 /**
  * The opened row's details, all editable where they sit: the song's arrangement and key,
- * its length and when it runs, and notes. The song's history opens on request.
+ * its length and when it runs, and notes. Its files are listed below, each opening in the
+ * file dialog, and a song's history opens on request.
  */
 export const PlanItemPane = ({
   item,
@@ -599,6 +603,7 @@ export const PlanItemPane = ({
   onChangeKey,
   onRemove,
   onReplaceSong,
+  onOpenFile,
   onClose,
   inSheet = false,
   className,
@@ -646,15 +651,6 @@ export const PlanItemPane = ({
       />
       <CardContent className="min-h-0 overflow-y-auto">
         <div className="flex flex-col gap-4">
-          {serviceTypeId !== null && planId !== null ? (
-            <PlanFilesBrowser
-              key={`${serviceTypeId}:${planId}:${item.id}`}
-              serviceTypeId={serviceTypeId}
-              planId={planId}
-              items={[item]}
-              item={item}
-            />
-          ) : null}
           {item.song ? (
             <SongFields
               item={item}
@@ -684,6 +680,16 @@ export const PlanItemPane = ({
               }}
             />
           </Field>
+          {serviceTypeId === null ||
+          planId === null ||
+          item.itemType === "header" ? null : (
+            <PlanItemFiles
+              serviceTypeId={serviceTypeId}
+              planId={planId}
+              item={item}
+              onOpen={onOpenFile}
+            />
+          )}
           {item.song ? (
             <>
               <Separator />

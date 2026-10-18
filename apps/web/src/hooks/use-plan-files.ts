@@ -7,6 +7,7 @@ import type {
 } from "@pcobooster/contracts/http/plan-files";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 import { queryKeys } from "@/lib/query-keys";
 import { productClient } from "@/product-client";
@@ -33,6 +34,23 @@ export const usePlanFiles = (serviceTypeId: string, planId: string) =>
     getNextPageParam: (last) => last.nextOffset ?? undefined,
     staleTime: 60_000,
   });
+
+/** Every page of the plan's files, loaded one after another: the list is only useful whole. */
+export const useAllPlanFiles = (serviceTypeId: string, planId: string) => {
+  const query = usePlanFiles(serviceTypeId, planId);
+  const { hasNextPage, isFetchingNextPage, isError, fetchNextPage } = query;
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage && !isError) {
+      void fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, isError, fetchNextPage]);
+  return {
+    query,
+    files: query.data?.pages.flatMap((page) => page.files) ?? [],
+    /** Still loading pages, so counts would be short. */
+    complete: query.isSuccess && !hasNextPage,
+  };
+};
 
 /** A fresh signed link each time a file opens: Planning Center's links expire quickly. */
 export const usePlanFileLink = (

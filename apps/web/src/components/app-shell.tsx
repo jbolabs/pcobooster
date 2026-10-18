@@ -100,6 +100,7 @@ import { usePlanRoute } from "@/hooks/use-plan-route";
 import {
   APP_SHORTCUTS,
   PLAN_BUILDER_SHORTCUTS,
+  FILE_DIALOG_SHORTCUTS,
   SHORTCUTS_PALETTE_HOTKEY,
 } from "@/lib/app-hotkeys";
 import type { DetailRoute } from "@/lib/app-routes";
@@ -657,6 +658,10 @@ const AppSidebar = ({
           <section className="flex flex-col gap-3">
             <h3 className="text-sm font-medium">Plan builder</h3>
             <ShortcutList shortcuts={PLAN_BUILDER_SHORTCUTS} />
+          </section>
+          <section className="flex flex-col gap-3">
+            <h3 className="text-sm font-medium">Song files</h3>
+            <ShortcutList shortcuts={FILE_DIALOG_SHORTCUTS} />
           </section>
         </DialogContent>
       </Dialog>

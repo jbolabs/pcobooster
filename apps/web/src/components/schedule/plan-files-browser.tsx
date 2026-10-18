@@ -8,13 +8,11 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { PlanFileIcon } from "@/components/schedule/plan-file-icon";
-import {
-  paneBarClassName,
-  PlanFileViewer,
-} from "@/components/schedule/plan-file-viewer";
+import { paneBarClassName } from "@/components/schedule/plan-file-pane-bar";
+import { PlanFileViewer } from "@/components/schedule/plan-file-viewer";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,6 +33,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Field, FieldTitle } from "@/components/ui/field";
 import { HoverLabel } from "@/components/ui/hover-card";
 import {
   InputGroup,
@@ -43,8 +42,9 @@ import {
 } from "@/components/ui/input-group";
 import { Item } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePlanFiles } from "@/hooks/use-plan-files";
+import { useAllPlanFiles } from "@/hooks/use-plan-files";
 import {
+  continuingFile,
   fileBelongsToItem,
   fileGroupLabel,
   fileSectionLabel,
@@ -60,6 +60,14 @@ interface Props {
   planId: string;
   items: PlanItem[];
   item?: PlanItem;
+}
+
+interface WorkspaceProps extends Props {
+  /** Inside the file dialog, which owns the title and close button. */
+  embedded?: boolean;
+  /** The file chosen on the song before, whose counterpart opens first. */
+  continueFrom?: PlanFile;
+  onChoose?: (file: PlanFile) => void;
 }
 
 /** Search only earns its space when there are enough files to hunt through. */
@@ -239,20 +247,9 @@ const ListSkeleton = () => (
   </div>
 );
 
-/** Loads every page while the browser is open: the list is only useful whole. */
-const useAllPlanFiles = (serviceTypeId: string, planId: string) => {
-  const query = usePlanFiles(serviceTypeId, planId);
-  const { hasNextPage, isFetchingNextPage, isError, fetchNextPage } = query;
-  useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage && !isError) {
-      void fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, isError, fetchNextPage]);
-  return query;
-};
-
 const FileList = ({
   title,
+  embedded,
   files,
   items,
   item,
@@ -261,6 +258,7 @@ const FileList = ({
   onSelect,
 }: {
   title: string;
+  embedded: boolean;
   files: PlanFile[];
   items: PlanItem[];
   item: PlanItem | undefined;
@@ -280,10 +278,12 @@ const FileList = ({
         );
   return (
     <>
-      <div className={cn(paneBarClassName, "sm:pl-12")}>
-        <h2 className="flex-1 truncate px-1 text-sm font-medium">{title}</h2>
-        <CloseButton className="sm:hidden" />
-      </div>
+      {embedded ? null : (
+        <div className={paneBarClassName({ atTop: true, insetStart: true })}>
+          <h2 className="flex-1 truncate px-1 text-sm font-medium">{title}</h2>
+          <CloseButton className="sm:hidden" />
+        </div>
+      )}
       {files.length >= SEARCH_THRESHOLD ? (
         <InputGroup className="mx-3 mb-2 w-auto">
           <InputGroupAddon>
@@ -334,16 +334,20 @@ const FileList = ({
 const NoFile = ({
   failed,
   empty,
+  closable,
   onRetry,
 }: {
   failed: boolean;
   empty: boolean;
+  closable: boolean;
   onRetry: () => void;
 }) => (
   <div className="flex flex-1 flex-col">
-    <div className="flex justify-end p-2">
-      <CloseButton />
-    </div>
+    {closable ? (
+      <div className="flex justify-end p-2">
+        <CloseButton />
+      </div>
+    ) : null}
     <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-3 text-sm">
       {failed ? (
         <>
@@ -358,16 +362,34 @@ const NoFile = ({
   </div>
 );
 
-const FilesWorkspace = ({ serviceTypeId, planId, items, item }: Props) => {
-  const [chosen, setChosen] = useState<PlanFile | null>(null);
+/** The file list beside the open file. Inside a song dialog, one tab's share of the files. */
+export const PlanFilesWorkspace = ({
+  serviceTypeId,
+  planId,
+  items,
+  item,
+  embedded = false,
+  continueFrom,
+  onChoose,
+}: WorkspaceProps) => {
+  const { query, files: loaded } = useAllPlanFiles(serviceTypeId, planId);
+  const files = orderedPlanFiles(
+    item === undefined
+      ? loaded
+      : loaded.filter((file) => fileBelongsToItem(file, item)),
+    items
+  );
+  // Stepping to the next song reopens the same part or chart, on phones too.
+  const [chosen, setChosen] = useState<PlanFile | null>(() =>
+    continuingFile(files, continueFrom)
+  );
   const [listOpen, setListOpen] = useState(true);
-  const query = useAllPlanFiles(serviceTypeId, planId);
-  const loaded = query.data?.pages.flatMap((page) => page.files) ?? [];
-  const files = item
-    ? loaded.filter((file) => fileBelongsToItem(file, item))
-    : loaded;
   // Desktop opens on the first file; phones start on the list until one is chosen.
-  const shown = chosen ?? orderedPlanFiles(files, items)[0] ?? null;
+  const shown = chosen ?? files[0] ?? null;
+  const choose = (file: PlanFile) => {
+    setChosen(file);
+    onChoose?.(file);
+  };
   const showList = files.length > 1 || query.isPending;
   const title = item ? item.title : "Files";
   const back = () => {
@@ -376,8 +398,8 @@ const FilesWorkspace = ({ serviceTypeId, planId, items, item }: Props) => {
 
   return (
     <div className="relative flex min-h-0 flex-1">
-      <DialogTitle className="sr-only">{title}</DialogTitle>
-      {showList ? (
+      {embedded ? null : <DialogTitle className="sr-only">{title}</DialogTitle>}
+      {showList && !embedded ? (
         // One toggle outside both panes, so it never moves between open and closed.
         <ListToggle
           open={listOpen}
@@ -390,19 +412,21 @@ const FilesWorkspace = ({ serviceTypeId, planId, items, item }: Props) => {
         <nav
           aria-label="Files"
           className={cn(
-            "pb-safe-3 flex min-h-0 w-full flex-col sm:w-60 sm:shrink-0 sm:border-r",
+            "flex min-h-0 w-full flex-col sm:w-60 sm:shrink-0 sm:border-r",
+            embedded ? "py-1.5" : "pb-safe-3",
             chosen !== null && "max-sm:hidden",
             !listOpen && "sm:hidden"
           )}
         >
           <FileList
             title={title}
+            embedded={embedded}
             files={files}
             items={items}
             item={item}
             pending={query.isPending}
             shown={shown}
-            onSelect={setChosen}
+            onSelect={choose}
           />
         </nav>
       ) : null}
@@ -416,6 +440,7 @@ const FilesWorkspace = ({ serviceTypeId, planId, items, item }: Props) => {
           <NoFile
             failed={query.isError}
             empty={query.isSuccess}
+            closable={!embedded}
             onRetry={() => {
               void query.refetch();
             }}
@@ -428,11 +453,67 @@ const FilesWorkspace = ({ serviceTypeId, planId, items, item }: Props) => {
             file={shown}
             onBack={showList ? back : undefined}
             insetStart={showList && !listOpen}
-            trailing={<CloseButton />}
+            atTop={!embedded}
+            trailing={embedded ? null : <CloseButton />}
           />
         )}
       </div>
     </div>
+  );
+};
+
+/**
+ * An item's files in its details pane, by section, the way Planning Center lists them.
+ * Choosing one opens it in the file dialog. Absent until loaded, and for items with none.
+ */
+export const PlanItemFiles = ({
+  serviceTypeId,
+  planId,
+  item,
+  onOpen,
+}: {
+  serviceTypeId: string;
+  planId: string;
+  item: PlanItem;
+  onOpen: (file: PlanFile) => void;
+}) => {
+  const { query, files } = useAllPlanFiles(serviceTypeId, planId);
+  const own = files.filter((file) => fileBelongsToItem(file, item));
+  if (query.isError) {
+    return (
+      <Field>
+        <FieldTitle>Files</FieldTitle>
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
+          Couldn’t load files.
+          <Button
+            variant="link"
+            size="xs"
+            onClick={() => {
+              void query.refetch();
+            }}
+          >
+            Try again
+          </Button>
+        </div>
+      </Field>
+    );
+  }
+  if (own.length === 0) {
+    return null;
+  }
+  return (
+    <Field>
+      <FieldTitle>Files</FieldTitle>
+      {/* Rows inset their text, so the list sits out to align it with the title. */}
+      <div className="-mx-2 -mt-2">
+        <FileSections
+          sections={sectionPlanFiles(own)}
+          labeled
+          shown={null}
+          onSelect={onOpen}
+        />
+      </div>
+    </Field>
   );
 };
 
@@ -466,7 +547,7 @@ export const PlanFilesBrowser = (props: Props) => (
     )}
     <DialogContent variant="viewer" showCloseButton={false}>
       {/* Mounted per open, so each visit starts fresh on the first file. */}
-      <FilesWorkspace {...props} />
+      <PlanFilesWorkspace {...props} />
     </DialogContent>
   </Dialog>
 );

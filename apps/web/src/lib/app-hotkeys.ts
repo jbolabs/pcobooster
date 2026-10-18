@@ -57,3 +57,32 @@ export const PLAN_BUILDER_SHORTCUTS = [
   label: string;
   binding: RegisterableHotkey;
 }[];
+
+export const NEXT_SONG_SHORTCUT = {
+  id: "song.next",
+  label: "Next song",
+  binding: "ArrowRight",
+} as const satisfies {
+  id: string;
+  label: string;
+  binding: RegisterableHotkey;
+};
+export const PREVIOUS_SONG_SHORTCUT = {
+  id: "song.previous",
+  label: "Previous song",
+  binding: "ArrowLeft",
+} as const satisfies {
+  id: string;
+  label: string;
+  binding: RegisterableHotkey;
+};
+
+/** The file dialog's keys: step through the plan's songs without closing it. */
+export const FILE_DIALOG_SHORTCUTS = [
+  NEXT_SONG_SHORTCUT,
+  PREVIOUS_SONG_SHORTCUT,
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  binding: RegisterableHotkey;
+}[];
