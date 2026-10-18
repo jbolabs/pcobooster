@@ -667,6 +667,66 @@ describe(PlanningCenterCoreClient, () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it("resends a rate-limited write once its Retry-After passes", async () => {
+    const fetch = fetchMock()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { error: "Rate limited" },
+          { status: 429, headers: { "retry-after": "8" } }
+        )
+      )
+      .mockResolvedValueOnce(jsonResponse({ data: person }));
+    const result = await Effect.runPromise(
+      Effect.gen(function* retryRateLimitedWrite() {
+        const fiber = yield* Effect.forkChild(
+          basicClient(fetch).fetch("/services/v2/people/1", {
+            method: "PATCH",
+            body: {},
+          })
+        );
+        yield* settle;
+        yield* TestClock.adjust("7999 millis");
+        expect(fetch).toHaveBeenCalledOnce();
+        yield* TestClock.adjust("1 millis");
+        return yield* Fiber.join(fiber);
+      }).pipe(Effect.provide(TestClock.layer()))
+    );
+    expect(result.data.id).toBe("1");
+    expect(fetch.mock.calls.map(([, init]) => init?.method)).toStrictEqual([
+      "PATCH",
+      "PATCH",
+    ]);
+  });
+
+  it("resends a rate-limited write only once", async () => {
+    const fetch = fetchMock().mockImplementation(
+      async () =>
+        await Promise.resolve(
+          jsonResponse(
+            { error: "Rate limited" },
+            { status: 429, headers: { "retry-after": "1" } }
+          )
+        )
+    );
+    const failure = await Effect.runPromise(
+      Effect.gen(function* exhaustWriteRetry() {
+        const fiber = yield* Effect.forkChild(
+          Effect.flip(
+            basicClient(fetch).fetch("/services/v2/people", {
+              method: "POST",
+              body: {},
+            })
+          )
+        );
+        yield* settle;
+        yield* TestClock.adjust("1 second");
+        return yield* Fiber.join(fiber);
+      }).pipe(Effect.provide(TestClock.layer()))
+    );
+    expect(failure).toMatchObject({ status: 429 });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it("gives up on a read after two retries", async () => {
     const fetch = fetchMock().mockImplementation(
       async () =>
@@ -775,7 +835,8 @@ const rateLimitedResponse = (count: number): Response =>
       headers: {
         "x-pco-api-request-rate-limit": "100",
         "x-pco-api-request-rate-count": String(count),
-        "x-pco-api-request-rate-period": "20 seconds",
+        // Successful responses report bare seconds; only 429s spell out the unit.
+        "x-pco-api-request-rate-period": "20",
       },
     }
   );
@@ -813,7 +874,7 @@ const pacedClient = (fetch: FetchMock): PlanningCenterCoreClient =>
 describe("Planning Center pacing and accounting", () => {
   it("spreads concurrent reads over the rest of the reported window", async () => {
     const fetch = fetchMock().mockImplementation(
-      async () => await Promise.resolve(rateLimitedResponse(80))
+      async () => await Promise.resolve(rateLimitedResponse(70))
     );
     const { lines, logger } = recordingLogger();
     const scope = limits();
@@ -832,7 +893,7 @@ describe("Planning Center pacing and accounting", () => {
         );
         yield* settle;
         expect(fetch).toHaveBeenCalledTimes(2);
-        // 20 requests left over 20 s: the next slot opens a second later.
+        // 20 reads left (10 more are kept for writes) over 20 s: the next slot opens a second later.
         yield* TestClock.adjust("999 millis");
         yield* settle;
         expect(fetch).toHaveBeenCalledTimes(2);
@@ -859,7 +920,7 @@ describe("Planning Center pacing and accounting", () => {
           attempt: 1,
           waitMs: 1000,
           // In flight before this request: the other concurrent read.
-          rateLimit: { limit: 100, count: 80, periodMs: 20_000, inFlight: 1 },
+          rateLimit: { limit: 100, count: 70, periodMs: 20_000, inFlight: 1 },
         },
       },
     ]);
@@ -1301,9 +1362,9 @@ describe("Planning Center pacing and accounting", () => {
     }).toStrictEqual({ reached: true, hits: 1 });
   });
 
-  it("sends writes without pacing even when the budget is spent", async () => {
+  it("sends writes into the budget reads leave for them, without pacing", async () => {
     const fetch = fetchMock()
-      .mockResolvedValueOnce(rateLimitedResponse(100))
+      .mockResolvedValueOnce(rateLimitedResponse(95))
       .mockResolvedValueOnce(jsonResponse({ data: person }));
     const scope = limits();
     const client = pacedClient(fetch);

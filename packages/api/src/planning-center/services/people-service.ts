@@ -78,6 +78,30 @@ const readEveryPage = (
   });
 
 /** One active team: who is on it and who leads it. */
+/**
+ * Where a plan person can be addressed. Planning Center has no top-level `/plan_people/:id`
+ * route (it answers 404), so every plan person write goes through its plan or its person.
+ */
+export type PlanPersonLocation =
+  | {
+      readonly serviceTypeId: string;
+      readonly planId: string;
+      readonly personId?: string;
+    }
+  | {
+      readonly personId: string;
+      readonly serviceTypeId?: undefined;
+      readonly planId?: undefined;
+    };
+
+const planPersonPath = (
+  planPersonId: string,
+  location: PlanPersonLocation
+): string =>
+  location.planId === undefined
+    ? `/services/v2/people/${location.personId}/plan_people/${planPersonId}`
+    : `/services/v2/service_types/${location.serviceTypeId}/plans/${location.planId}/team_members/${planPersonId}`;
+
 export interface TeamRoster {
   id: string;
   name: string;
@@ -657,10 +681,10 @@ export class PlanningCenterPeopleService {
   updatePlanPersonStatus(
     planPersonId: string,
     status: "C" | "U" | "D",
-    context?: { personId?: string; serviceTypeId?: string; planId?: string }
+    location: PlanPersonLocation
   ): Effect.Effect<PCResource, PlanningCenterError> {
     return this.core
-      .fetch(`/services/v2/plan_people/${planPersonId}`, {
+      .fetch(planPersonPath(planPersonId, location), {
         method: "PATCH",
         body: {
           data: {
@@ -672,16 +696,7 @@ export class PlanningCenterPeopleService {
       })
       .pipe(
         Effect.map((response) => {
-          if (
-            isNonEmptyString(context?.serviceTypeId) &&
-            isNonEmptyString(context.planId)
-          ) {
-            this.invalidateScheduleReadCaches({
-              personId: context.personId,
-              serviceTypeId: context.serviceTypeId,
-              planId: context.planId,
-            });
-          }
+          this.invalidatePlanPersonReads(location);
           return response.data;
         })
       );
@@ -729,35 +744,24 @@ export class PlanningCenterPeopleService {
 
   deletePlanPerson(
     planPersonId: string,
-    context?: { personId?: string; serviceTypeId?: string; planId?: string }
+    location: PlanPersonLocation
   ): Effect.Effect<void, PlanningCenterError> {
-    let endpoint = `/services/v2/plan_people/${planPersonId}`;
-    if (
-      isNonEmptyString(context?.serviceTypeId) &&
-      isNonEmptyString(context.planId)
-    ) {
-      endpoint = `/services/v2/service_types/${context.serviceTypeId}/plans/${context.planId}/team_members/${planPersonId}`;
-    } else if (isNonEmptyString(context?.personId)) {
-      endpoint = `/services/v2/people/${context.personId}/plan_people/${planPersonId}`;
-    }
+    return this.core
+      .request(planPersonPath(planPersonId, location), { method: "DELETE" })
+      .pipe(
+        Effect.asVoid,
+        Effect.tap(() =>
+          Effect.sync(() => {
+            this.invalidatePlanPersonReads(location);
+          })
+        )
+      );
+  }
 
-    return this.core.request(endpoint, { method: "DELETE" }).pipe(
-      Effect.asVoid,
-      Effect.tap(() =>
-        Effect.sync(() => {
-          if (
-            isNonEmptyString(context?.serviceTypeId) &&
-            isNonEmptyString(context.planId)
-          ) {
-            this.invalidateScheduleReadCaches({
-              personId: context.personId,
-              serviceTypeId: context.serviceTypeId,
-              planId: context.planId,
-            });
-          }
-        })
-      )
-    );
+  private invalidatePlanPersonReads(location: PlanPersonLocation): void {
+    if (location.planId !== undefined) {
+      this.invalidateScheduleReadCaches(location);
+    }
   }
 
   /**

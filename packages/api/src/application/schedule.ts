@@ -13,7 +13,9 @@ import {
 } from "@pcobooster/api/modules/planning-center/schedule-person";
 import { PlanningCenterApiError } from "@pcobooster/api/planning-center/api-error";
 import type { PlanningCenterError } from "@pcobooster/api/planning-center/core-client";
+import type { PlanPersonLocation } from "@pcobooster/api/planning-center/services/people-service";
 import { AlreadyScheduled } from "@pcobooster/contracts/faults/already-scheduled";
+import { InvalidInput } from "@pcobooster/contracts/faults/invalid-input";
 import { NotFound } from "@pcobooster/contracts/faults/not-found";
 import { PositionMismatch } from "@pcobooster/contracts/faults/position-mismatch";
 import type {
@@ -148,6 +150,25 @@ const reportMissingPlanPerson = <Value, Requirements>(
       : failure
   );
 
+/** The plan (preferred) or person a removal or status change addresses the plan person through. */
+const planPersonLocation = (
+  input: ScheduleRemoveInput
+): Effect.Effect<PlanPersonLocation, InvalidInput> => {
+  const { serviceTypeId, planId, personId } = input;
+  if (serviceTypeId !== undefined && planId !== undefined) {
+    return Effect.succeed({ serviceTypeId, planId, personId });
+  }
+  if (personId !== undefined) {
+    return Effect.succeed({ personId });
+  }
+  return Effect.fail(
+    new InvalidInput({
+      message:
+        "A plan person can only be changed with its plan or person. Refresh and try again.",
+    })
+  );
+};
+
 export const removeScheduledPerson = (
   input: ScheduleRemoveInput
 ): Effect.Effect<
@@ -157,9 +178,10 @@ export const removeScheduledPerson = (
 > =>
   Effect.gen(function* removePerson() {
     const peopleService = yield* PlanningCenterPeople;
+    const location = yield* planPersonLocation(input);
     yield* ensureRequestIsOpen;
     yield* reportMissingPlanPerson(
-      peopleService.deletePlanPerson(input.planPersonId, input)
+      peopleService.deletePlanPerson(input.planPersonId, location)
     );
     peopleService.invalidatePlanWindowRosters();
     return { success: true as const };
@@ -174,12 +196,13 @@ export const updateScheduledPersonStatus = (
 > =>
   Effect.gen(function* updateStatus() {
     const peopleService = yield* PlanningCenterPeople;
+    const location = yield* planPersonLocation(input);
     yield* ensureRequestIsOpen;
     yield* reportMissingPlanPerson(
       peopleService.updatePlanPersonStatus(
         input.planPersonId,
         input.status,
-        input
+        location
       )
     );
     peopleService.invalidatePlanWindowRosters();

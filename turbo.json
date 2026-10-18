@@ -1,6 +1,13 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalDependencies": [
+    ".node-version",
+    "bunfig.toml",
+    "tsconfig.json",
+    "packages/config/**",
+    "scripts/**"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -21,7 +28,12 @@
     },
     "@pcobooster/web#build": {
       "dependsOn": ["^build"],
-      "env": ["NODE_ENV", "PLANNING_CENTER_TIME_ZONE", "POSTHOG_PROJECT_KEY"],
+      "env": [
+        "NODE_ENV",
+        "PCOBOOSTER_STAGE",
+        "PLANNING_CENTER_TIME_ZONE",
+        "POSTHOG_PROJECT_KEY"
+      ],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/stage-marketing.ts"],
       "outputs": ["dist/**", "public/marketing/**"]
     },
@@ -38,30 +50,11 @@
       "outputs": []
     },
     "//#test:root": {
-      "inputs": [
-        "lint/**/*.ts",
-        "scripts/**/*.ts",
-        "scripts/**/*.json",
-        "vitest.config.ts",
-        "packages/analytics/src/reports.ts",
-        "packages/analytics/src/privacy.ts"
-      ],
+      "inputs": ["$TURBO_DEFAULT$"],
       "outputs": []
     },
     "//#typecheck:root": {
-      "inputs": [
-        "lint/**/*.ts",
-        "scripts/**/*.ts",
-        "tsconfig.json",
-        "vitest.config.ts",
-        "packages/config/tsconfig.base.json",
-        "alchemy.run.ts",
-        "alchemy.cleanup.ts",
-        "alchemy.ci.ts",
-        "alchemy.posthog.ts",
-        "packages/analytics/src/reports.ts",
-        "packages/analytics/src/privacy.ts"
-      ],
+      "inputs": ["$TURBO_DEFAULT$"],
       "outputs": []
     },
     "db:generate": {

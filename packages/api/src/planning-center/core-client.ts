@@ -8,7 +8,10 @@ import { PlanningCenterNetworkError } from "@pcobooster/api/planning-center/netw
 import { PlanningCenterPacing } from "@pcobooster/api/planning-center/pacing";
 import { PlanningCenterPaginationError } from "@pcobooster/api/planning-center/pagination-error";
 import { PlanningCenterRateLimitError } from "@pcobooster/api/planning-center/rate-limit-error";
-import { DEFAULT_MAX_RATE_LIMIT_WAIT_MS } from "@pcobooster/api/planning-center/rate-pacer";
+import {
+  DEFAULT_MAX_RATE_LIMIT_WAIT_MS,
+  DEFAULT_MAX_WRITE_RATE_LIMIT_WAIT_MS,
+} from "@pcobooster/api/planning-center/rate-pacer";
 import type { PlanningCenterRatePacer } from "@pcobooster/api/planning-center/rate-pacer";
 import { PlanningCenterReadOnlyError } from "@pcobooster/api/planning-center/read-only-error";
 import type {
@@ -253,7 +256,8 @@ const isRateLimitedResponse = (error: AttemptError): boolean =>
   error instanceof PlanningCenterApiError && error.status === 429;
 
 /**
- * Idempotent reads retry transient failures; writes never do. A 429 is
+ * Idempotent reads retry transient failures; writes retry only a 429 (see
+ * `rateLimitedWriteRetry`). A read's 429 is
  * retried only when its Retry-After fits the interactive wait cap; its
  * `info` line comes from the attempt.
  */
@@ -281,6 +285,38 @@ const transientReadRetries = (
           );
     })
   );
+
+/**
+ * Planning Center answers 429 before acting on a request, so resending a rate-limited write
+ * cannot apply it twice. It is resent once, when its Retry-After fits the write wait cap.
+ */
+const isRetryableWriteRateLimit = (error: AttemptError): boolean =>
+  error instanceof PlanningCenterApiError &&
+  error.status === 429 &&
+  (error.retryAfterSeconds ?? 0) * MS_PER_SECOND <=
+    DEFAULT_MAX_WRITE_RATE_LIMIT_WAIT_MS;
+
+const MAX_WRITE_RATE_LIMIT_RETRIES = 1;
+
+const rateLimitedWriteRetry = Schedule.recurs(
+  MAX_WRITE_RATE_LIMIT_RETRIES
+).pipe(
+  Schedule.setInputType<AttemptError>(),
+  Schedule.while(({ input }) => isRetryableWriteRateLimit(input)),
+  Schedule.addDelay(({ attempt, input }) =>
+    Effect.succeed(Duration.millis(retryDelayMs(attempt, input)))
+  )
+);
+
+const willRetryRateLimit = (
+  method: HttpMethod,
+  attempt: number,
+  error: AttemptError
+): boolean =>
+  isReadMethod(method)
+    ? attempt <= MAX_RETRIES && isRetryableError(error)
+    : attempt <= MAX_WRITE_RATE_LIMIT_RETRIES &&
+      isRetryableWriteRateLimit(error);
 
 const readIntegerHeader = (
   headers: ResponseHeaders,
@@ -740,10 +776,7 @@ export class PlanningCenterCoreClient {
           attempt: context.attempt,
           retryAfterSeconds: error.retryAfterSeconds,
           rateLimit: error.rateLimit,
-          willRetry:
-            isReadMethod(method) &&
-            context.attempt <= MAX_RETRIES &&
-            isRetryableError(error),
+          willRetry: willRetryRateLimit(method, context.attempt, error),
         });
       }
       return yield* Effect.fail(error);
@@ -801,7 +834,7 @@ export class PlanningCenterCoreClient {
       });
       return yield* isReadMethod(method)
         ? Effect.retry(nextAttempt, transientReadRetries(description, method))
-        : nextAttempt;
+        : Effect.retry(nextAttempt, rateLimitedWriteRetry);
     });
   }
 

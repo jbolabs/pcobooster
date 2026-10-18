@@ -25,6 +25,9 @@ jobs:
     if: github.event.action != 'labeled'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # PRs reuse content-addressed results; main executes every gate afresh before deploy.
+      TURBO_FORCE: ${{ github.event_name != 'pull_request' }}
     concurrency:
       group: ci-${{ github.event.pull_request.number || github.sha }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -45,6 +48,9 @@ jobs:
       - name: Setup toolchain
         uses: ./.github/actions/setup
 
+      - name: Cache validation tasks
+        uses: ./.github/actions/turbo-cache
+
       - name: Lint workflows
         run: |
           curl -fsSL -o "$RUNNER_TEMP/actionlint.tar.gz" \
@@ -56,25 +62,12 @@ jobs:
       - name: Lint
         run: bunx turbo run //#lint:ci
 
-      # Pull requests check the packages their diff touches plus every dependent. A change to shared
-      # root config (dependencies, Turborepo, TypeScript, or Vitest settings) runs everything, which
-      # `--affected` alone would miss. Pushes to main always run the full suite before staging.
+      # Use the same conservative scope as local ci:affected. Main always runs everything.
       - name: Choose affected packages
         id: scope
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
-        run: |
-          if [ -z "$BASE" ]; then
-            exit 0
-          fi
-          # Fails the step (rather than narrowing the run) if the base cannot be diffed.
-          changed=$(git diff --name-only "$BASE...HEAD")
-          if grep -qE '^(package\.json|bun\.lock|bunfig\.toml|turbo\.json|tsconfig\.json|vitest\.config\.ts|\.node-version|patches/)' <<<"$changed"; then
-            echo "::notice::Shared root config changed; running every package."
-          else
-            echo "args=--affected" >> "$GITHUB_OUTPUT"
-            echo "TURBO_SCM_BASE=$BASE" >> "$GITHUB_ENV"
-          fi
+        run: bun scripts/ci/affected.ts --github
 
       # Kept apart, not one Turborepo run: in parallel they starve the release tests' 5 s timeouts.
       - name: Typecheck
@@ -91,6 +84,7 @@ jobs:
       group: cloudflare-build-${{ github.event.pull_request.number || github.sha }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
+      TURBO_FORCE: ${{ github.event_name != 'pull_request' }}
       # Validates admin's Vite build with the preview stages' base path.
       ADMIN_BASE_PATH: /admin
     steps:
@@ -100,6 +94,8 @@ jobs:
           persist-credentials: false
       - name: Setup toolchain
         uses: ./.github/actions/setup
+      - name: Cache validation tasks
+        uses: ./.github/actions/turbo-cache
       - name: Build Cloudflare bundles without credentials
         run: bun run build:cloudflare
 
