@@ -162,7 +162,11 @@ describe("PlanningCenterAccess", () => {
     expect(access.presentation).toBeTruthy();
     await expect(
       Effect.runPromise(
-        Effect.flip(access.services.people.deletePlanPerson("plan-person-1"))
+        Effect.flip(
+          access.services.people.deletePlanPerson("plan-person-1", {
+            personId: "person-1",
+          })
+        )
       )
     ).resolves.toMatchObject({ _tag: "PlanningCenterReadOnlyError" });
     expect(fetchMock).not.toHaveBeenCalled();
