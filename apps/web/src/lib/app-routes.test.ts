@@ -55,6 +55,7 @@ describe("phone plan tabs", () => {
       "lineup",
       "plan",
       "times",
+      "practice",
     ]);
     expect(phonePlanViewTab("assign")).toBe("lineup");
     expect(phonePlanViewTab("times")).toBe("times");

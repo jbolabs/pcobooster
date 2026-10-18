@@ -32,10 +32,11 @@ export const authSearchSchema = routeSearch({
   error: optionalParam,
 });
 
-/** Plan workspace views: the selected team position slot. */
+/** Plan workspace views: the selected team position slot, and the item Practice shows. */
 export const planWorkspaceSearchSchema = routeSearch({
   teamId: optionalParam,
   positionId: optionalParam,
+  item: optionalParam,
 });
 
 /**

@@ -18,6 +18,8 @@ describe(isSectionHeading, () => {
     "TAG (x2)",
     "CHORUS 2x",
     "INSTRUMENTAL",
+    "BRIDGE 1: (x2)",
+    "Chorus (2x)",
   ])("recognizes %s", (line) => {
     expect(isSectionHeading(line)).toBeTruthy();
   });
@@ -34,6 +36,8 @@ describe(isChordLine, () => {
   it("accepts chords with bar lines and repeats", () => {
     expect(isChordLine("D          Bm       G          D")).toBeTruthy();
     expect(isChordLine("| G | D/F# | Em | C | x2")).toBeTruthy();
+    expect(isChordLine("| F  | Am | G | -II- |  (2x)")).toBeTruthy();
+    expect(isChordLine("G -//- D (3x)")).toBeTruthy();
   });
 
   it("rejects lyric lines", () => {

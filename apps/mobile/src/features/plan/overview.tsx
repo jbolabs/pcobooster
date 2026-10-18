@@ -4,6 +4,7 @@ import {
   summarizeStaffing,
   summarizeTimes,
 } from "@pcobooster/planning-center-models/plan-overview";
+import type { PlanView } from "@pcobooster/planning-center-models/plan-overview";
 import { collectUnnotifiedPeople } from "@pcobooster/planning-center-models/scheduling-notifications";
 import { useRouter } from "expo-router";
 import { View } from "react-native";
@@ -22,7 +23,9 @@ const checkSegments = {
   assign: "Lineup",
   plan: "Plan",
   times: "Times",
-} as const;
+  // Phones have no Practice segment yet; its songs live under Plan.
+  practice: "Plan",
+} as const satisfies Record<PlanView, PlanSegment>;
 
 export const PlanOverview = ({
   ids,
