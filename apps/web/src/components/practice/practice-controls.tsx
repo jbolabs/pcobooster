@@ -31,27 +31,61 @@ import type { ChartTextSize, PracticeFiles } from "@/lib/practice";
 const PITCH_CLASSES = 12;
 const PLAN_KEY = "plan";
 
+const sameKey = (left: MusicalKey | null, right: MusicalKey | null) =>
+  left !== null &&
+  right !== null &&
+  left.pitch === right.pitch &&
+  left.minor === right.minor;
+
+interface KeyChoice {
+  readonly name: string;
+  readonly isPlan: boolean;
+  readonly hasChart: boolean;
+}
+
+const KeyOption = ({ option }: { option: KeyChoice }) => (
+  <DropdownMenuRadioItem value={option.isPlan ? PLAN_KEY : option.name}>
+    {option.name}
+    {option.isPlan ? (
+      <span className="text-muted-foreground ml-auto text-xs">Plan key</span>
+    ) : null}
+  </DropdownMenuRadioItem>
+);
+
 /**
- * The key to practice in: any of the twelve, in the song's mode. The plan's key is marked, and
- * choosing it goes back to following the plan.
+ * The key to practice in, in the song's mode. Keys Planning Center renders a chart for come
+ * first; the rest show the chart as text. The plan's key is marked, and choosing it goes back
+ * to following the plan.
  */
 export const KeyMenu = ({
   sounding,
   planKey,
+  renderedKeys,
   chosen,
   onChoose,
 }: {
   sounding: MusicalKey;
   /** The key the plan sets for the song, if any. */
   planKey: string | null;
+  /** Keys on the arrangement, which Planning Center renders charts for. */
+  renderedKeys: readonly string[];
   /** The key chosen to practice in; undefined follows the plan. */
   chosen: string | undefined;
   onChoose: (key: string | undefined) => void;
 }) => {
   const plan = parseKey(planKey);
-  const keys = Array.from({ length: PITCH_CLASSES }, (_, pitch) =>
-    keyName(pitch, sounding.minor)
-  );
+  const rendered = renderedKeys.map(parseKey);
+  const keys = Array.from({ length: PITCH_CLASSES }, (_, pitch): KeyChoice => {
+    const name = keyName(pitch, sounding.minor);
+    const key = parseKey(name);
+    return {
+      name,
+      isPlan: sameKey(key, plan),
+      hasChart: rendered.some((candidate) => sameKey(candidate, key)),
+    };
+  });
+  const charted = keys.filter((key) => key.hasChart || key.isPlan);
+  const others = keys.filter((key) => !(key.hasChart || key.isPlan));
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -66,36 +100,33 @@ export const KeyMenu = ({
         Key {sounding.name}
         <ChevronDown data-icon="inline-end" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-h-96 w-48">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Practice in</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={chosen ?? PLAN_KEY}
-            onValueChange={(value: string) => {
-              onChoose(
-                value === PLAN_KEY || value === plan?.name ? undefined : value
-              );
-            }}
-          >
-            {plan === null ? null : (
-              <DropdownMenuRadioItem value={PLAN_KEY}>
-                {plan.name}
-                <span className="text-muted-foreground ml-auto text-xs">
-                  Plan key
-                </span>
-              </DropdownMenuRadioItem>
-            )}
-            {keys.flatMap((key) =>
-              key === plan?.name
-                ? []
-                : [
-                    <DropdownMenuRadioItem key={key} value={key}>
-                      {key}
-                    </DropdownMenuRadioItem>,
-                  ]
-            )}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuGroup>
+      <DropdownMenuContent align="start" className="max-h-96 w-52">
+        <DropdownMenuRadioGroup
+          value={chosen ?? PLAN_KEY}
+          onValueChange={(value: string) => {
+            onChoose(
+              value === PLAN_KEY || value === plan?.name ? undefined : value
+            );
+          }}
+        >
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Planning Center charts</DropdownMenuLabel>
+            {charted.map((key) => (
+              <KeyOption key={key.name} option={key} />
+            ))}
+          </DropdownMenuGroup>
+          {others.length === 0 ? null : (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Other keys, as text</DropdownMenuLabel>
+                {others.map((key) => (
+                  <KeyOption key={key.name} option={key} />
+                ))}
+              </DropdownMenuGroup>
+            </>
+          )}
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -134,7 +165,7 @@ export const CapoMenu = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-96 w-52">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>Capo</DropdownMenuLabel>
+          <DropdownMenuLabel>Capo, as text</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={String(capo)}
             onValueChange={(value: string) => {

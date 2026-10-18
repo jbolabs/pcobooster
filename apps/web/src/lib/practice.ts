@@ -4,6 +4,7 @@
  * plan files it already shares with the Plan tab and the files browser.
  */
 import type { PlanFile } from "@pcobooster/contracts/http/plan-files";
+import { parseKey } from "@pcobooster/planning-center-models/chord-chart-chords";
 import type { PlanItem } from "@pcobooster/planning-center-models/types";
 import { Schema } from "effect";
 
@@ -201,4 +202,59 @@ export const nextLoop = (
       : { start: time, end: loop.start };
   }
   return null;
+};
+
+/** An arrangement key Planning Center renders a chord chart PDF for. */
+export interface ChartKey {
+  readonly id: string;
+  readonly startingKey: string | null;
+}
+
+/**
+ * What the chart area shows: Planning Center's own PDF (a key's chord chart, or the lyric
+ * sheet when `keyId` is null), or the chart drawn as text, for what Services doesn't render.
+ */
+export type ChartView =
+  | { readonly kind: "pdf"; readonly keyId: string | null }
+  | { readonly kind: "text"; readonly reason: "capo" | "key" };
+
+const sameKey = (left: string | null, right: string | null): boolean => {
+  const a = parseKey(left);
+  const b = parseKey(right);
+  return a !== null && b !== null && a.pitch === b.pitch && a.minor === b.minor;
+};
+
+/**
+ * Planning Center's PDF whenever it renders one: the lyric sheet, the plan's key, or another key
+ * on the arrangement. Services renders only saved keys, and no capo, so a key the arrangement
+ * lacks or a capo falls back to the text chart.
+ */
+export const chartView = ({
+  mode,
+  keys,
+  planKeyId,
+  chosenKey,
+  capo,
+}: {
+  readonly mode: ChartMode;
+  readonly keys: readonly ChartKey[];
+  readonly planKeyId: string | null;
+  readonly chosenKey: string | undefined;
+  readonly capo: number;
+}): ChartView => {
+  if (mode === "lyrics") {
+    return { kind: "pdf", keyId: null };
+  }
+  if (capo > 0) {
+    return { kind: "text", reason: "capo" };
+  }
+  const planKey = keys.find((key) => key.id === planKeyId);
+  if (chosenKey === undefined && planKey !== undefined) {
+    return { kind: "pdf", keyId: planKey.id };
+  }
+  const wanted = chosenKey ?? planKey?.startingKey ?? null;
+  const match = keys.find((key) => sameKey(key.startingKey, wanted));
+  return match === undefined
+    ? { kind: "text", reason: "key" }
+    : { kind: "pdf", keyId: match.id };
 };

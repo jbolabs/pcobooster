@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   adjacentStep,
+  chartView,
   formatPlaybackTime,
   nextLoop,
   playedSequence,
@@ -255,5 +256,46 @@ describe(nextLoop, () => {
     expect(nextLoop(started, 10)).toStrictEqual({ start: 10, end: 30 });
     expect(nextLoop(started, 30)).toStrictEqual({ start: 30, end: null });
     expect(nextLoop({ start: 30, end: 45 }, 50)).toBeNull();
+  });
+});
+
+describe(chartView, () => {
+  const keys = [
+    { id: "k-a", startingKey: "A" },
+    { id: "k-bb", startingKey: "Bb" },
+  ];
+  const base = {
+    mode: "chords",
+    keys,
+    planKeyId: "k-a",
+    chosenKey: undefined,
+    capo: 0,
+  } as const;
+
+  it("shows Planning Center's PDF for the plan's key, another saved key, and the lyrics", () => {
+    expect(chartView(base)).toStrictEqual({ kind: "pdf", keyId: "k-a" });
+    expect(chartView({ ...base, chosenKey: "A#" })).toStrictEqual({
+      kind: "pdf",
+      keyId: "k-bb",
+    });
+    expect(chartView({ ...base, mode: "lyrics", capo: 3 })).toStrictEqual({
+      kind: "pdf",
+      keyId: null,
+    });
+  });
+
+  it("draws the chart as text for a capo or a key Services doesn't render", () => {
+    expect(chartView({ ...base, capo: 2 })).toStrictEqual({
+      kind: "text",
+      reason: "capo",
+    });
+    expect(chartView({ ...base, chosenKey: "G" })).toStrictEqual({
+      kind: "text",
+      reason: "key",
+    });
+    expect(chartView({ ...base, keys: [] })).toStrictEqual({
+      kind: "text",
+      reason: "key",
+    });
   });
 });

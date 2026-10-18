@@ -1,3 +1,4 @@
+import { NotFound } from "@pcobooster/contracts/faults/not-found";
 import type { ChordChartArrangement } from "@pcobooster/contracts/http/chord-charts";
 import type { PlanFile } from "@pcobooster/contracts/http/plan-files";
 import { parseKey } from "@pcobooster/planning-center-models/chord-chart-chords";
@@ -15,6 +16,7 @@ import { FileMusic } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { PageScrollArea } from "@/components/page-shell";
 import { PracticeChart } from "@/components/practice/practice-chart";
 import {
   CapoMenu,
@@ -23,6 +25,7 @@ import {
   TextSizeControl,
 } from "@/components/practice/practice-controls";
 import { PracticePlayer } from "@/components/practice/practice-player";
+import { FilePdfReader } from "@/components/schedule/file-pdf-reader";
 import { PlanFileViewer } from "@/components/schedule/plan-file-viewer";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,18 +36,28 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { createChordChartSongQueryOptions } from "@/hooks/use-chord-chart-song";
+import {
+  createChordChartSongQueryOptions,
+  useChordChartPdf,
+} from "@/hooks/use-chord-chart-song";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { usePracticePrefs } from "@/hooks/use-practice-prefs";
 import {
   NO_SONG_PRACTICE,
+  chartView,
   playedSequence,
   practiceFiles,
   stepTextSize,
   withSongPractice,
 } from "@/lib/practice";
-import type { ChartMode, PracticeFiles, SongPractice } from "@/lib/practice";
+import type {
+  ChartMode,
+  ChartView,
+  PracticeFiles,
+  SongPractice,
+} from "@/lib/practice";
 
 /** How long a section jumped to stays marked. */
 const JUMP_HIGHLIGHT_MS = 1200;
@@ -222,6 +235,23 @@ const songMeta = (item: PlanItem): string =>
     .join(" · ");
 
 /** The text chart in the key and capo set for this song, as chords or lyrics. */
+/** Why the chart is drawn as text instead of Planning Center's PDF. */
+type TextReason = "capo" | "key" | "no-lyric-sheet" | "failed";
+
+const textChartNote = (reason: TextReason, key: string | null): string => {
+  if (reason === "capo") {
+    return "Planning Center has no capo chart for this song, so it shows as text.";
+  }
+  if (reason === "key") {
+    return `Planning Center has no chart in ${key ?? "this key"}, so it shows as text.`;
+  }
+  if (reason === "no-lyric-sheet") {
+    return "Planning Center has no lyric sheet for this song, so it shows as text.";
+  }
+  return "Planning Center couldn't render this chart, so it shows as text.";
+};
+
+/** The chart drawn from its Lyrics & Chords text, in any key and fingered for a capo. */
 const TextChart = ({
   arrangement,
   item,
@@ -229,6 +259,7 @@ const TextChart = ({
   mode,
   textSize,
   jump,
+  reason,
 }: {
   arrangement: ChordChartArrangement;
   item: PlanItem;
@@ -236,6 +267,7 @@ const TextChart = ({
   mode: ChartMode;
   textSize: Parameters<typeof PracticeChart>[0]["textSize"];
   jump: ReturnType<typeof useSectionJump>;
+  reason: TextReason;
 }) => {
   const reading = readChart({
     chordChart: arrangement.chordChart,
@@ -256,9 +288,10 @@ const TextChart = ({
           jump.jump(index);
         }}
       />
-      {reading.note === null || mode === "lyrics" ? null : (
-        <p className="text-muted-foreground text-xs">{reading.note}</p>
-      )}
+      <p className="text-muted-foreground text-xs">
+        {reading.note ??
+          textChartNote(reason, reading.keys.sounding?.name ?? null)}
+      </p>
       <PracticeChart
         sections={sections}
         textSize={textSize}
@@ -268,6 +301,75 @@ const TextChart = ({
     </div>
   );
 };
+
+/** What the chart area ends up showing once Planning Center has answered for its PDF. */
+type ResolvedChart =
+  | {
+      readonly kind: "pdf";
+      readonly data: string | null;
+      readonly keyId: string | null;
+    }
+  | { readonly kind: "text"; readonly reason: TextReason };
+
+/**
+ * Planning Center's PDF for the chosen view, falling back to the text chart when it has none
+ * (404) or can't render one. Null when the arrangement's text chart isn't on screen.
+ */
+const useResolvedChart = (
+  view: ChartView | null,
+  arrangement: ChordChartArrangement | null,
+  item: PlanItem
+): ResolvedChart | null => {
+  const keyId = view?.kind === "pdf" ? view.keyId : null;
+  const pdf = useChordChartPdf(
+    {
+      songId: item.song?.id ?? "",
+      arrangementId: arrangement?.id ?? "",
+      keyId,
+      updatedAt: arrangement?.updatedAt ?? null,
+    },
+    { enabled: view?.kind === "pdf" && arrangement !== null }
+  );
+  if (view === null) {
+    return null;
+  }
+  if (view.kind === "text") {
+    return { kind: "text", reason: view.reason };
+  }
+  if (pdf.isError) {
+    if (!(pdf.error instanceof NotFound)) {
+      return { kind: "text", reason: "failed" };
+    }
+    return { kind: "text", reason: keyId === null ? "no-lyric-sheet" : "key" };
+  }
+  return { kind: "pdf", data: pdf.data?.data ?? null, keyId };
+};
+
+/** A boxed panel for a PDF or file: it scrolls and zooms inside itself, not with the page. */
+const StagePanel = ({ children }: { children: ReactNode }) => (
+  <div className="bg-muted/40 flex min-h-[70dvh] flex-col rounded-xl md:min-h-0 md:flex-1">
+    {children}
+  </div>
+);
+
+/** Planning Center's own PDF of the chart. Services prints the song's order in its header. */
+const ChartPdf = ({
+  data,
+  keyId,
+}: {
+  data: string | null;
+  keyId: string | null;
+}) => (
+  <StagePanel>
+    {data === null ? (
+      <div className="text-muted-foreground flex flex-1 items-center justify-center gap-2 text-sm">
+        <Spinner /> Loading chart…
+      </div>
+    ) : (
+      <FilePdfReader key={keyId ?? "lyrics"} data={data} />
+    )}
+  </StagePanel>
+);
 
 /** The song's chord controls, shown only while the text chart is up in chords. */
 const ChordControls = ({
@@ -290,6 +392,9 @@ const ChordControls = ({
         <KeyMenu
           sounding={sounding}
           planKey={item.key?.startingKey ?? written?.name ?? null}
+          renderedKeys={arrangement.keys.flatMap((key) =>
+            key.startingKey === null ? [] : [key.startingKey]
+          )}
           chosen={song.key}
           onChoose={(key) => {
             onSong({ ...song, key });
@@ -376,6 +481,87 @@ const StageTitle = ({
 };
 
 /**
+ * The stage below its toolbar: text scrolls with the page, while a PDF or file is a panel that
+ * scrolls and zooms inside itself. The item's notes follow either.
+ */
+const StageBody = ({
+  serviceTypeId,
+  planId,
+  item,
+  song,
+  chart,
+  stage,
+  resolved,
+  textSize,
+  jump,
+  filesLoading,
+}: {
+  serviceTypeId: string;
+  planId: string;
+  item: PlanItem;
+  song: SongPractice;
+  chart: ReturnType<typeof useArrangementChart>;
+  stage: ReturnType<typeof useStageSource>;
+  resolved: ResolvedChart | null;
+  textSize: Parameters<typeof PracticeChart>[0]["textSize"];
+  jump: ReturnType<typeof useSectionJump>;
+  filesLoading: boolean;
+}) => {
+  // Text scrolls with the page; a PDF or file is a panel that scrolls inside itself.
+  let page: ReactNode = <NothingToShow filesLoading={filesLoading} />;
+  let panel: ReactNode = null;
+  if (chart.loading && stage.chosen === null) {
+    page = <ChartSkeleton />;
+  } else if (
+    resolved?.kind === "text" &&
+    stage.textMode !== null &&
+    chart.arrangement !== null
+  ) {
+    page = (
+      <TextChart
+        arrangement={chart.arrangement}
+        item={item}
+        song={song}
+        mode={stage.textMode}
+        textSize={textSize}
+        jump={jump}
+        reason={resolved.reason}
+      />
+    );
+  } else if (resolved?.kind === "pdf") {
+    panel = <ChartPdf data={resolved.data} keyId={resolved.keyId} />;
+  } else if (stage.shownFile !== null) {
+    panel = (
+      <StagePanel>
+        <PlanFileViewer
+          key={stage.shownFile.id}
+          serviceTypeId={serviceTypeId}
+          planId={planId}
+          file={stage.shownFile}
+        />
+      </StagePanel>
+    );
+  }
+
+  if (panel !== null) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
+        {panel}
+        <ItemNotes notes={item.description} />
+      </div>
+    );
+  }
+  return (
+    <PageScrollArea besidePane>
+      <div className="flex flex-col gap-6 pb-4">
+        {page}
+        <ItemNotes notes={item.description} />
+      </div>
+    </PageScrollArea>
+  );
+};
+
+/**
  * One item on the stage: its title and the song's details, the controls for how the chart
  * reads, the chart (or a chart file, lead sheet, or video), notes, and the player for its
  * recordings. It remounts for each item, so choices made for one song start fresh on the next.
@@ -405,33 +591,28 @@ export const PracticeStage = ({
     itemFiles
   );
   const jump = useSectionJump();
+  const view =
+    chart.arrangement === null || stage.textMode === null
+      ? null
+      : chartView({
+          mode: stage.textMode,
+          keys: chart.arrangement.keys,
+          planKeyId: item.key?.id ?? null,
+          chosenKey: song.key,
+          capo: song.capo,
+        });
+  // The arrangement's own charts are the Chords and Lyrics tabs, so the menu lists the rest.
+  const menuFiles =
+    chart.arrangement === null
+      ? itemFiles
+      : {
+          ...itemFiles,
+          charts: itemFiles.charts.filter(
+            (file) => !file.providerType.startsWith("AttachmentChart")
+          ),
+        };
 
-  let body: ReactNode = <NothingToShow filesLoading={filesLoading} />;
-  if (chart.loading && stage.chosen === null) {
-    body = <ChartSkeleton />;
-  } else if (stage.textMode !== null && chart.arrangement !== null) {
-    body = (
-      <TextChart
-        arrangement={chart.arrangement}
-        item={item}
-        song={song}
-        mode={stage.textMode}
-        textSize={prefs.textSize}
-        jump={jump}
-      />
-    );
-  } else if (stage.shownFile !== null) {
-    body = (
-      <div className="bg-muted/40 -mx-(--page-gutter) flex min-h-[70dvh] flex-col md:mx-0 md:min-h-0 md:flex-1 md:rounded-xl">
-        <PlanFileViewer
-          key={stage.shownFile.id}
-          serviceTypeId={serviceTypeId}
-          planId={planId}
-          file={stage.shownFile}
-        />
-      </div>
-    );
-  }
+  const resolved = useResolvedChart(view, chart.arrangement, item);
 
   return (
     <Tabs
@@ -461,7 +642,7 @@ export const PracticeStage = ({
               onSong={setSong}
             />
           ) : null}
-          {stage.textMode === null ? null : (
+          {resolved?.kind === "text" ? (
             <TextSizeControl
               size={prefs.textSize}
               onStep={(step) => {
@@ -471,10 +652,10 @@ export const PracticeStage = ({
                 }));
               }}
             />
-          )}
+          ) : null}
           <span className="flex-1" />
           <FilesMenu
-            files={itemFiles}
+            files={menuFiles}
             selected={stage.shownFile}
             onChoose={(file) => {
               stage.setChosen(fileSource(file));
@@ -486,10 +667,18 @@ export const PracticeStage = ({
         value={stage.source ?? "none"}
         className="flex min-h-0 flex-1 flex-col"
       >
-        <div className="flex min-h-0 flex-1 flex-col gap-6 md:overflow-y-auto md:overscroll-contain">
-          {body}
-          <ItemNotes notes={item.description} />
-        </div>
+        <StageBody
+          serviceTypeId={serviceTypeId}
+          planId={planId}
+          item={item}
+          song={song}
+          chart={chart}
+          stage={stage}
+          resolved={resolved}
+          textSize={prefs.textSize}
+          jump={jump}
+          filesLoading={filesLoading}
+        />
       </TabsContent>
       {itemFiles.tracks.length > 0 ? (
         <PracticePlayer

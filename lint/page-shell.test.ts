@@ -64,6 +64,10 @@ const panelScrollers = new Map([
     "Assign's position list column",
   ],
   [
+    "apps/web/src/components/practice/practice-tab.tsx",
+    "Practice's setlist column",
+  ],
+  [
     "apps/web/src/components/songs/chord-chart-import-dialog.tsx",
     "a dialog's preformatted preview",
   ],
