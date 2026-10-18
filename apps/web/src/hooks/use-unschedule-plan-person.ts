@@ -9,6 +9,7 @@ import {
   settleScheduleMutationQueries,
 } from "@/hooks/use-schedule-cache-optimism";
 import type { ScheduleMutationInvalidateContext } from "@/hooks/use-schedule-cache-optimism";
+import { scheduleMutationKey } from "@/lib/query-keys";
 import { productClient } from "@/product-client";
 
 /** The fault's message (written for people), or the failure's own; never blank. */
@@ -25,6 +26,7 @@ export const useUnschedulePlanPerson = ({
   const queryClient = useQueryClient();
 
   const unscheduleMutation = useMutation({
+    mutationKey: scheduleMutationKey,
     mutationFn: async ({
       planPersonId,
       context,
@@ -47,11 +49,7 @@ export const useUnschedulePlanPerson = ({
     onMutate: async ({ planPersonId, context }) => {
       await cancelScheduleMutationQueries(queryClient, context ?? {});
       return {
-        snapshot: optimisticallyUnschedulePlanPerson(
-          queryClient,
-          planPersonId,
-          context?.personId
-        ),
+        snapshot: optimisticallyUnschedulePlanPerson(queryClient, planPersonId),
       };
     },
     onSuccess: (_result, variables) => {

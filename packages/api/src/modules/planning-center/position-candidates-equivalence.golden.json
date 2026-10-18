@@ -12,10 +12,7 @@
       "isScheduledForSelectedPlanPosition": true,
       "isConfirmedForSelectedPlanPosition": true,
       "isDeclinedForSelectedPlanPosition": false,
-      "selectedPlanAssignmentLabels": [
-        "Band - Electric Guitar",
-        "Electric Guitar"
-      ],
+      "selectedPlanAssignmentLabels": ["Band - Electric Guitar"],
       "schedulingPreferences": {
         "schedulePreference": null,
         "preferredWeeks": [],
@@ -187,10 +184,7 @@
       "isScheduledForSelectedPlanPosition": true,
       "isConfirmedForSelectedPlanPosition": false,
       "isDeclinedForSelectedPlanPosition": false,
-      "selectedPlanAssignmentLabels": [
-        "Band - Electric Guitar",
-        "Electric Guitar"
-      ],
+      "selectedPlanAssignmentLabels": ["Band - Electric Guitar"],
       "schedulingPreferences": {
         "schedulePreference": null,
         "preferredWeeks": [],
@@ -256,10 +250,7 @@
       "isScheduledForSelectedPlanPosition": true,
       "isConfirmedForSelectedPlanPosition": false,
       "isDeclinedForSelectedPlanPosition": false,
-      "selectedPlanAssignmentLabels": [
-        "Band - Electric Guitar",
-        "Electric Guitar"
-      ],
+      "selectedPlanAssignmentLabels": ["Band - Electric Guitar"],
       "schedulingPreferences": null,
       "frequency": {
         "recentServedDays": 1,
@@ -293,86 +284,6 @@
       "recommendationScore": 90,
       "recommendationReasoning": [
         "Last served on the same date (Sun, Sep 27, 2026)"
-      ]
-    },
-    {
-      "id": "p-gus",
-      "firstName": "Gus",
-      "lastName": "Gray",
-      "fullName": "Gus Gray",
-      "photoUrl": "https://example.test/p-gus.jpg",
-      "photoThumbnailUrl": "https://example.test/p-gus-thumb.jpg",
-      "archived": false,
-      "positions": [],
-      "isScheduledForSelectedPlanPosition": true,
-      "isConfirmedForSelectedPlanPosition": false,
-      "isDeclinedForSelectedPlanPosition": false,
-      "selectedPlanAssignmentLabels": ["Band - Electric Guitar"],
-      "schedulingPreferences": {
-        "schedulePreference": null,
-        "preferredWeeks": [],
-        "timePreferenceOptionIds": [],
-        "maxPlansPerDay": null,
-        "maxPlansPerMonth": null
-      },
-      "frequency": {
-        "recentServedDays": 2,
-        "last60Days": 2,
-        "last90Days": 2,
-        "totalServed": 2,
-        "upcomingServices": 1,
-        "recentRehearsalOnlyDays": 0,
-        "rehearsalLast60Days": 0,
-        "rehearsalLast90Days": 0,
-        "totalRehearsals": 0,
-        "upcomingRehearsals": 0,
-        "lastServedDate": "2026-09-27T17:00:00.000Z",
-        "nextUpcomingDate": "2026-10-11T17:00:00.000Z"
-      },
-      "serviceHistory": [
-        {
-          "id": "pp-gus-aug30",
-          "sourceScheduleId": "pp-gus-aug30",
-          "planId": "plan-aug30",
-          "date": "2026-08-30T17:00:00.000Z",
-          "teamPositionName": "Electric Guitar",
-          "serviceTypeName": "Sunday",
-          "planTitle": "Plan plan-aug30",
-          "status": "U",
-          "timeType": "service"
-        },
-        {
-          "id": "pp-gus-sel",
-          "sourceScheduleId": "pp-gus-sel",
-          "planId": "plan-sel",
-          "date": "2026-09-27T17:00:00.000Z",
-          "teamPositionName": "Electric Guitar",
-          "teamName": "Band",
-          "serviceTypeName": "Sunday",
-          "planTitle": "Plan plan-sel",
-          "status": "U",
-          "timeType": "service"
-        },
-        {
-          "id": "pp-gus-oct11",
-          "sourceScheduleId": "pp-gus-oct11",
-          "planId": "plan-oct11",
-          "date": "2026-10-11T17:00:00.000Z",
-          "teamPositionName": "Electric Guitar",
-          "serviceTypeName": "Sunday",
-          "planTitle": "Plan plan-oct11",
-          "status": "C",
-          "timeType": "service"
-        }
-      ],
-      "scheduledPlanPersonId": "pp-gus-sel",
-      "isBlockedForDate": true,
-      "availability": "blocked",
-      "recommendationScore": 45,
-      "recommendationReasoning": [
-        "Last served on the same date (Sun, Sep 27, 2026)",
-        "Upcoming: 14 days after on Sun, Oct 11, 2026",
-        "Ranked slightly lower: scheduled 14 days after"
       ]
     },
     {
@@ -440,7 +351,7 @@
       "isScheduledForSelectedPlanPosition": false,
       "isConfirmedForSelectedPlanPosition": false,
       "isDeclinedForSelectedPlanPosition": false,
-      "selectedPlanAssignmentLabels": ["Vocals - Harmony", "Harmony"],
+      "selectedPlanAssignmentLabels": ["Vocals - Harmony"],
       "schedulingPreferences": {
         "schedulePreference": null,
         "preferredWeeks": [],
@@ -491,6 +402,85 @@
       "recommendationScore": 86,
       "recommendationReasoning": [
         "Last served on the same date (Sun, Sep 27, 2026)"
+      ]
+    },
+    {
+      "id": "p-gus",
+      "firstName": "Gus",
+      "lastName": "Gray",
+      "fullName": "Gus Gray",
+      "photoUrl": "https://example.test/p-gus.jpg",
+      "photoThumbnailUrl": "https://example.test/p-gus-thumb.jpg",
+      "archived": false,
+      "positions": [],
+      "isScheduledForSelectedPlanPosition": false,
+      "isConfirmedForSelectedPlanPosition": false,
+      "isDeclinedForSelectedPlanPosition": false,
+      "selectedPlanAssignmentLabels": [],
+      "schedulingPreferences": {
+        "schedulePreference": null,
+        "preferredWeeks": [],
+        "timePreferenceOptionIds": [],
+        "maxPlansPerDay": null,
+        "maxPlansPerMonth": null
+      },
+      "frequency": {
+        "recentServedDays": 2,
+        "last60Days": 2,
+        "last90Days": 2,
+        "totalServed": 2,
+        "upcomingServices": 1,
+        "recentRehearsalOnlyDays": 0,
+        "rehearsalLast60Days": 0,
+        "rehearsalLast90Days": 0,
+        "totalRehearsals": 0,
+        "upcomingRehearsals": 0,
+        "lastServedDate": "2026-09-27T17:00:00.000Z",
+        "nextUpcomingDate": "2026-10-11T17:00:00.000Z"
+      },
+      "serviceHistory": [
+        {
+          "id": "pp-gus-aug30",
+          "sourceScheduleId": "pp-gus-aug30",
+          "planId": "plan-aug30",
+          "date": "2026-08-30T17:00:00.000Z",
+          "teamPositionName": "Electric Guitar",
+          "serviceTypeName": "Sunday",
+          "planTitle": "Plan plan-aug30",
+          "status": "U",
+          "timeType": "service"
+        },
+        {
+          "id": "pp-gus-sel",
+          "sourceScheduleId": "pp-gus-sel",
+          "planId": "plan-sel",
+          "date": "2026-09-27T17:00:00.000Z",
+          "teamPositionName": "Electric Guitar",
+          "teamName": "Band",
+          "serviceTypeName": "Sunday",
+          "planTitle": "Plan plan-sel",
+          "status": "U",
+          "timeType": "service"
+        },
+        {
+          "id": "pp-gus-oct11",
+          "sourceScheduleId": "pp-gus-oct11",
+          "planId": "plan-oct11",
+          "date": "2026-10-11T17:00:00.000Z",
+          "teamPositionName": "Electric Guitar",
+          "serviceTypeName": "Sunday",
+          "planTitle": "Plan plan-oct11",
+          "status": "C",
+          "timeType": "service"
+        }
+      ],
+      "isBlockedForDate": true,
+      "availability": "blocked",
+      "recommendationScore": 45,
+      "recommendationReasoning": [
+        "Last served on the same date (Sun, Sep 27, 2026)",
+        "Upcoming: 14 days after on Sun, Oct 11, 2026",
+        "Ranked slightly lower: scheduled 14 days after"
       ]
     }
   ],
@@ -705,60 +695,6 @@
       "recommendationReasoning": ["No past services scheduled"]
     },
     {
-      "id": "p-gus",
-      "firstName": "Gus",
-      "lastName": "Gray",
-      "fullName": "Gus Gray",
-      "photoUrl": "https://example.test/p-gus.jpg",
-      "photoThumbnailUrl": "https://example.test/p-gus-thumb.jpg",
-      "archived": false,
-      "positions": [],
-      "isScheduledForSelectedPlanPosition": true,
-      "isConfirmedForSelectedPlanPosition": false,
-      "isDeclinedForSelectedPlanPosition": false,
-      "selectedPlanAssignmentLabels": ["Band - Electric Guitar"],
-      "schedulingPreferences": {
-        "schedulePreference": null,
-        "preferredWeeks": [],
-        "timePreferenceOptionIds": [],
-        "maxPlansPerDay": null,
-        "maxPlansPerMonth": null
-      },
-      "frequency": {
-        "recentServedDays": 1,
-        "last60Days": 1,
-        "last90Days": 1,
-        "totalServed": 1,
-        "upcomingServices": 0,
-        "recentRehearsalOnlyDays": 0,
-        "rehearsalLast60Days": 0,
-        "rehearsalLast90Days": 0,
-        "totalRehearsals": 0,
-        "upcomingRehearsals": 0,
-        "lastServedDate": "2026-09-27T17:00:00.000Z"
-      },
-      "serviceHistory": [
-        {
-          "id": "s-gus-sel",
-          "sourceScheduleId": "s-gus-sel",
-          "planId": "plan-sel",
-          "date": "2026-09-27T17:00:00.000Z",
-          "teamPositionName": "Electric Guitar",
-          "teamName": "Band",
-          "serviceTypeName": "Sunday",
-          "planTitle": "Plan plan-sel",
-          "status": "U"
-        }
-      ],
-      "scheduledPlanPersonId": "pp-gus-sel",
-      "isBlockedForDate": true,
-      "availability": "blocked",
-      "recommendationScore": 90,
-      "recommendationReasoning": [
-        "Last served on the same date (Sun, Sep 27, 2026)"
-      ]
-    },
-    {
       "id": "p-eve",
       "firstName": "Eve",
       "lastName": "Evans",
@@ -847,6 +783,59 @@
       "availability": "blocked",
       "recommendationScore": 126,
       "recommendationReasoning": ["No past services scheduled"]
+    },
+    {
+      "id": "p-gus",
+      "firstName": "Gus",
+      "lastName": "Gray",
+      "fullName": "Gus Gray",
+      "photoUrl": "https://example.test/p-gus.jpg",
+      "photoThumbnailUrl": "https://example.test/p-gus-thumb.jpg",
+      "archived": false,
+      "positions": [],
+      "isScheduledForSelectedPlanPosition": false,
+      "isConfirmedForSelectedPlanPosition": false,
+      "isDeclinedForSelectedPlanPosition": false,
+      "selectedPlanAssignmentLabels": [],
+      "schedulingPreferences": {
+        "schedulePreference": null,
+        "preferredWeeks": [],
+        "timePreferenceOptionIds": [],
+        "maxPlansPerDay": null,
+        "maxPlansPerMonth": null
+      },
+      "frequency": {
+        "recentServedDays": 1,
+        "last60Days": 1,
+        "last90Days": 1,
+        "totalServed": 1,
+        "upcomingServices": 0,
+        "recentRehearsalOnlyDays": 0,
+        "rehearsalLast60Days": 0,
+        "rehearsalLast90Days": 0,
+        "totalRehearsals": 0,
+        "upcomingRehearsals": 0,
+        "lastServedDate": "2026-09-27T17:00:00.000Z"
+      },
+      "serviceHistory": [
+        {
+          "id": "s-gus-sel",
+          "sourceScheduleId": "s-gus-sel",
+          "planId": "plan-sel",
+          "date": "2026-09-27T17:00:00.000Z",
+          "teamPositionName": "Electric Guitar",
+          "teamName": "Band",
+          "serviceTypeName": "Sunday",
+          "planTitle": "Plan plan-sel",
+          "status": "U"
+        }
+      ],
+      "isBlockedForDate": true,
+      "availability": "blocked",
+      "recommendationScore": 90,
+      "recommendationReasoning": [
+        "Last served on the same date (Sun, Sep 27, 2026)"
+      ]
     }
   ]
 }

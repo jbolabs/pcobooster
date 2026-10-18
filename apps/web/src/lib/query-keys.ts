@@ -1,3 +1,5 @@
+export const scheduleMutationKey = ["schedule-write"] as const;
+
 export const queryKeys = {
   accounts: () => ["planning-center-accounts"] as const,
   /** The signed-in person's Planning Center permissions in one linked account. */

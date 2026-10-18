@@ -3,10 +3,7 @@ import type {
   PlanWindowRosters,
   WindowRosterRow,
 } from "@pcobooster/planning-center-models/plan-window-history";
-import {
-  assemblePositionCandidates,
-  mergeAssignmentLabels,
-} from "@pcobooster/planning-center-models/position-candidates";
+import { assemblePositionCandidates } from "@pcobooster/planning-center-models/position-candidates";
 import type { PositionCandidate } from "@pcobooster/planning-center-models/position-candidates";
 import { describe, expect, it } from "vitest";
 
@@ -108,17 +105,6 @@ describe(expandPlanWindowHistory, () => {
   });
 });
 
-describe(mergeAssignmentLabels, () => {
-  it("only dedupes exact labels so hyphenated position names stay intact", () => {
-    expect(
-      mergeAssignmentLabels(
-        ["Band - Bass Guitar"],
-        ["Bass Guitar", "Band - Bass Guitar"]
-      )
-    ).toStrictEqual(["Band - Bass Guitar", "Bass Guitar"]);
-  });
-});
-
 describe(assemblePositionCandidates, () => {
   const candidate: PositionCandidate = {
     id: "p1",
@@ -137,7 +123,7 @@ describe(assemblePositionCandidates, () => {
     },
   };
 
-  it("applies the roster's slot status and merges history's labels", () => {
+  it("uses the roster for slot status and labels even when history disagrees", () => {
     const { people } = assemblePositionCandidates({
       candidates: [candidate],
       match: { planId: "plan-ok", selectedPositionName: "Vocals" },
@@ -167,7 +153,46 @@ describe(assemblePositionCandidates, () => {
       isConfirmedForSelectedPlanPosition: true,
       isDeclinedForSelectedPlanPosition: false,
       scheduledPlanPersonId: "pp-selected",
-      selectedPlanAssignmentLabels: ["Band - Vocals", "Band - Keys"],
+      selectedPlanAssignmentLabels: ["Band - Vocals"],
+    });
+  });
+
+  it("does not resurrect a removed assignment or labels from older history", () => {
+    const { people } = assemblePositionCandidates({
+      candidates: [
+        { ...candidate, selectedPlanSlot: null, selectedPlanRosterLabels: [] },
+      ],
+      match: {
+        planId: "plan-ok",
+        teamId: "team-1",
+        selectedPositionName: "Vocals",
+      },
+      referenceDate: new Date("2026-02-22T00:00:00Z"),
+      timeZone: "UTC",
+      historyFor: () => ({
+        serviceHistory: [],
+        selectedPlanAssignments: [
+          {
+            source: "planPerson",
+            id: "pp-removed",
+            planId: "plan-ok",
+            teamId: "team-1",
+            teamName: null,
+            teamPositionName: "Band - Vocals",
+            status: "U",
+            planPersonId: null,
+            declineReason: null,
+          },
+        ],
+      }),
+      blockedFor: () => false,
+    });
+    expect(people[0]).toMatchObject({
+      id: "p1",
+      isScheduledForSelectedPlanPosition: false,
+      isConfirmedForSelectedPlanPosition: false,
+      isDeclinedForSelectedPlanPosition: false,
+      selectedPlanAssignmentLabels: [],
     });
   });
 });

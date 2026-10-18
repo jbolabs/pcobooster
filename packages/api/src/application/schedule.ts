@@ -64,11 +64,15 @@ export const commitScheduledPerson = (
 ): Effect.Effect<
   { readonly success: true; readonly data: { readonly id: string } },
   ApplicationFault,
-  PlanningCenterAccess | PlanningCenterPeople | RequestContext
+  | PlanningCenterAccess
+  | PlanningCenterCatalog
+  | PlanningCenterPeople
+  | RequestContext
 > =>
   Effect.gen(function* commitPerson() {
     const access = yield* PlanningCenterAccess;
     const peopleService = yield* PlanningCenterPeople;
+    const catalogService = yield* PlanningCenterCatalog;
     yield* ensureRequestIsOpen;
     // The scheduling transport does not interrupt this provider mutation,
     // so its outcome is audited accurately.
@@ -88,6 +92,10 @@ export const commitScheduledPerson = (
             )
           ) {
             peopleService.invalidateScheduleReadCaches(input);
+            catalogService.invalidateNeededPositionsCache(
+              input.serviceTypeId,
+              input.planId
+            );
             peopleService.invalidatePlanWindowRosters();
             return Effect.fail(
               new AlreadyScheduled({
@@ -102,6 +110,10 @@ export const commitScheduledPerson = (
       );
 
     peopleService.invalidateScheduleReadCaches(input);
+    catalogService.invalidateNeededPositionsCache(
+      input.serviceTypeId,
+      input.planId
+    );
     peopleService.invalidatePlanWindowRosters();
     const name = created.attributes.team_position_name;
     const createdPositionName = isString(name) ? name : "";
@@ -174,15 +186,22 @@ export const removeScheduledPerson = (
 ): Effect.Effect<
   { readonly success: true },
   ApplicationFault,
-  PlanningCenterPeople | RequestContext
+  PlanningCenterCatalog | PlanningCenterPeople | RequestContext
 > =>
   Effect.gen(function* removePerson() {
     const peopleService = yield* PlanningCenterPeople;
+    const catalogService = yield* PlanningCenterCatalog;
     const location = yield* planPersonLocation(input);
     yield* ensureRequestIsOpen;
     yield* reportMissingPlanPerson(
       peopleService.deletePlanPerson(input.planPersonId, location)
     );
+    if (input.serviceTypeId !== undefined && input.planId !== undefined) {
+      catalogService.invalidateNeededPositionsCache(
+        input.serviceTypeId,
+        input.planId
+      );
+    }
     peopleService.invalidatePlanWindowRosters();
     return { success: true as const };
   }).pipe(withPlanningCenterFaults);
@@ -192,10 +211,11 @@ export const updateScheduledPersonStatus = (
 ): Effect.Effect<
   { readonly success: true },
   ApplicationFault,
-  PlanningCenterPeople | RequestContext
+  PlanningCenterCatalog | PlanningCenterPeople | RequestContext
 > =>
   Effect.gen(function* updateStatus() {
     const peopleService = yield* PlanningCenterPeople;
+    const catalogService = yield* PlanningCenterCatalog;
     const location = yield* planPersonLocation(input);
     yield* ensureRequestIsOpen;
     yield* reportMissingPlanPerson(
@@ -205,6 +225,12 @@ export const updateScheduledPersonStatus = (
         location
       )
     );
+    if (input.serviceTypeId !== undefined && input.planId !== undefined) {
+      catalogService.invalidateNeededPositionsCache(
+        input.serviceTypeId,
+        input.planId
+      );
+    }
     peopleService.invalidatePlanWindowRosters();
     return { success: true as const };
   }).pipe(withPlanningCenterFaults);

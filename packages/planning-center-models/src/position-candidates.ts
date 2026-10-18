@@ -1,12 +1,8 @@
-import {
-  isDeclinedAssignmentStatus,
-  summarizeCandidateHistory,
-} from "@pcobooster/planning-center-models/candidate-frequency";
+import { summarizeCandidateHistory } from "@pcobooster/planning-center-models/candidate-frequency";
 import {
   scoreAndNormalizePeople,
   sortPeopleForSelection,
 } from "@pcobooster/planning-center-models/candidate-scoring";
-import { isNonEmptyString } from "@pcobooster/planning-center-models/json";
 import type { SchedulingPreferences } from "@pcobooster/planning-center-models/scheduling-preferences";
 import type {
   PersonWithAvailability,
@@ -82,121 +78,6 @@ export const EMPTY_CANDIDATE_HISTORY: CandidateHistory = {
   selectedPlanAssignments: [],
 };
 
-const parseTeamPositionName = (
-  teamPositionName: string
-): { teamName?: string; positionName: string } | null => {
-  const raw = teamPositionName.trim();
-  if (!raw) {
-    return null;
-  }
-  if (!raw.includes(" - ")) {
-    return { positionName: raw };
-  }
-  const parts = raw.split(" - ");
-  const teamName = parts[0]?.trim();
-  const positionName = parts.slice(1).join(" - ").trim();
-  if (!positionName) {
-    return null;
-  }
-  return { teamName: teamName || undefined, positionName };
-};
-
-const readAssignmentTeamPosition = (
-  assignment: SelectedPlanAssignment
-): { teamName?: string; positionName: string } | null => {
-  const parsed = parseTeamPositionName(assignment.teamPositionName);
-  if (!parsed) {
-    return null;
-  }
-  const explicitTeamName =
-    assignment.source === "schedule" && assignment.teamName !== null
-      ? assignment.teamName.trim()
-      : "";
-  return {
-    ...parsed,
-    teamName: (parsed.teamName ?? explicitTeamName) || undefined,
-  };
-};
-
-/** The assignment for the selected slot on the selected plan, if the person has one. */
-export const findSelectedSlotAssignment = (
-  assignments: readonly SelectedPlanAssignment[],
-  context: SelectedPlanMatchContext
-): SelectedPlanAssignment | undefined => {
-  const { planId, teamId, selectedPositionName, selectedTeamName } = context;
-  if (!isNonEmptyString(planId) || !isNonEmptyString(selectedPositionName)) {
-    return undefined;
-  }
-  return assignments.find((assignment) => {
-    if (assignment.planId !== planId) {
-      return false;
-    }
-    if (
-      isNonEmptyString(teamId) &&
-      isNonEmptyString(assignment.teamId) &&
-      assignment.teamId !== teamId
-    ) {
-      return false;
-    }
-    const parsed = readAssignmentTeamPosition(assignment);
-    if (!parsed) {
-      return false;
-    }
-    if (
-      isNonEmptyString(selectedTeamName) &&
-      isNonEmptyString(parsed.teamName) &&
-      parsed.teamName !== selectedTeamName
-    ) {
-      return false;
-    }
-    return parsed.positionName === selectedPositionName;
-  });
-};
-
-/** "Team - Position" labels of the person's non-declined assignments on the selected plan. */
-export const getSelectedPlanAssignmentLabels = (
-  assignments: readonly SelectedPlanAssignment[],
-  context: SelectedPlanMatchContext
-): string[] => {
-  const { planId } = context;
-  if (!isNonEmptyString(planId)) {
-    return [];
-  }
-  const labels = new Set<string>();
-  for (const assignment of assignments) {
-    if (
-      assignment.planId !== planId ||
-      isDeclinedAssignmentStatus(assignment.status)
-    ) {
-      continue;
-    }
-    const parsed = readAssignmentTeamPosition(assignment);
-    if (!parsed) {
-      continue;
-    }
-    labels.add(
-      isNonEmptyString(parsed.teamName)
-        ? `${parsed.teamName} - ${parsed.positionName}`
-        : parsed.positionName
-    );
-  }
-  return [...labels];
-};
-
-/** Case-insensitive union of label groups; a later spelling of a label wins. */
-export const mergeAssignmentLabels = (
-  ...labelGroups: readonly (readonly string[])[]
-): string[] => {
-  const merged = new Map<string, string>();
-  for (const rawLabel of labelGroups.flat()) {
-    const label = rawLabel.trim();
-    if (label) {
-      merged.set(label.toLowerCase(), label);
-    }
-  }
-  return [...merged.values()];
-};
-
 const createCandidatePerson = (
   candidate: PositionCandidate
 ): PersonWithAvailability => ({
@@ -234,29 +115,6 @@ const applySelectedSlot = (
   }
 };
 
-const applySelectedAssignment = (
-  person: PersonWithAvailability,
-  assignment: SelectedPlanAssignment | undefined,
-  labels: string[]
-) => {
-  person.selectedPlanAssignmentLabels = labels;
-  person.selectedPlanDeclineReason = undefined;
-  if (assignment === undefined) {
-    return;
-  }
-  const { status } = assignment;
-  person.isScheduledForSelectedPlanPosition = true;
-  person.isConfirmedForSelectedPlanPosition =
-    status === "C" || status.toLowerCase() === "confirmed";
-  person.isDeclinedForSelectedPlanPosition = isDeclinedAssignmentStatus(status);
-  person.scheduledPlanPersonId =
-    (assignment.source === "schedule" ? assignment.planPersonId : null) ??
-    assignment.id;
-  if (person.isDeclinedForSelectedPlanPosition) {
-    person.selectedPlanDeclineReason = assignment.declineReason;
-  }
-};
-
 export interface PositionCandidateSources {
   candidates: readonly PositionCandidate[];
   match: SelectedPlanMatchContext;
@@ -283,9 +141,9 @@ export interface AssembledPositionCandidates {
 }
 
 /**
- * Builds the candidate list from whatever parts have arrived. Once complete, the result equals
- * what the single-call candidate list returned: the fresh roster decides the selected slot, and
- * history's own copy of the selected plan fills in when the roster has no entry for the slot.
+ * Builds the candidate list from whatever parts have arrived. The fresh roster decides the
+ * selected slot and assignment labels. History supplies frequency
+ * and calendar bars only; its older roster copy must not resurrect a removed assignment.
  */
 export const assemblePositionCandidates = ({
   candidates,
@@ -300,13 +158,13 @@ export const assemblePositionCandidates = ({
   const people = candidates.map((candidate) => {
     const person = createCandidatePerson(candidate);
     const history = historyFor(candidate.id);
+    applySelectedSlot(
+      person,
+      candidate.selectedPlanSlot,
+      candidate.selectedPlanRosterLabels
+    );
     if (history === undefined) {
       complete = false;
-      applySelectedSlot(
-        person,
-        candidate.selectedPlanSlot,
-        candidate.selectedPlanRosterLabels
-      );
     } else {
       const summary = summarizeCandidateHistory(
         history.serviceHistory,
@@ -315,19 +173,6 @@ export const assemblePositionCandidates = ({
       );
       person.frequency = summary.frequency;
       person.serviceHistory = summary.serviceHistory;
-      const labels = mergeAssignmentLabels(
-        candidate.selectedPlanRosterLabels,
-        getSelectedPlanAssignmentLabels(history.selectedPlanAssignments, match)
-      );
-      if (candidate.selectedPlanSlot === null) {
-        applySelectedAssignment(
-          person,
-          findSelectedSlotAssignment(history.selectedPlanAssignments, match),
-          labels
-        );
-      } else {
-        applySelectedSlot(person, candidate.selectedPlanSlot, labels);
-      }
     }
 
     const blocked = blockedFor(candidate.id);
