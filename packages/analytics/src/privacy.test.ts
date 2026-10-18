@@ -174,6 +174,100 @@ describe("analytics privacy boundary", () => {
     });
   });
 
+  it("keeps an exception when a frame line number is null or not finite", () => {
+    const event = {
+      uuid: "null-line",
+      event: "$exception",
+      properties: {
+        $exception_list: [
+          {
+            type: "Error",
+            value: "Menu group missing",
+            stacktrace: {
+              type: "raw",
+              frames: [
+                {
+                  filename: "https://pcobooster.com/assets/editor.js",
+                  function: "InsertMenu",
+                  lineno: null,
+                  colno: null,
+                },
+                {
+                  filename: "https://pcobooster.com/assets/editor.js",
+                  function: "openMenu",
+                  lineno: "12",
+                  colno: Number.NaN,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+
+    expect(
+      prepareAnalyticsEvent(event, "/songs/42", true)?.properties
+        .$exception_list
+    ).toStrictEqual([
+      {
+        type: "Error",
+        value: "Menu group missing",
+        stacktrace: {
+          type: "raw",
+          frames: [
+            {
+              filename: "https://pcobooster.com/assets/editor.js",
+              function: "InsertMenu",
+            },
+            {
+              filename: "https://pcobooster.com/assets/editor.js",
+              function: "openMenu",
+            },
+          ],
+        },
+      },
+    ]);
+  });
+
+  it("keeps type and message when the exception list still cannot decode", () => {
+    const message = `Base UI error #31${"!".repeat(600)}`;
+    const event = {
+      uuid: "undecodable",
+      event: "$exception",
+      properties: {
+        $exception_list: [
+          {
+            type: "Error",
+            value: message,
+            stacktrace: { type: 1, frames: [] },
+          },
+        ],
+      },
+    };
+
+    expect(
+      prepareAnalyticsEvent(event, "/songs/42", true)?.properties
+        .$exception_list
+    ).toStrictEqual([
+      {
+        type: "Error",
+        value: message.slice(0, 500),
+        stacktrace: undefined,
+      },
+    ]);
+    expect(
+      prepareAnalyticsEvent(
+        {
+          uuid: "no-text",
+          event: "$exception",
+          properties: { $exception_list: [{ value: 31 }] },
+        },
+        "/songs/42",
+        true
+      )
+    ).toBeNull();
+  });
+
   it("keeps handled read failures on Overview and Songs linked to the person and session", () => {
     const event = {
       uuid: "read-failure",

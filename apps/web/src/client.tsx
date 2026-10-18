@@ -20,8 +20,9 @@ startTransition(() => {
       <StartClient />
     </StrictMode>,
     {
-      // Errors an error boundary catches never reach the global handlers that exception
-      // autocapture listens to. Uncaught ones do, so React's default handles those.
+      // The router's error screen is TanStack's CatchBoundary. An error it catches never
+      // reaches the global handlers that exception autocapture listens to, so report it
+      // here. Uncaught errors do reach those handlers.
       onCaughtError: (error, errorInfo) => {
         console.error(error, errorInfo.componentStack);
         captureAnalyticsException(

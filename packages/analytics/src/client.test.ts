@@ -110,4 +110,70 @@ describe(createAnalyticsClient, () => {
       calls: ["init", "capture:sign in started"],
     });
   });
+
+  it("sends an exception captured before analytics starts once the SDK is ready", async () => {
+    const calls: string[] = [];
+    const client = createAnalyticsClient(async () => {
+      calls.push("load");
+      return await Promise.resolve(recordingSdk(calls));
+    });
+
+    client.captureAnalyticsException(new Error("Menu group missing"));
+    client.initializeAnalytics("phc_key", true);
+    await vi.waitFor(() => {
+      expect(calls).toContain("exception:Menu group missing");
+    });
+
+    expect(calls).toStrictEqual([
+      "load",
+      "init",
+      "exception:Menu group missing",
+    ]);
+  });
+
+  it("drops an exception captured before analytics when the session resets first", async () => {
+    const calls: string[] = [];
+    const client = createAnalyticsClient(async () => {
+      await Promise.resolve();
+      return recordingSdk(calls);
+    });
+
+    client.captureAnalyticsException(new Error("Menu group missing"));
+    client.resetAnalytics();
+    client.initializeAnalytics("phc_key", true);
+    client.captureAnalyticsException(new Error("later failure"));
+    await vi.waitFor(() => {
+      expect(calls).toContain("exception:later failure");
+    });
+
+    expect(calls).toStrictEqual(["init", "exception:later failure"]);
+  });
+
+  it("sends an exception captured before a failed SDK download once a later start succeeds", async () => {
+    const calls: string[] = [];
+    let attempts = 0;
+    const client = createAnalyticsClient(async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        throw new Error("chunk failed to load");
+      }
+      return await Promise.resolve(recordingSdk(calls));
+    });
+
+    client.captureAnalyticsException(new Error("Menu group missing"));
+    client.initializeAnalytics("phc_key", true);
+    await vi.waitFor(() => {
+      expect(attempts).toBe(1);
+    });
+    await Promise.resolve();
+    client.initializeAnalytics("phc_key", true);
+    await vi.waitFor(() => {
+      expect(calls).toContain("exception:Menu group missing");
+    });
+
+    expect({ attempts, calls }).toStrictEqual({
+      attempts: 2,
+      calls: ["init", "exception:Menu group missing"],
+    });
+  });
 });

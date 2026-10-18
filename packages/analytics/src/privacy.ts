@@ -244,7 +244,6 @@ const exceptionListSchema = Schema.Array(
   })
 );
 const isFiniteNumber = Schema.is(Schema.Finite);
-const decodeExceptionList = Schema.decodeUnknownOption(exceptionListSchema);
 
 /** Bundled script URLs stay intact so stack frames resolve; other URLs are scrubbed. */
 const exceptionFrameFilename = (filename: string): string => {
@@ -260,17 +259,170 @@ const exceptionFrameFilename = (filename: string): string => {
 };
 
 /**
+ * PostHog's frame builder assigns `lineno` and `colno` even when they are null. `Schema.Finite`
+ * rejects null, NaN, and strings, so those coordinates are read separately and omitted.
+ */
+const rawCoordinateSchema = Schema.Union([
+  Schema.Number,
+  Schema.Null,
+  Schema.String,
+]);
+const rawExceptionFrameSchema = Schema.Struct({
+  platform: Schema.optional(Schema.String),
+  filename: Schema.optional(Schema.String),
+  function: Schema.optional(Schema.String),
+  lineno: Schema.optional(rawCoordinateSchema),
+  colno: Schema.optional(rawCoordinateSchema),
+  in_app: Schema.optional(Schema.Boolean),
+});
+const rawExceptionListSchema = Schema.Array(
+  Schema.Struct({
+    type: Schema.optional(Schema.String),
+    value: Schema.optional(Schema.String),
+    mechanism: Schema.optional(
+      Schema.Struct({
+        handled: Schema.optional(Schema.Boolean),
+        synthetic: Schema.optional(Schema.Boolean),
+        type: Schema.optional(Schema.String),
+      })
+    ),
+    stacktrace: Schema.optional(
+      Schema.Struct({
+        type: Schema.String,
+        frames: Schema.Array(rawExceptionFrameSchema),
+      })
+    ),
+  })
+);
+const decodeRawExceptionList = Schema.decodeUnknownOption(
+  rawExceptionListSchema
+);
+const salvageEntrySchema = Schema.Struct({
+  type: Schema.optional(Schema.String),
+  value: Schema.optional(Schema.String),
+});
+const decodeUnknownList = Schema.decodeUnknownOption(
+  Schema.Array(Schema.Unknown)
+);
+const decodeSalvageEntry = Schema.decodeUnknownOption(salvageEntrySchema);
+
+interface WritableExceptionFrame {
+  platform?: string;
+  filename?: string;
+  function?: string;
+  lineno?: number;
+  colno?: number;
+  in_app?: boolean;
+}
+interface WritableExceptionEntry {
+  type?: string;
+  value?: string;
+  mechanism?: NonNullable<
+    (typeof exceptionListSchema.Type)[number]["mechanism"]
+  >;
+  stacktrace?: {
+    type: string;
+    frames: WritableExceptionFrame[];
+  };
+}
+type RawFrame = typeof rawExceptionFrameSchema.Type;
+
+const finiteCoordinate = (
+  value: number | string | null | undefined
+): number | undefined => (isFiniteNumber(value) ? value : undefined);
+
+const cleanFrame = (frame: RawFrame): WritableExceptionFrame => {
+  const cleaned: WritableExceptionFrame = {};
+  if (frame.platform !== undefined) {
+    cleaned.platform = frame.platform;
+  }
+  if (frame.filename !== undefined) {
+    cleaned.filename = frame.filename;
+  }
+  if (frame.function !== undefined) {
+    cleaned.function = frame.function;
+  }
+  if (frame.in_app !== undefined) {
+    cleaned.in_app = frame.in_app;
+  }
+  const lineno = finiteCoordinate(frame.lineno);
+  if (lineno !== undefined) {
+    cleaned.lineno = lineno;
+  }
+  const colno = finiteCoordinate(frame.colno);
+  if (colno !== undefined) {
+    cleaned.colno = colno;
+  }
+  return cleaned;
+};
+
+const cleanExceptionList = (
+  exceptions: typeof rawExceptionListSchema.Type
+): typeof exceptionListSchema.Type =>
+  exceptions.map((exception) => {
+    const cleaned: WritableExceptionEntry = {};
+    if (exception.type !== undefined) {
+      cleaned.type = exception.type;
+    }
+    if (exception.value !== undefined) {
+      cleaned.value = exception.value;
+    }
+    if (exception.mechanism !== undefined) {
+      cleaned.mechanism = exception.mechanism;
+    }
+    if (exception.stacktrace !== undefined) {
+      cleaned.stacktrace = {
+        type: exception.stacktrace.type,
+        frames: exception.stacktrace.frames.map(cleanFrame),
+      };
+    }
+    return cleaned;
+  });
+
+/**
+ * When the list still cannot decode, keep each entry's type and message. Losing the stack is
+ * better than dropping the crash. A value that is not a list stays empty so the event is dropped.
+ */
+const salvageExceptionList = (
+  value: CaptureResult["properties"][string]
+): typeof exceptionListSchema.Type => {
+  const entries = decodeUnknownList(value);
+  if (Option.isNone(entries)) {
+    return [];
+  }
+  const salvaged: WritableExceptionEntry[] = [];
+  for (const entry of entries.value) {
+    const decoded = decodeSalvageEntry(entry);
+    if (Option.isNone(decoded)) {
+      continue;
+    }
+    const exception: WritableExceptionEntry = {};
+    if (decoded.value.type !== undefined) {
+      exception.type = decoded.value.type;
+    }
+    if (decoded.value.value !== undefined) {
+      exception.value = decoded.value.value;
+    }
+    if (exception.type === undefined && exception.value === undefined) {
+      continue;
+    }
+    salvaged.push(exception);
+  }
+  return salvaged;
+};
+
+/**
  * Keeps an exception's type, message, and stack frames. Messages come from code, not from
  * people, but are truncated in case one embeds a payload.
  */
 export const sanitizeExceptionList = (
   properties: CaptureResult["properties"]
 ): typeof exceptionListSchema.Type => {
-  const parsed = decodeExceptionList(properties.$exception_list);
-  if (Option.isNone(parsed)) {
-    return [];
-  }
-  return parsed.value.map((exception) => ({
+  const parsed = decodeRawExceptionList(properties.$exception_list);
+  const exceptions = Option.isSome(parsed)
+    ? cleanExceptionList(parsed.value)
+    : salvageExceptionList(properties.$exception_list);
+  return exceptions.map((exception) => ({
     ...exception,
     value: exception.value?.slice(0, EXCEPTION_MESSAGE_MAX_LENGTH),
     stacktrace:

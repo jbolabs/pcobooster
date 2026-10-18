@@ -65,6 +65,12 @@ export const createAnalyticsClient = (
   let loadingSdk: Promise<AnalyticsSdk> | undefined;
   /** Captures sent after analytics started but before the SDK finished loading, in order. */
   const heldCaptures: (() => void)[] = [];
+  /**
+   * Exceptions captured before analytics starts. The chord-chart editor can render from cache
+   * and throw before the account response calls `initializeAnalytics`, and `holdUntilLoaded`
+   * only queues once that start is in flight.
+   */
+  const heldExceptions: (() => void)[] = [];
 
   let currentUserId: string | undefined;
   /** Raised by `resetAnalytics`, so an initialization still loading the SDK identifies nobody. */
@@ -82,6 +88,13 @@ export const createAnalyticsClient = (
       heldCaptures.length < MAX_HELD_CAPTURES
     ) {
       heldCaptures.push(capture);
+    }
+  };
+
+  /** Keeps a crash that happened before any initialization, up to the same cap as held captures. */
+  const rememberException = (capture: () => void): void => {
+    if (heldExceptions.length < MAX_HELD_CAPTURES) {
+      heldExceptions.push(capture);
     }
   };
 
@@ -206,6 +219,9 @@ export const createAnalyticsClient = (
       for (const capture of heldCaptures.splice(0)) {
         capture();
       }
+      for (const capture of heldExceptions.splice(0)) {
+        capture();
+      }
       if (userId !== undefined) {
         captureAnalytics("app opened");
       }
@@ -255,17 +271,24 @@ export const createAnalyticsClient = (
 
   /**
    * Reports an error React caught in an error boundary, which never reaches the global
-   * handlers that exception autocapture listens to. The privacy guard drops it outside
-   * authenticated product routes.
+   * handlers that exception autocapture listens to. A crash can happen before the account
+   * response starts analytics; that report is held until the SDK starts, or dropped on
+   * reset. The privacy guard drops it outside authenticated product routes.
    */
   const captureAnalyticsException = (
     error: Error,
     properties: Record<string, string | number | boolean> = {}
   ): void => {
     if (posthog === undefined) {
-      holdUntilLoaded(() => {
-        captureAnalyticsException(error, properties);
-      });
+      if (initializingGeneration === generation) {
+        holdUntilLoaded(() => {
+          captureAnalyticsException(error, properties);
+        });
+      } else {
+        rememberException(() => {
+          captureAnalyticsException(error, properties);
+        });
+      }
       return;
     }
     try {
@@ -291,6 +314,7 @@ export const createAnalyticsClient = (
     currentUserId = undefined;
     generation += 1;
     heldCaptures.length = 0;
+    heldExceptions.length = 0;
     if (posthog !== undefined) {
       try {
         posthog.stopSessionRecording();
