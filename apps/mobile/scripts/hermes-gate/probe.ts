@@ -6,7 +6,6 @@
  * exception, exactly as it aborts the app.
  */
 import "../../src/runtime-polyfills";
-import "./expo-globals";
 import { makeProductClient } from "@pcobooster/client/product-client";
 import {
   ProductApi,

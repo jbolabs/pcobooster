@@ -57,7 +57,7 @@ const PlanningCenterPersonLink = ({
     side="bottom"
     align="end"
     sideOffset={8}
-    render={
+    trigger={
       <a
         href={planningCenterPersonUrl(personId)}
         target="_blank"

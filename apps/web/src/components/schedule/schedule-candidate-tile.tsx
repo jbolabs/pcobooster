@@ -267,7 +267,6 @@ const fitFill = (score: number): string => {
     ? "bg-status-scheduled-bright"
     : "bg-status-declined-bright";
 };
-
 /** The recommendation score, 0 to 100 with the best candidate at 100, with a bar to match. */
 const CandidateFit = ({
   score,
@@ -288,8 +287,8 @@ const CandidateFit = ({
   return (
     <RecommendationPopover reasoning={reasoning} percentage={rounded}>
       <Item
-        size="row"
-        className="w-14 shrink-0 flex-col items-end gap-1 rounded-4xl in-data-[slot=item-list]:rounded-4xl sm:w-20"
+        size="pill"
+        className="w-14 shrink-0 flex-col items-end sm:w-20"
         render={
           <button
             type="button"

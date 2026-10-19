@@ -12,7 +12,7 @@ const productionOrigin = "https://production.example.com";
 const previewOrigin = "https://preview.example.net";
 const proxySecret =
   "synthetic-proxy-secret-0123456789abcdefghijklmnopqrstuvwxyz";
-/** Better Auth 1.7.7 isolates each OAuth proxy ciphertext by purpose. */
+/** Better Auth 1.7.10 isolates each OAuth proxy ciphertext by purpose. */
 const proxyEncryptionKey = (purpose: string): string =>
   Buffer.from(
     hkdfSync(

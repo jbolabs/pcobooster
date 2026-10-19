@@ -77,7 +77,7 @@
     "@pcobooster/config": "workspace:*",
     "@pcobooster/contracts": "workspace:*",
     "@pcobooster/planning-center-models": "workspace:*",
-    "@shadcn/lint": "0.1.2",
+    "@shadcn/lint": "0.2.1",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
     "alchemy": "2.0.0-beta.83",
@@ -102,7 +102,7 @@
   },
   "packageManager": "bun@1.4.2",
   "patchedDependencies": {
-    "better-auth@1.7.7": "patches/better-auth@1.7.7.patch"
+    "better-auth@1.7.10": "patches/better-auth@1.7.10.patch"
   },
   "trustedDependencies": [
     "esbuild",

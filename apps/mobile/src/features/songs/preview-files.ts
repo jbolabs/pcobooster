@@ -59,7 +59,7 @@ const deviceStore: PreviewStore = {
   writeBase64: (scope, folder, name, base64) => {
     const file = new File(freshFolder(scope, folder), name);
     file.create();
-    file.write(base64, { encoding: "base64" });
+    file.writeSync(base64, { encoding: "base64" });
     return file.uri;
   },
   download: async (scope, folder, name, url, signal) => {

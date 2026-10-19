@@ -14,7 +14,7 @@
     "@pcobooster/config": "workspace:*",
     "@pcobooster/contracts": "workspace:*",
     "alchemy": "2.0.0-beta.83",
-    "better-auth": "1.7.7",
+    "better-auth": "1.7.10",
     "effect": "4.0.5"
   },
   "devDependencies": {

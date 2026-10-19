@@ -117,7 +117,7 @@ const PlanAgendaRow = ({
     <Item
       size="xs"
       variant={isActive ? "muted" : "default"}
-      className="min-h-12 rounded-xl"
+      className="min-h-12"
       render={
         <button
           type="button"

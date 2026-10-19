@@ -421,7 +421,7 @@ const SaveStatusMenu = ({ workspace }: { workspace: ChordChartWorkspace }) => {
         label={label.full}
         side="bottom"
         align="end"
-        render={
+        trigger={
           <DropdownMenuTrigger
             render={
               <Button
@@ -583,7 +583,7 @@ const ChartMoreMenu = ({
     <HoverLabel
       label="More actions"
       side="bottom"
-      render={
+      trigger={
         <DropdownMenuTrigger
           render={
             <Button

@@ -37,7 +37,7 @@ const ShortcutButton = ({
         {binding === null ? null : <HotkeyChord binding={binding} id={label} />}
       </span>
     }
-    render={render}
+    trigger={render}
   >
     {children}
   </HoverLabel>

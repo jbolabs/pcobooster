@@ -47,12 +47,9 @@ export const PracticeSetlist = ({
               <Item
                 key={item.id}
                 size="row"
+                variant={current ? "selected" : "default"}
                 aria-current={current ? "true" : undefined}
-                data-selected={current}
-                className={cn(
-                  "data-[selected=true]:bg-muted min-h-9 rounded-lg px-2",
-                  number === undefined && "text-muted-foreground"
-                )}
+                className="min-h-9"
                 render={
                   <button
                     type="button"
@@ -71,7 +68,9 @@ export const PracticeSetlist = ({
                 <span
                   className={cn(
                     "min-w-0 flex-1 truncate",
-                    number !== undefined && "font-medium"
+                    number === undefined
+                      ? "text-muted-foreground"
+                      : "font-medium"
                   )}
                 >
                   {item.title}

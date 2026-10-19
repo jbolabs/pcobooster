@@ -57,7 +57,7 @@ export const SongPageHeader = ({
       side="bottom"
       align="end"
       sideOffset={8}
-      render={
+      trigger={
         <a
           href={planningCenterSongUrl(songId)}
           target="_blank"

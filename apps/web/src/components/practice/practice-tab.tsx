@@ -84,7 +84,7 @@ const StepButton = ({
         </span>
       }
       side="bottom"
-      render={
+      trigger={
         <Button
           variant="outline"
           size="icon-sm"

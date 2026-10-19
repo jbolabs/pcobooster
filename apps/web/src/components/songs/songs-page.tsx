@@ -193,7 +193,7 @@ const SongRow = ({
       {showPlanningCenterLink ? (
         <HoverLabel
           label="Open in Planning Center"
-          render={
+          trigger={
             <a
               href={planningCenterSongUrl(row.id)}
               target="_blank"

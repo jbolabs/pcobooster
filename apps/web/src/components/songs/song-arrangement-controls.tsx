@@ -346,7 +346,7 @@ export const KeyTabs = ({
               key={key.id}
               label={ending}
               side="bottom"
-              render={<TabsTrigger value={key.id} className="flex-none" />}
+              trigger={<TabsTrigger value={key.id} className="flex-none" />}
             >
               {keyLabel(key)}
             </HoverLabel>

@@ -202,7 +202,7 @@ export const TextSizeControl = ({
   <span className="flex items-center">
     <HoverLabel
       label="Smaller text"
-      render={
+      trigger={
         <Button
           variant="ghost"
           size="icon-sm"
@@ -218,7 +218,7 @@ export const TextSizeControl = ({
     </HoverLabel>
     <HoverLabel
       label="Larger text"
-      render={
+      trigger={
         <Button
           variant="ghost"
           size="icon-sm"

@@ -109,7 +109,7 @@ const ListToggle = ({
     <HoverLabel
       label={label}
       side="bottom"
-      render={
+      trigger={
         <Button
           variant="ghost"
           size="icon-sm"

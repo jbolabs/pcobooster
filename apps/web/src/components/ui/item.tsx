@@ -102,6 +102,8 @@ const itemVariants = cva(
         xs: "gap-2.5 px-3 py-2.5 in-data-[slot=dropdown-menu-content]:p-0 pointer-coarse:min-h-11",
         /** Dense rows inside cards, such as lineup positions and people. */
         row: "min-h-10 gap-2 rounded-lg px-1.5 py-1 pointer-coarse:min-h-11",
+        /** A compact pill control inside a row, such as a candidate's fit score. Keeps its pill shape in lists. */
+        pill: "min-h-10 gap-1 rounded-4xl px-1.5 py-1 in-data-[slot=item-list]:rounded-4xl pointer-coarse:min-h-11",
       },
     },
     defaultVariants: {

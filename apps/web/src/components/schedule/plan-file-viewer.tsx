@@ -85,7 +85,7 @@ const OpenOriginal = ({
     <HoverLabel
       label={label}
       side="bottom"
-      render={
+      trigger={
         <a
           href={url}
           onClick={

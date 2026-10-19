@@ -729,7 +729,7 @@ const DemoBadge = () => {
       side="bottom"
       align="end"
       sideOffset={8}
-      render={<Badge variant="secondary" className="ml-auto" />}
+      trigger={<Badge variant="secondary" className="ml-auto" />}
     >
       Read-only demo
     </HoverLabel>
