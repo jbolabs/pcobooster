@@ -8,6 +8,7 @@ import { trialBranch } from "./settings";
 
 export interface TrialBuildsProps {
   readonly workerTag: string;
+  readonly buildCaching: boolean;
   readonly tokenId: string;
   readonly token: Redacted.Redacted;
   readonly variables: Readonly<Record<string, string | Redacted.Redacted>>;
@@ -173,7 +174,7 @@ export const trialBuildsProvider = Provider.effect(
             root_directory: "/",
             path_includes: ["*"],
             path_excludes: [],
-            build_caching_enabled: false,
+            build_caching_enabled: news.buildCaching,
           };
           const trigger = decode(
             triggerSchema,

@@ -73,6 +73,7 @@ export default Alchemy.Stack(
     })(access.clientSecret);
     const props = {
       workerTag: worker.workerId,
+      buildCaching: true,
       tokenId: token.tokenId,
       token: token.value,
       variables: {
