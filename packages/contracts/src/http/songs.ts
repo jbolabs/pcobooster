@@ -85,7 +85,10 @@ export const songAttachmentsInputSchema = Schema.Struct({
   arrangementId: requiredId,
 });
 
-/** A file attached to an arrangement or one of its keys (Planning Center's charts excluded). */
+/** Which of Planning Center's own chart renders a file is: a key's chord chart, or the lyrics sheet. */
+export const SONG_CHART_RENDERS = ["chord", "lyrics"] as const;
+
+/** A file attached to an arrangement or one of its keys, Planning Center's chart renders included. */
 export const songAttachmentSchema = Schema.Struct({
   id: Schema.String,
   /** The key it is attached to; null for the arrangement's own files. */
@@ -101,6 +104,11 @@ export const songAttachmentSchema = Schema.Struct({
   downloadable: Schema.Boolean,
   /** Planning Center streams it (audio and video). */
   streamable: Schema.Boolean,
+  /**
+   * Set on Planning Center's own chart renders (listed as `pdf`, so builds that predate this
+   * field still open them); absent on uploaded files.
+   */
+  chart: Schema.optional(Schema.Literals(SONG_CHART_RENDERS)),
 });
 
 export const songAttachmentsSchema = Schema.Struct({

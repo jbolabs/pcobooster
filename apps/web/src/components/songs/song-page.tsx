@@ -300,7 +300,10 @@ const AttachmentRowContent = ({
   attachment: SongAttachment;
   note: string | null;
 }) => {
-  const Icon = attachmentIcon[attachment.kind];
+  const Icon =
+    attachment.chart === undefined
+      ? attachmentIcon[attachment.kind]
+      : FileMusic;
   const detail = note ?? fileSizeLabel(attachment.fileSize);
   return (
     <>
@@ -319,7 +322,10 @@ const AttachmentRowContent = ({
   );
 };
 
-/** A link opens where it lives; a stored file opens from a fresh signed link. */
+/**
+ * A key's chord chart opens the chart page in that key; a link opens where it lives; a stored
+ * file (Planning Center's lyrics sheet included) opens from a fresh signed link.
+ */
 const AttachmentRow = ({
   songId,
   arrangementId,
@@ -331,6 +337,24 @@ const AttachmentRow = ({
   attachment: SongAttachment;
   onOpen: (attachment: SongAttachment) => Promise<void>;
 }) => {
+  if (attachment.chart === "chord" && attachment.keyId !== null) {
+    // Planning Center's chord chart for a key: the chart page shows it, in that key.
+    return (
+      <Item
+        size="row"
+        render={
+          <Link
+            to="/songs/$songId/chart"
+            params={{ songId }}
+            search={{ arrangement: arrangementId, key: attachment.keyId }}
+            aria-label={attachmentName(attachment)}
+          />
+        }
+      >
+        <AttachmentRowContent attachment={attachment} note="Chart" />
+      </Item>
+    );
+  }
   if (attachment.kind === "link" && attachment.linkUrl !== null) {
     return (
       <Item
@@ -460,7 +484,8 @@ const FilesSkeleton = () => (
 /**
  * Files people uploaded to the arrangement and its keys, side by side as Planning Center lays
  * them out: the arrangement's own (every key), then the chosen key's. With two or more keys,
- * the key tabs pick whose files show. Planning Center's own chart renders are the Chart action.
+ * the key tabs pick whose files show. Planning Center's own chord chart and lyrics renders are
+ * listed too, as Planning Center lists them.
  */
 const FilesSection = ({
   songId,
