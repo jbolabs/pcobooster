@@ -11,7 +11,7 @@ const forwardedHeaders = [
 
 export const proxyAnalytics = async (
   request: Request,
-  send: typeof globalThis.fetch
+  send: (url: URL, init: RequestInit) => Promise<Response>
 ): Promise<Response> => {
   const incoming = new URL(request.url);
   if (!incoming.pathname.startsWith("/ingest/")) {

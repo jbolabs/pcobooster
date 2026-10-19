@@ -4,7 +4,7 @@ import { proxyAnalytics } from "./analytics-proxy";
 
 const upstream = (response: Response = new Response("ok")) => {
   const requests: Request[] = [];
-  const send: typeof globalThis.fetch = async (input, init) => {
+  const send: Parameters<typeof proxyAnalytics>[1] = async (input, init) => {
     requests.push(new Request(input, init));
     return await Promise.resolve(response);
   };
