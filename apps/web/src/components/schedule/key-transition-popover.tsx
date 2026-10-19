@@ -32,13 +32,13 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import {
-  Popover,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  ResponsivePopover,
+  ResponsivePopoverContent,
+  ResponsivePopoverDescription,
+  ResponsivePopoverHeader,
+  ResponsivePopoverTitle,
+  ResponsivePopoverTrigger,
+} from "@/components/ui/responsive-popover";
 import { useSongOptions } from "@/hooks/use-song-options";
 
 /** One key icon for every key change, toned by how rough the change is. */
@@ -133,8 +133,8 @@ export const KeyTransitionPopover = ({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
+    <ResponsivePopover open={open} onOpenChange={setOpen}>
+      <ResponsivePopoverTrigger
         render={
           <Button
             type="button"
@@ -153,24 +153,24 @@ export const KeyTransitionPopover = ({
           strokeWidth={2}
           className={KEY_ICON_TONES[transition.level]}
         />
-      </PopoverTrigger>
-      <PopoverContent
+      </ResponsivePopoverTrigger>
+      <ResponsivePopoverContent
         align="end"
         className="max-h-(--available-height) w-80 overflow-y-auto overscroll-contain"
       >
-        <PopoverHeader className="mx-4 mt-4">
-          <PopoverTitle>
+        <ResponsivePopoverHeader className="mx-4 mt-4 max-md:mx-0 max-md:mt-0">
+          <ResponsivePopoverTitle>
             {transition.from} → {transition.to}
-          </PopoverTitle>
-          <PopoverDescription>
+          </ResponsivePopoverTitle>
+          <ResponsivePopoverDescription>
             {transition.fromTitle} into {transition.toTitle}:{" "}
             {transition.description.charAt(0).toLowerCase()}
             {transition.description.slice(1)}.
             {transition.bridgedBy === null
               ? null
               : ` ${transition.bridgedBy} gives the band room to change.`}
-          </PopoverDescription>
-        </PopoverHeader>
+          </ResponsivePopoverDescription>
+        </ResponsivePopoverHeader>
         {/* Touch has no hover label, so say what tapping an idea does. */}
         <p className="bg-muted text-muted-foreground mx-4 mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs pointer-fine:hidden">
           <NotebookPen className="size-3.5 shrink-0" aria-hidden />
@@ -251,7 +251,7 @@ export const KeyTransitionPopover = ({
             </div>
           </div>
         )}
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 };

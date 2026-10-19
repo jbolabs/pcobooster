@@ -96,7 +96,7 @@ const PlanTimeCreateDialogForm = ({
         <Button
           type="button"
           variant="outline"
-          className="max-md:h-11"
+
           disabled={creating}
           onClick={onCancel}
         >
@@ -104,7 +104,7 @@ const PlanTimeCreateDialogForm = ({
         </Button>
         <Button
           type="button"
-          className="max-md:order-first max-md:h-11"
+
           disabled={creating || !valid}
           onClick={() => {
             void handleSave();

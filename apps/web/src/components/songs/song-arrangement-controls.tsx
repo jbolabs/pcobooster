@@ -158,7 +158,7 @@ export const ArrangementPicker = ({
         render={
           <Button
             variant="ghost"
-            touch="target"
+
             className={
               flush ? "-ml-3 max-w-full min-w-0" : "max-w-full min-w-0"
             }

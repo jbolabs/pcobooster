@@ -11,6 +11,8 @@ import {
 import {
   Popover,
   PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
@@ -144,9 +146,33 @@ const ResponsivePopoverTitle = (
   return <PopoverTitle {...props} />;
 };
 
+/** A heading block inside the content: the sheet's header on phones. */
+const ResponsivePopoverHeader = ({
+  className,
+  ...props
+}: React.ComponentProps<"div">) => {
+  const { isMobile } = useResponsivePopover();
+  if (isMobile) {
+    return <DrawerHeader className={cn("text-left", className)} {...props} />;
+  }
+  return <PopoverHeader className={className} {...props} />;
+};
+
+const ResponsivePopoverDescription = (
+  props: React.ComponentProps<typeof PopoverDescription>
+) => {
+  const { isMobile } = useResponsivePopover();
+  if (isMobile) {
+    return <DrawerDescription {...props} />;
+  }
+  return <PopoverDescription {...props} />;
+};
+
 export {
   ResponsivePopover,
   ResponsivePopoverContent,
+  ResponsivePopoverDescription,
+  ResponsivePopoverHeader,
   ResponsivePopoverTitle,
   ResponsivePopoverTrigger,
   useResponsivePopover,

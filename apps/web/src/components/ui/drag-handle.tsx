@@ -9,8 +9,8 @@ const dragHandleVariants = cva(
   {
     variants: {
       size: {
-        default: "w-9",
-        sm: "w-8",
+        default: "w-9 pointer-coarse:w-11",
+        sm: "w-8 pointer-coarse:w-10",
       },
     },
     defaultVariants: {

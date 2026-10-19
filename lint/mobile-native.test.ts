@@ -2,11 +2,12 @@ import { readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, extname, join, relative } from "node:path";
 
-import { parseSync } from "oxc-parser";
 import { describe, expect, it } from "vitest";
 
 import { siteHead } from "../apps/marketing/src/lib/site-head";
 import { productHeadMeta } from "../apps/web/src/lib/document-head";
+import { parseJsxElements, stringLiterals } from "./jsx-elements";
+import type { JsxElement } from "./jsx-elements";
 
 /**
  * The platform layer that decides whether the product and marketing site feel native on a
@@ -510,94 +511,9 @@ describe("document metadata", () => {
   });
 });
 
-/** A JSX element as these checks read it: its tag, attributes, and enclosing elements. */
-interface JsxElement {
-  tag: string;
-  attributes: Map<string, unknown>;
-  /** The static class tokens of `className`: every string literal in it, split on spaces. */
-  classes: string[];
-  /** Enclosing JSX elements, innermost first. */
-  ancestors: JsxElement[];
-}
-
-const isNode = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-/** Every string literal in an expression, so `cn("a", open && "b")` reads as `a b`. */
-const stringLiterals = (node: unknown): string[] => {
-  if (Array.isArray(node)) {
-    return node.flatMap(stringLiterals);
-  }
-  if (!isNode(node)) {
-    return [];
-  }
-  if (node.type === "Literal" && typeof node.value === "string") {
-    return [node.value];
-  }
-  if (node.type === "TemplateElement" && isNode(node.value)) {
-    return [String(node.value.cooked ?? "")];
-  }
-  return Object.values(node).flatMap(stringLiterals);
-};
-
-const tagName = (name: unknown): string => {
-  if (!isNode(name)) {
-    return "";
-  }
-  if (name.type === "JSXMemberExpression") {
-    return `${tagName(name.object)}.${tagName(name.property)}`;
-  }
-  return String(name.name ?? "");
-};
-
 /** Every JSX element in a TSX file, with the elements around it. */
-const jsxElements = (path: string): JsxElement[] => {
-  const { program, errors } = parseSync(
-    path,
-    readFileSync(join(repositoryRoot, path), "utf8")
-  );
-  expect(errors).toStrictEqual([]);
-  const found: JsxElement[] = [];
-  const visit = (node: unknown, ancestors: JsxElement[]) => {
-    if (Array.isArray(node)) {
-      for (const child of node) {
-        visit(child, ancestors);
-      }
-      return;
-    }
-    if (!isNode(node)) {
-      return;
-    }
-    if (node.type !== "JSXElement" || !isNode(node.openingElement)) {
-      for (const child of Object.values(node)) {
-        visit(child, ancestors);
-      }
-      return;
-    }
-    const opening = node.openingElement;
-    const attributes = new Map<string, unknown>();
-    for (const attribute of Array.isArray(opening.attributes)
-      ? opening.attributes
-      : []) {
-      if (isNode(attribute) && attribute.type === "JSXAttribute") {
-        attributes.set(tagName(attribute.name), attribute.value);
-      }
-    }
-    const element: JsxElement = {
-      tag: tagName(opening.name),
-      attributes,
-      classes: stringLiterals(attributes.get("className")).flatMap((value) =>
-        value.split(/\s+/u).filter(Boolean)
-      ),
-      ancestors,
-    };
-    found.push(element);
-    visit(opening.attributes, [element, ...ancestors]);
-    visit(node.children, [element, ...ancestors]);
-  };
-  visit(program, []);
-  return found;
-};
+const jsxElements = (path: string): JsxElement[] =>
+  parseJsxElements(path, readFileSync(join(repositoryRoot, path), "utf8"));
 
 /** A class token without its variants: `md:hidden` is `hidden`, `[&>a]:hover:x` is `x`. */
 const utilityOf = (token: string): string => {

@@ -169,7 +169,7 @@ const CommitmentList = ({
       {monthDays.map((entry) => (
         <li
           key={`${entry.day}:${entry.kind}:${entry.positionName ?? ""}:${entry.serviceTypeName ?? ""}:${entry.status ?? ""}`}
-          className="flex min-h-9 items-center gap-3 px-1.5 max-sm:items-start max-sm:py-1.5"
+          className="has-[a]:active:bg-muted relative flex min-h-9 items-center gap-3 rounded-lg px-1.5 max-sm:items-start max-sm:py-1.5 pointer-coarse:min-h-11"
         >
           <span className="text-muted-foreground w-12 shrink-0 text-xs tabular-nums">
             {formatWeekday(month, entry.day)}{" "}
@@ -182,7 +182,7 @@ const CommitmentList = ({
             {entry.kind === "rehearsal" ? (
               <span className="text-muted-foreground">Rehearsal · </span>
             ) : null}
-            <CommitmentEntryText entry={entry} />
+            <CommitmentEntryText entry={entry} rowLink />
           </span>
           <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-xs max-sm:mt-1.5">
             <span

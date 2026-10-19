@@ -96,7 +96,7 @@ const SectionRetry = ({
     <Button
       variant="outline"
       size="sm"
-      touch="target"
+
       disabled={busy}
       onClick={onRetry}
     >
@@ -430,7 +430,7 @@ const FileList = ({
           type="button"
           variant="link"
           size="xs"
-          touch="target"
+
           onClick={() => {
             setShowAll((current) => !current);
           }}
@@ -639,7 +639,7 @@ const NoteText = ({ note }: { note: SongNote }) => {
         <Button
           variant="link"
           size="xs"
-          touch="target"
+
           className="-ml-2.5"
           aria-expanded={expanded}
           onClick={() => {
@@ -824,7 +824,7 @@ const ScheduleList = ({
               type="button"
               variant="link"
               size="xs"
-              touch="target"
+
               onClick={() => {
                 setShowAll((current) => !current);
               }}

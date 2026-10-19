@@ -52,6 +52,10 @@ const panelScrollers = new Map([
     "the plan builder's details pane",
   ],
   [
+    "apps/web/src/components/access/access-review.tsx",
+    "a dialog body on phones",
+  ],
+  [
     "apps/web/src/components/schedule/plan-person-edit-dialog.tsx",
     "a dialog body",
   ],

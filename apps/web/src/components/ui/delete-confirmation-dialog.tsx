@@ -52,7 +52,7 @@ export const DeleteConfirmationDialog = ({
           <Button
             type="button"
             variant="outline"
-            className="max-md:h-11"
+
             onClick={() => {
               onOpenChange(false);
             }}
@@ -63,7 +63,7 @@ export const DeleteConfirmationDialog = ({
           <Button
             type="button"
             variant="destructive"
-            className="max-md:order-first max-md:h-11"
+
             onClick={() => {
               startTransition(onConfirm);
             }}

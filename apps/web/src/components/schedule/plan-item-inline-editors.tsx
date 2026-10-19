@@ -23,10 +23,10 @@ import {
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  ResponsivePopover,
+  ResponsivePopoverContent,
+  ResponsivePopoverTrigger,
+} from "@/components/ui/responsive-popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDraftPopover } from "@/hooks/use-persist-on-close-popover";
 import { useSongOptions } from "@/hooks/use-song-options";
@@ -85,8 +85,8 @@ export const SongKeyPicker = ({
           onAddNote={onAddNote}
         />
       )}
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
+      <ResponsivePopover open={open} onOpenChange={setOpen}>
+        <ResponsivePopoverTrigger
           render={
             <Button
               type="button"
@@ -101,8 +101,13 @@ export const SongKeyPicker = ({
           }
         >
           {label ?? <span className="text-status-scheduled">No key</span>}
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-72">
+        </ResponsivePopoverTrigger>
+        <ResponsivePopoverContent
+          title={`Key for ${item.title}`}
+          showTitle
+          align="end"
+          className="w-72"
+        >
           <Command>
             <CommandList>
               {isLoading && options === undefined ? (
@@ -135,8 +140,8 @@ export const SongKeyPicker = ({
               ))}
             </CommandList>
           </Command>
-        </PopoverContent>
-      </Popover>
+        </ResponsivePopoverContent>
+      </ResponsivePopover>
     </span>
   );
 };
@@ -177,8 +182,8 @@ export const ItemLengthEditor = ({
   });
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger
+    <ResponsivePopover open={open} onOpenChange={handleOpenChange}>
+      <ResponsivePopoverTrigger
         render={
           <Button
             type="button"
@@ -195,10 +200,16 @@ export const ItemLengthEditor = ({
         <span className="text-muted-foreground tabular-nums">
           {current === "" ? "-:--" : current}
         </span>
-      </PopoverTrigger>
-      <PopoverContent ref={contentRef} align="end" className="w-44">
+      </ResponsivePopoverTrigger>
+      <ResponsivePopoverContent
+        ref={contentRef}
+        title={`Length of ${item.title}`}
+        showTitle
+        align="end"
+        className="w-44"
+      >
         <form
-          className="p-2"
+          className="p-2 max-md:px-3 max-md:pb-4"
           onSubmit={(event) => {
             event.preventDefault();
             closeAndPersist();
@@ -216,7 +227,7 @@ export const ItemLengthEditor = ({
             }}
           />
         </form>
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 };

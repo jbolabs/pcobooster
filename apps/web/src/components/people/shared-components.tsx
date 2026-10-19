@@ -13,11 +13,17 @@ import type { GetIntentPrefetchProps } from "@/hooks/use-intent-prefetch";
 import { parsePlanRoute } from "@/lib/app-routes";
 import { cn } from "@/lib/utils";
 
-/** The position and service type of a commitment, the service type linking to its plan. */
+/**
+ * The position and service type of a commitment, the service type linking to its plan.
+ * `rowLink` stretches the link over its nearest positioned ancestor on touch screens, so a
+ * finger can open the plan from anywhere on the row; that row must be `relative`.
+ */
 export const CommitmentEntryText = ({
   entry,
+  rowLink = false,
 }: {
   entry: PeopleDashboardMonthDay;
+  rowLink?: boolean;
 }) => {
   const hasServiceType =
     entry.serviceTypeName !== undefined && entry.serviceTypeName !== "";
@@ -35,7 +41,11 @@ export const CommitmentEntryText = ({
             <Link
               to="/services/$serviceTypeId/plans/$planId/$view"
               params={planRoute}
-              className="text-foreground font-medium underline-offset-2 hover:underline"
+              className={cn(
+                "text-foreground font-medium underline-offset-2 hover:underline",
+                rowLink &&
+                  "pointer-coarse:after:absolute pointer-coarse:after:inset-0"
+              )}
             >
               {entry.serviceTypeName}
             </Link>
