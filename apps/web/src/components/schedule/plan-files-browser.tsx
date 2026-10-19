@@ -401,7 +401,7 @@ export const PlanFilesWorkspace = ({
   };
 
   return (
-    <div className="relative flex min-h-0 flex-1">
+    <div className="relative flex min-h-0 min-w-0 flex-1">
       {embedded ? null : <DialogTitle className="sr-only">{title}</DialogTitle>}
       {showList && !embedded ? (
         // One toggle outside both panes, so it never moves between open and closed.
