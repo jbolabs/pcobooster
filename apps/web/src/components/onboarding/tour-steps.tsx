@@ -27,7 +27,7 @@ export const appTourSteps: readonly TourStep[] = [
   {
     target: "nav-songs",
     title: "Songs",
-    body: "Your Planning Center song library. Open a song to write or import its chord chart.",
+    body: "Your Planning Center song library. Open a song to see its arrangements, files, and schedule, and to write its chord chart.",
   },
   {
     target: "mobile-menu",
