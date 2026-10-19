@@ -95,14 +95,14 @@ const setup = async (
 const PLACEHOLDER_IN_BODY = /"(?:optimistic|pending)-/u;
 
 describe("run sheet and time writes", () => {
-  it("refreshes warm song history and options after a run-sheet edit", async () => {
+  it("refreshes warm song history, schedule, and options after a run-sheet edit", async () => {
     const timer = makeManualTimer();
     const { writer, items, cache, context } = await setup(
       undefined,
       timer.timer
     );
     let saved = "C";
-    const observers = ["songs.history", "songs.options"].map(
+    const observers = ["songs.history", "songs.schedule", "songs.options"].map(
       (name) =>
         new QueryObserver(cache, {
           queryKey: [context.scope, name, "song-1"],
@@ -126,7 +126,7 @@ describe("run sheet and time writes", () => {
     );
     expect(
       observers.map((observer) => observer.getCurrentResult().data)
-    ).toStrictEqual(["D", "D"]);
+    ).toStrictEqual(["D", "D", "D"]);
     for (const stop of stops) {
       stop();
     }

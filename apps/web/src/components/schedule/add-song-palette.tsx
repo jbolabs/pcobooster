@@ -87,7 +87,7 @@ const SongPreview = ({
   const history = useSongHistory(song.id);
   const options = useSongOptions(song.id, serviceTypeId);
   const { keys, tempos, keyChange } = songPreviewFacts({
-    history: history.data,
+    history: history.data?.entries,
     arrangements: options.data?.arrangements ?? [],
     serviceTypeId,
     previousSong,

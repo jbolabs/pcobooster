@@ -62,7 +62,7 @@ const CHART_PREVIEW_LINES = 8;
 
 const styles = StyleSheet.create({
   chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.xs },
-  factCell: { flexBasis: "45%", flexGrow: 1, gap: Spacing.xs },
+  factCell: { flexBasis: "30%", flexGrow: 1, gap: Spacing.xs },
   facts: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.lg },
   inline: {
     alignItems: "center",
@@ -188,53 +188,29 @@ export const SongHeader = ({ model }: { model: SongDetailModel }) => {
   );
 };
 
-/** The keys it was sung in, as badges. */
-const FactKeys = ({ keys }: { keys: readonly string[] }) =>
-  keys.length === 0 ? (
-    <AppText color={colors.inkTertiary} font="title3" weight="semibold">
-      No keys yet
-    </AppText>
-  ) : (
-    <View style={styles.chips}>
-      {keys.map((key) => (
-        <KeyBadge key={key} songKey={key} />
-      ))}
-    </View>
-  );
-
 const FactCell = ({ fact }: { fact: SongFact }) => (
   <View
-    accessibilityLabel={
-      fact.kind === "keys"
-        ? `${fact.label}, ${fact.keys.length === 0 ? "No keys yet" : fact.keys.join(", ")}`
-        : [fact.label, fact.accessibilityValue, fact.caption]
-            .filter((part) => part !== null)
-            .join(", ")
-    }
+    accessibilityLabel={[fact.label, fact.accessibilityValue, fact.caption]
+      .filter((part) => part !== null)
+      .join(", ")}
     accessible
     style={styles.factCell}
   >
     <AppText color={colors.inkSecondary} font="meta">
       {fact.label}
     </AppText>
-    {fact.kind === "keys" ? (
-      <FactKeys keys={fact.keys} />
-    ) : (
-      <>
-        <AppText font="title3" tabular weight="semibold">
-          {fact.value}
-        </AppText>
-        {fact.caption === null ? null : (
-          <AppText color={colors.inkSecondary} font="meta" numberOfLines={2}>
-            {fact.caption}
-          </AppText>
-        )}
-      </>
+    <AppText font="title3" tabular weight="semibold">
+      {fact.value}
+    </AppText>
+    {fact.caption === null ? null : (
+      <AppText color={colors.inkSecondary} font="meta" numberOfLines={2}>
+        {fact.caption}
+      </AppText>
     )}
   </View>
 );
 
-/** Last sung, next planned, how often in the past year and where, and its keys. Never advice. */
+/** Last sung, next planned, and how often in the past year and in which keys. Never advice. */
 export const SongFactsCard = ({ model }: { model: SongDetailModel }) => {
   const timeZone = useOrgTimeZone();
   const { history } = model;
@@ -247,7 +223,7 @@ export const SongFactsCard = ({ model }: { model: SongDetailModel }) => {
             accessible
             style={styles.facts}
           >
-            {[0, 1, 2, 3].map((cell) => (
+            {[0, 1, 2].map((cell) => (
               <View key={cell} style={styles.factCell}>
                 <Skeleton height={10} variant="text" width={64} />
                 <Skeleton height={18} variant="text" width={96} />
@@ -269,7 +245,12 @@ export const SongFactsCard = ({ model }: { model: SongDetailModel }) => {
   return (
     <SurfaceCard>
       <View style={styles.facts} testID="song-facts">
-        {songFacts(history.data, model.now, timeZone).map((fact) => (
+        {songFacts(
+          history.data.entries,
+          model.now,
+          timeZone,
+          history.data.truncated
+        ).map((fact) => (
           <FactCell fact={fact} key={fact.label} />
         ))}
       </View>
@@ -659,8 +640,9 @@ export const SongHistorySection = ({ model }: { model: SongDetailModel }) => {
       </View>
     ) : null;
   }
-  const { upcoming, past } = splitSongHistory(history.data, model.now);
-  const namesArrangement = historyNamesArrangements(history.data);
+  const { entries } = history.data;
+  const { upcoming, past } = splitSongHistory(entries, model.now);
+  const namesArrangement = historyNamesArrangements(entries);
   const shown = showsAll ? past : past.slice(0, HISTORY_PREVIEW);
   return (
     <>
@@ -685,14 +667,14 @@ export const SongHistorySection = ({ model }: { model: SongDetailModel }) => {
             title="Past year"
           />
           <AppText color={colors.inkSecondary} font="meta">
-            {historyCountLine(history.data, model.now)}
+            {historyCountLine(entries, model.now, history.data.truncated)}
           </AppText>
         </View>
         <SurfaceCard padding="none">
           {past.length === 0 ? (
             <InlineFailure
               message={
-                history.data.length > 0
+                entries.length > 0
                   ? "Not sung in the past year."
                   : "Not scheduled in the past year."
               }

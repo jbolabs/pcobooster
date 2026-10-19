@@ -7,14 +7,12 @@ import {
 
 const SongChartRoute = () => {
   const { songId } = Route.useParams();
-  const { arrangement } = Route.useSearch();
-  return (
-    <ChordChartEditorPage songId={songId} arrangementId={arrangement ?? null} />
-  );
+  const search = Route.useSearch();
+  return <ChordChartEditorPage songId={songId} search={search} />;
 };
 
 export const Route = createFileRoute("/_app/songs/$songId/chart")({
-  head: () => ({ meta: [{ title: "Chord chart · pcobooster.com" }] }),
+  head: () => ({ meta: [{ title: "Chart · pcobooster.com" }] }),
   pendingComponent: ChordChartEditorPageSkeleton,
   component: SongChartRoute,
 });

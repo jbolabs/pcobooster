@@ -52,6 +52,16 @@ export const songHistoryEntrySchema = Schema.Struct({
   arrangementName: Schema.NullOr(Schema.String),
 });
 
+/** A song's past year and upcoming plans, newest first. */
+export const songHistorySchema = Schema.Struct({
+  entries: mutableArray(songHistoryEntrySchema),
+  /**
+   * Planning Center had more plans than the one page read, so the count is a floor. The newest
+   * ones (and every upcoming one) are always read, so last and next stay right.
+   */
+  truncated: Schema.Boolean,
+});
+
 export const songsSuggestionsOutputSchema = Schema.Struct({
   /** Played most recently first. */
   recentlyPlayed: mutableArray(songCatalogEntrySchema),
@@ -130,10 +140,22 @@ export const songs = planningCenterGroup(
     success: songLibrarySchema,
     feature: "chordCharts",
   }),
-  /** Every plan in any service type that scheduled the song over the past year, newest first. */
+  /**
+   * Every plan in any service type that scheduled the song over the past year, newest first.
+   * Superseded by `schedule`, which also says when the list is cut off; delete this once the
+   * iOS update that reads `schedule` instead has shipped.
+   */
   read("history", "/songs/:songId/history", {
     params: songsHistoryInputSchema.fields,
     success: mutableArray(songHistoryEntrySchema),
+  }),
+  /**
+   * The song's plans over the past year and ahead, newest first, and whether Planning Center
+   * had more than the one page read (`truncated`).
+   */
+  read("schedule", "/songs/:songId/schedule", {
+    params: songsHistoryInputSchema.fields,
+    success: songHistorySchema,
   }),
   read("options", "/service-types/:serviceTypeId/songs/:songId/options", {
     params: songsOptionsInputSchema.fields,
@@ -173,3 +195,4 @@ export type SongLibraryEntry = typeof songLibraryEntrySchema.Type;
 export type SongLibrary = typeof songLibrarySchema.Type;
 export type SongsHistoryInput = typeof songsHistoryInputSchema.Type;
 export type SongHistoryEntry = typeof songHistoryEntrySchema.Type;
+export type SongHistory = typeof songHistorySchema.Type;

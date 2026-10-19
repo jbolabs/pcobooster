@@ -250,11 +250,33 @@ const AppTopBar = () => {
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>
-                  <DetailBreadcrumbLabel detail={detail} />
-                </BreadcrumbPage>
-              </BreadcrumbItem>
+              {detail.songSubpage === null ? (
+                <BreadcrumbItem>
+                  <BreadcrumbPage>
+                    <DetailBreadcrumbLabel detail={detail} />
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              ) : (
+                <>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink
+                      render={
+                        <Link
+                          to="/songs/$songId"
+                          params={{ songId: detail.songSubpage.songId }}
+                          search={(previous) => previous}
+                        />
+                      }
+                    >
+                      <DetailBreadcrumbLabel detail={detail} />
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>{detail.songSubpage.label}</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </>
+              )}
             </>
           ) : (
             <BreadcrumbItem>
@@ -721,6 +743,36 @@ const PresentationModeBadge = () => (
   </span>
 );
 
+const mobileBackLinkClassName = buttonVariants({
+  variant: "ghost",
+  size: "lg",
+  className: "-ml-2 min-w-0 gap-0.5 pl-1.5 text-base",
+});
+
+/** Back to the section, or from a song's chart back to the song. */
+const MobileBackLink = ({ detail }: { detail: DetailRoute }) => {
+  const songTitle = useSongTitle(detail.songId);
+  if (detail.songSubpage !== null) {
+    return (
+      <Link
+        to="/songs/$songId"
+        params={{ songId: detail.songSubpage.songId }}
+        search={(previous) => previous}
+        className={mobileBackLinkClassName}
+      >
+        <ChevronLeft className="size-5" aria-hidden />
+        <span className="truncate">{songTitle ?? detail.label}</span>
+      </Link>
+    );
+  }
+  return (
+    <Link to={detail.parentHref} className={mobileBackLinkClassName}>
+      <ChevronLeft className="size-5" aria-hidden />
+      {detail.parentLabel}
+    </Link>
+  );
+};
+
 /**
  * Phone header for sections and detail pages. Plan workspaces render their own
  * header with the plan title, so this stays out of the way there.
@@ -736,17 +788,7 @@ const MobileChromeHeader = () => {
   return (
     <MobileHeader>
       {detail ? (
-        <Link
-          to={detail.parentHref}
-          className={buttonVariants({
-            variant: "ghost",
-            size: "lg",
-            className: "-ml-2 gap-0.5 pl-1.5 text-base",
-          })}
-        >
-          <ChevronLeft className="size-5" aria-hidden />
-          {detail.parentLabel}
-        </Link>
+        <MobileBackLink detail={detail} />
       ) : (
         <p className="text-lg font-semibold tracking-tight">
           {getAppSectionLabel(getAppSection(pathname))}

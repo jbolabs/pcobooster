@@ -73,7 +73,7 @@ export const SongHistory = ({
   return (
     <EditorSection title="History">
       <AppText font="meta" color={colors.inkSecondary} tabular>
-        {songHistoryCountLabel(summary, serviceTypeName)}
+        {songHistoryCountLabel(summary, serviceTypeName, false)}
       </AppText>
       {rows.length === 0 ? (
         <AppText font="rowDetail" color={colors.inkSecondary}>

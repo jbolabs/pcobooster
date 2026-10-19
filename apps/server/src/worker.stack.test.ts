@@ -1138,7 +1138,14 @@ test(
     );
 
     assert.deepStrictEqual(charts, {
-      song: { id: "song-1", title: "Amazing Grace", author: "John Newton" },
+      song: {
+        id: "song-1",
+        title: "Amazing Grace",
+        author: "John Newton",
+        ccliNumber: null,
+        copyright: null,
+        notes: null,
+      },
       arrangements: [],
     });
     assert.isTrue(

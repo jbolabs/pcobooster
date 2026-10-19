@@ -30,7 +30,10 @@ import type { PlanTimeDependencies } from "@pcobooster/api/modules/planning-cent
 import { reorderPlanItems } from "@pcobooster/api/modules/planning-center/reorder-plan-items";
 import { searchSongs } from "@pcobooster/api/modules/planning-center/search-songs";
 import { getSongHistory } from "@pcobooster/api/modules/planning-center/song-history";
-import type { SongHistoryEntry } from "@pcobooster/api/modules/planning-center/song-history";
+import type {
+  SongHistory,
+  SongHistoryEntry,
+} from "@pcobooster/api/modules/planning-center/song-history";
 import { suggestSongs } from "@pcobooster/api/modules/planning-center/song-suggestions";
 import type { SongSuggestions } from "@pcobooster/api/modules/planning-center/song-suggestions";
 import {
@@ -316,14 +319,15 @@ export const suggestRunSheetSongs = (): Effect.Effect<
     return yield* suggestSongs(cacheScope, songsService, new Date());
   }).pipe(withPlanningCenterFaults);
 
-export const getRunSheetSongHistory = (
+/** The song's plans, and whether Planning Center had more than the one page read. */
+export const getRunSheetSongSchedule = (
   input: SongsHistoryInput
 ): Effect.Effect<
-  SongHistoryEntry[],
+  SongHistory,
   ApplicationFault,
   OrganizationTimeZone | PlanningCenterSongs
 > =>
-  Effect.gen(function* readSongHistory() {
+  Effect.gen(function* readSongSchedule() {
     const songsService = yield* PlanningCenterSongs;
     const organizationTimeZone = yield* OrganizationTimeZone;
     return yield* getSongHistory(input.songId, new Date(), {
@@ -331,6 +335,15 @@ export const getRunSheetSongHistory = (
       resolveTimeZone: organizationTimeZone,
     });
   }).pipe(withPlanningCenterFaults);
+
+/** `songs.history` for installed iOS builds: the same plans without the cutoff flag. */
+export const getRunSheetSongHistory = (
+  input: SongsHistoryInput
+): Effect.Effect<
+  SongHistoryEntry[],
+  ApplicationFault,
+  OrganizationTimeZone | PlanningCenterSongs
+> => Effect.map(getRunSheetSongSchedule(input), (schedule) => schedule.entries);
 
 export const getRunSheetSongOptions = (
   input: SongsOptionsInput

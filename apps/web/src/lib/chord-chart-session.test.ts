@@ -61,7 +61,7 @@ const version = (
 const typeChart = (session: ChordChartSession, chart: string) =>
   editChordChartDraft(session, (current) => ({ ...current, chart }));
 
-const typing = { enabled: true, canEdit: true, held: false } as const;
+const typing = { enabled: true, held: false } as const;
 
 describe(startChordChartSession, () => {
   it("starts from Planning Center and saves nothing before the first edit", () => {
@@ -87,7 +87,7 @@ describe(startChordChartSession, () => {
       conflict: null,
     });
     expect(savesAsYouType(session, typing)).toBeFalsy();
-    expect(canSaveChordChart(session, true)).toBeTruthy();
+    expect(canSaveChordChart(session)).toBeTruthy();
   });
 
   it("opens in conflict when the restored edits build on an older version", () => {
@@ -100,7 +100,7 @@ describe(startChordChartSession, () => {
     });
     expect(session.draft.chart).toBe("VERSE mine");
     expect(session.conflict).toStrictEqual({ theirs: server });
-    expect(canSaveChordChart(session, true)).toBeFalsy();
+    expect(canSaveChordChart(session)).toBeFalsy();
     expect(
       savesAsYouType(typeChart(session, "VERSE more"), typing)
     ).toBeFalsy();
@@ -215,7 +215,7 @@ describe("saving", () => {
       false
     );
     expect(savesAsYouType(typeChart(failed, "AB"), typing)).toBeFalsy();
-    expect(canSaveChordChart(failed, true)).toBeTruthy();
+    expect(canSaveChordChart(failed)).toBeTruthy();
     expect(failed.conflict).toBeNull();
   });
 
@@ -226,7 +226,6 @@ describe("saving", () => {
     );
     expect(savesAsYouType(edited, typing)).toBeTruthy();
     expect(savesAsYouType(edited, { ...typing, enabled: false })).toBeFalsy();
-    expect(savesAsYouType(edited, { ...typing, canEdit: false })).toBeFalsy();
     expect(savesAsYouType(edited, { ...typing, held: true })).toBeFalsy();
   });
 });
@@ -246,7 +245,7 @@ describe("conflicts", () => {
   it("opens a conflict when Planning Center refuses a stale save", () => {
     const session = refused();
     expect(session.conflict).toStrictEqual({ theirs: null });
-    expect(canSaveChordChart(session, true)).toBeFalsy();
+    expect(canSaveChordChart(session)).toBeFalsy();
     const theirs = version("VERSE theirs", V2);
     expect(receiveConflictVersion(session, theirs).conflict).toStrictEqual({
       theirs,
@@ -260,7 +259,7 @@ describe("conflicts", () => {
     );
     const kept = keepMyChordChart(typeChart(withTheirs, "VERSE mine, later"));
     expect(kept.conflict).toBeNull();
-    expect(canSaveChordChart(kept, true)).toBeTruthy();
+    expect(canSaveChordChart(kept)).toBeTruthy();
     expect(chordChartSaveRequest(kept)).toMatchObject({
       chordChart: "VERSE mine, later",
       baseUpdatedAt: V2,

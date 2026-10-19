@@ -179,17 +179,22 @@ export const songHistoryNote = (
 
 /**
  * "Sung 4 times in the past year · 2 at Youth": how often the song came before the
- * plan, and how many of those were at the plan's service type, by name when known.
+ * plan, and how many of those were at the plan's service type, by name when known. A
+ * `truncated` history read only its newest page, so its count is a floor: "Sung 97+ times".
  */
 export const songHistoryCountLabel = (
   summary: Pick<SongHistorySummary, "timesThisYear" | "timesHere">,
-  serviceTypeName: string | null
+  serviceTypeName: string | null,
+  truncated: boolean
 ): string => {
   const { timesThisYear, timesHere } = summary;
   if (timesThisYear === 0) {
     return "Not sung in the past year";
   }
-  const times = timesThisYear === 1 ? "once" : `${timesThisYear} times`;
+  let times = timesThisYear === 1 ? "once" : `${timesThisYear} times`;
+  if (truncated) {
+    times = `${timesThisYear}+ times`;
+  }
   const sung = `Sung ${times} in the past year`;
   return serviceTypeName === null || serviceTypeName === ""
     ? sung

@@ -68,10 +68,15 @@ const startFromBrowser = (arrangement: ChordChartArrangement) =>
     readChordChartSession(arrangement.id)
   );
 
+/** What follows a save someone waits on. */
+export interface SaveOutcome {
+  readonly onSaved: () => void;
+  readonly onFailed: () => void;
+}
+
 export interface ChordChartWorkspaceOptions {
   readonly songId: string;
   readonly arrangement: ChordChartArrangement;
-  readonly canEdit: boolean;
   /** Something on screen holds saves, such as copying to a new arrangement. */
   readonly held: boolean;
 }
@@ -85,7 +90,6 @@ export interface ChordChartWorkspaceOptions {
 export const useChordChartWorkspace = ({
   songId,
   arrangement,
-  canEdit,
   held,
 }: ChordChartWorkspaceOptions) => {
   const queryClient = useQueryClient();
@@ -111,9 +115,7 @@ export const useChordChartWorkspace = ({
     setSession((current) => (current === null ? current : change(current)));
   };
   const edit = (change: (draft: ChordChartDraft) => ChordChartDraft) => {
-    if (canEdit) {
-      update((current) => editChordChartDraft(current, change));
-    }
+    update((current) => editChordChartDraft(current, change));
   };
 
   const [storedSetting, setStoredSetting] = useBrowserStorage(
@@ -126,10 +128,9 @@ export const useChordChartWorkspace = ({
     pruneChordChartDrafts(Date.now());
   }, []);
 
-  // A viewer's browser keeps nothing, and leaves any draft from before alone.
   useEffect(
     () =>
-      session === null || !canEdit
+      session === null
         ? undefined
         : schedule(() => {
             writeChordChartSession(
@@ -137,7 +138,7 @@ export const useChordChartWorkspace = ({
               storedChordChartSession(session, Date.now())
             );
           }, DRAFT_WRITE_DELAY_MS),
-    [arrangement.id, canEdit, session]
+    [arrangement.id, session]
   );
 
   const loadTheirVersion = async () => {
@@ -157,8 +158,19 @@ export const useChordChartWorkspace = ({
 
   // Set before the session shows the save, so a second Save in the same moment sends nothing.
   const sendingRef = useRef(false);
+  // What to do once the save in flight lands, for leaving the editor after it.
+  const afterSaveRef = useRef<SaveOutcome | null>(null);
+  const settleAfterSave = (saved: boolean) => {
+    const after = afterSaveRef.current;
+    afterSaveRef.current = null;
+    if (saved) {
+      after?.onSaved();
+    } else {
+      after?.onFailed();
+    }
+  };
   const save = (current: ChordChartSession) => {
-    if (sendingRef.current || !canSaveChordChart(current, canEdit)) {
+    if (sendingRef.current || !canSaveChordChart(current)) {
       return;
     }
     sendingRef.current = true;
@@ -170,10 +182,12 @@ export const useChordChartWorkspace = ({
       {
         onSuccess: (saved) => {
           update((latest) => chordChartSaveSucceeded(latest, saved.updatedAt));
+          settleAfterSave(true);
         },
         onError: (error) => {
           const refusedAsStale = isChordChartConflict(error);
           update((latest) => chordChartSaveFailed(latest, refusedAsStale));
+          settleAfterSave(false);
           if (refusedAsStale) {
             void loadTheirVersion();
             return;
@@ -194,8 +208,8 @@ export const useChordChartWorkspace = ({
 
   const autosaving =
     session !== null &&
-    savesAsYouType(session, { enabled: saveAsYouType, canEdit, held });
-  const draft = session === null || !canEdit ? server.draft : session.draft;
+    savesAsYouType(session, { enabled: saveAsYouType, held });
+  const draft = session === null ? server.draft : session.draft;
   const saveAfterPause = useEffectEvent((typed: ChordChartDraft) => {
     if (session?.draft === typed) {
       save(session);
@@ -212,7 +226,7 @@ export const useChordChartWorkspace = ({
     [autosaving, draft]
   );
 
-  const canSave = session !== null && canSaveChordChart(session, canEdit);
+  const canSave = session !== null && canSaveChordChart(session);
   return {
     /** Planning Center's fresh copy is in and editing can begin. */
     ready: session !== null,
@@ -220,6 +234,8 @@ export const useChordChartWorkspace = ({
     status: session === null ? "saved" : chordChartSaveStatus(session),
     saveAsYouType,
     canSave,
+    /** The last save didn't reach Planning Center, so typing no longer saves on its own. */
+    saveFailed: session?.paused ?? false,
     /** Saving waits for the person: the setting is off, paused, or yet to see an edit. */
     needsSave: canSave && !autosaving,
     conflict: session?.conflict ?? null,
@@ -244,6 +260,22 @@ export const useChordChartWorkspace = ({
         save(session);
       }
     },
+    /**
+     * Saves what is pending (or waits for the save already in flight), then reports how it
+     * went; with nothing to save it reports saved at once.
+     */
+    handleSaveThen: (outcome: SaveOutcome) => {
+      if (sendingRef.current) {
+        afterSaveRef.current = outcome;
+        return;
+      }
+      if (session === null || !canSaveChordChart(session)) {
+        outcome.onSaved();
+        return;
+      }
+      afterSaveRef.current = outcome;
+      save(session);
+    },
     handleChartChange: (chart: string) => {
       edit((current) => ({ ...current, chart }));
     },
@@ -258,7 +290,7 @@ export const useChordChartWorkspace = ({
     },
     /** Replacing offers Undo, since it bypasses the text box's own undo history. */
     handleImport: (text: ChordChartImportText, mode: "replace" | "append") => {
-      if (session === null || !canEdit) {
+      if (session === null) {
         return;
       }
       const previous = session.draft;
@@ -275,9 +307,7 @@ export const useChordChartWorkspace = ({
       }
     },
     handleRevert: () => {
-      if (canEdit) {
-        update(revertChordChart);
-      }
+      update(revertChordChart);
     },
     handleDiscard: () => {
       update(discardUnsavedChordChart);

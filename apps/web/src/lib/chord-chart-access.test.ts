@@ -22,32 +22,25 @@ const snapshot = (
 
 describe(chordChartEditAccess, () => {
   it("lets song Editors and organization administrators edit", () => {
-    expect(chordChartEditAccess(snapshot("Editor"), false)).toStrictEqual({
-      canEdit: true,
-    });
-    expect(chordChartEditAccess(snapshot("Viewer", true), false)).toStrictEqual(
-      { canEdit: true }
-    );
+    expect([
+      chordChartEditAccess(snapshot("Editor"), false, false),
+      chordChartEditAccess(snapshot("Viewer", true), false, false),
+    ]).toStrictEqual(["editor", "editor"]);
   });
 
-  it("makes the editor view-only for song Viewers, with the reason", () => {
-    expect(chordChartEditAccess(snapshot("Viewer"), false)).toStrictEqual({
-      canEdit: false,
-      reason:
-        "Your song access in Planning Center is Viewer. Saving chord charts needs Editor.",
-    });
+  it("makes charts view-only for song Viewers and the read-only demo", () => {
+    expect([
+      chordChartEditAccess(snapshot("Viewer"), false, false),
+      chordChartEditAccess(snapshot("Editor"), true, false),
+      chordChartEditAccess(null, true, false),
+    ]).toStrictEqual(["viewer", "viewer", "viewer"]);
   });
 
-  it("leaves editing open while permissions load or the level is unknown", () => {
-    expect(chordChartEditAccess(null, false)).toStrictEqual({ canEdit: true });
-    expect(chordChartEditAccess(snapshot(null), false)).toStrictEqual({
-      canEdit: true,
-    });
-  });
-
-  it("makes the read-only demo view-only", () => {
-    expect(chordChartEditAccess(snapshot("Editor"), true)).toMatchObject({
-      canEdit: false,
-    });
+  it("waits while permissions load, and leaves an unreported level or a failed read open", () => {
+    expect([
+      chordChartEditAccess(null, false, false),
+      chordChartEditAccess(snapshot(null), false, false),
+      chordChartEditAccess(null, false, true),
+    ]).toStrictEqual(["pending", "editor", "editor"]);
   });
 });

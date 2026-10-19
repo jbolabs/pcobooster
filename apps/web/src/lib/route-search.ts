@@ -59,7 +59,11 @@ export const songsSearchSchema = routeSearch({
   sort: optionalParam,
 });
 
-/** A song's pages: the arrangement shown and edited; unknown ids fall back to the first. */
+/**
+ * A song's page and its chart: the arrangement and key shown. Unknown ids fall back to the first
+ * active arrangement and its first key, and the page replaces the URL to say so.
+ */
 export const songSearchSchema = routeSearch({
   arrangement: optionalParam,
+  key: optionalParam,
 });

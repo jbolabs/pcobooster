@@ -169,22 +169,28 @@ describe(songHistoryNote, () => {
 describe(songHistoryCountLabel, () => {
   it("counts the past year, then the plan's service type by name", () => {
     expect(
-      songHistoryCountLabel({ timesThisYear: 4, timesHere: 2 }, "Youth")
+      songHistoryCountLabel({ timesThisYear: 4, timesHere: 2 }, "Youth", false)
     ).toBe("Sung 4 times in the past year · 2 at Youth");
     expect(
-      songHistoryCountLabel({ timesThisYear: 1, timesHere: 0 }, "Youth")
+      songHistoryCountLabel({ timesThisYear: 1, timesHere: 0 }, "Youth", false)
     ).toBe("Sung once in the past year · 0 at Youth");
   });
 
   it("leaves out the service type when its name is unknown", () => {
     expect(
-      songHistoryCountLabel({ timesThisYear: 3, timesHere: 1 }, null)
+      songHistoryCountLabel({ timesThisYear: 3, timesHere: 1 }, null, false)
     ).toBe("Sung 3 times in the past year");
+  });
+
+  it("counts a history cut off at its page as a floor", () => {
+    expect(
+      songHistoryCountLabel({ timesThisYear: 97, timesHere: 40 }, "Youth", true)
+    ).toBe("Sung 97+ times in the past year · 40 at Youth");
   });
 
   it("says when the song wasn't sung in the past year", () => {
     expect(
-      songHistoryCountLabel({ timesThisYear: 0, timesHere: 0 }, "Youth")
+      songHistoryCountLabel({ timesThisYear: 0, timesHere: 0 }, "Youth", false)
     ).toBe("Not sung in the past year");
   });
 });

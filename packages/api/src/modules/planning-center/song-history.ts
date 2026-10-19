@@ -64,6 +64,12 @@ export const toSongHistory = (
   );
 };
 
+/** The plans, newest first, and whether Planning Center had more than were read. */
+export interface SongHistory {
+  entries: SongHistoryEntry[];
+  truncated: boolean;
+}
+
 export interface SongHistoryDependencies {
   readonly songs: Pick<PlanningCenterSongsService, "getSongSchedules">;
   readonly resolveTimeZone: Effect.Effect<string, PlanningCenterError>;
@@ -77,7 +83,7 @@ export const getSongHistory = (
   songId: string,
   now: Date,
   dependencies: SongHistoryDependencies
-): Effect.Effect<SongHistoryEntry[], PlanningCenterError> =>
+): Effect.Effect<SongHistory, PlanningCenterError> =>
   Effect.gen(function* readSongHistory() {
     const timeZone = yield* dependencies.resolveTimeZone;
     const afterDayKey = addCalendarDaysToDayKey(
@@ -88,5 +94,8 @@ export const getSongHistory = (
       songId,
       afterDayKey
     );
-    return toSongHistory(schedules);
+    return {
+      entries: toSongHistory(schedules.data),
+      truncated: schedules.truncated,
+    };
   });

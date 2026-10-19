@@ -22,6 +22,8 @@ export type ChordChartSongOutput = typeof chordChartSongOutputSchema.Type;
 const LIBRARY_STALE_MS = 3_600_000;
 /** A chart changes when someone saves it; a minute keeps a just-saved web edit close. */
 const CHART_STALE_MS = 60_000;
+/** Plans change as services are built, not while someone reads one song. */
+const SCHEDULE_STALE_MS = 60_000;
 
 export const songsReads = {
   /** `songs.library`: every visible song, behind the `chordCharts` flag. */
@@ -32,7 +34,16 @@ export const songsReads = {
         await callForQuery(context, client, (api) => api.songs.library()),
       staleTime: LIBRARY_STALE_MS,
     }),
-  history: runSheetSongReads.history,
+  /** `songs.schedule`: the song's plans, and whether Planning Center had more than were read. */
+  schedule: ({ client, scope }: SongsReadContext, songId: string) =>
+    queryOptions({
+      queryKey: [scope, "songs.schedule", songId] as const,
+      queryFn: async (context) =>
+        await callForQuery(context, client, (api) =>
+          api.songs.schedule({ params: { songId } })
+        ),
+      staleTime: SCHEDULE_STALE_MS,
+    }),
   options: runSheetSongReads.options,
   serviceTypes: planReads.serviceTypes,
   /** `chordCharts.song`: the song's arrangements with their chart text, behind the flag. */
@@ -107,7 +118,7 @@ export const prefetchSong = async (
   await context.scheduler.runSpeculative(async () => {
     // Best effort: the song screen's own reads show any failure.
     await Promise.allSettled([
-      cache.query(speculativeQuery(songsReads.history(context, songId))),
+      cache.query(speculativeQuery(songsReads.schedule(context, songId))),
       chartsEnabled
         ? cache.query(speculativeQuery(songsReads.chart(context, songId)))
         : null,

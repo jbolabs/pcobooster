@@ -10,6 +10,7 @@ import {
 import {
   getRunSheetSongHistory,
   getRunSheetSongOptions,
+  getRunSheetSongSchedule,
   searchRunSheetSongs,
   suggestRunSheetSongs,
 } from "@pcobooster/api/application/run-sheet";
@@ -30,6 +31,7 @@ export const SongHandlers = Layer.mergeAll(
       .handle("suggestions", () => suggestRunSheetSongs())
       .handle("library", () => readSongLibrary())
       .handle("history", ({ params }) => getRunSheetSongHistory(params))
+      .handle("schedule", ({ params }) => getRunSheetSongSchedule(params))
       .handle("options", ({ params }) => getRunSheetSongOptions(params))
       .handle("attachments", ({ params }) => readSongAttachments(params))
       .handle("attachmentLink", ({ params, query }) =>

@@ -346,19 +346,12 @@ export const chordChartCopy = (session: ChordChartSession) => ({
 });
 
 /** A save can go out now: there is something to save and no conflict waits on the person. */
-export const canSaveChordChart = (
-  session: ChordChartSession,
-  canEdit: boolean
-): boolean =>
-  canEdit &&
-  session.saving === null &&
-  session.conflict === null &&
-  isDirty(session);
+export const canSaveChordChart = (session: ChordChartSession): boolean =>
+  session.saving === null && session.conflict === null && isDirty(session);
 
 export interface SaveAsYouTypeOptions {
   /** The person's Save as you type setting. */
   readonly enabled: boolean;
-  readonly canEdit: boolean;
   /** Something on screen holds saves, such as copying to a new arrangement. */
   readonly held: boolean;
 }
@@ -375,7 +368,7 @@ export const savesAsYouType = (
   !options.held &&
   session.edited &&
   !session.paused &&
-  canSaveChordChart(session, options.canEdit);
+  canSaveChordChart(session);
 
 export type ChordChartSaveStatus = "saved" | "saving" | "unsaved";
 

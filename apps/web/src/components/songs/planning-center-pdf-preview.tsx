@@ -1,28 +1,13 @@
 import { failureMessage } from "@pcobooster/client/product-client";
+import { NotFound } from "@pcobooster/contracts/faults/not-found";
 import type { ChordChartArrangement } from "@pcobooster/contracts/http/chord-charts";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 import { useChordChartPdf } from "@/hooks/use-chord-chart-song";
 import { renderPdfPages } from "@/lib/pdf-pages";
-
-const LYRICS_TARGET = "lyrics";
-
-const keyLabel = (key: ChordChartArrangement["keys"][number]): string => {
-  const name = key.name.trim();
-  const start = key.startingKey ?? "";
-  if (name === "" || name === start) {
-    return start === "" ? "Chord chart" : `Chords in ${start}`;
-  }
-  return start === "" ? name : `${name} (${start})`;
-};
 
 const observeWidth = (
   element: HTMLElement,
@@ -65,13 +50,14 @@ const drawPages = (
 };
 
 /**
- * Pages drawn into `pagesRef`. A new render replaces the old pages only once it is
- * ready, so the preview never blanks and keeps its scroll position.
+ * Pages drawn into `pagesRef`, and which chart (`source`) they show. A new render of the same
+ * chart replaces the old pages only once it is ready, so the editor's preview never blanks and
+ * keeps its scroll position.
  */
-const usePdfPages = (data: string | undefined) => {
+const usePdfPages = (data: string | undefined, source: string) => {
   const pagesRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const [drawn, setDrawn] = useState(false);
+  const [drawnSource, setDrawnSource] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -85,114 +71,144 @@ const usePdfPages = (data: string | undefined) => {
       ? undefined
       : drawPages(pages, data, width, {
           onDrawn: () => {
-            setDrawn(true);
+            setDrawnSource(source);
             setFailed(false);
           },
           onFailed: () => {
             setFailed(true);
           },
         });
-  }, [data, width]);
+  }, [data, width, source]);
 
-  return { pagesRef, drawn, failed };
+  return { pagesRef, drawnSource, failed };
 };
 
-export interface PlanningCenterPdfPreviewProps {
-  songId: string;
-  arrangement: ChordChartArrangement;
-  /** Shown beside the chart picker, such as Formatting. */
-  actions: ReactNode;
-  /** A line about unsaved edits, shown above the pages. */
-  status: ReactNode;
+export interface PlanningCenterPdf {
+  /** The pages on screen are this chart's (this arrangement and key). */
+  readonly drawn: boolean;
+  readonly failed: boolean;
+  /** Planning Center is rendering, or the pages are being drawn. */
+  readonly rendering: boolean;
+  /** Planning Center has no chart for this key yet. */
+  readonly missing: boolean;
+  /** Why the chart didn't load, or null. */
+  readonly error: string | null;
+  readonly handleRetry: () => void;
+}
+
+export interface PlanningCenterPdfRead {
+  /** Where the pages are drawn; pass it to `PlanningCenterPdfPages`. */
+  readonly pagesRef: RefObject<HTMLDivElement | null>;
+  readonly pdf: PlanningCenterPdf;
 }
 
 /**
- * The chart exactly as Planning Center renders it: Services' own PDF of the saved chart,
- * for one of the arrangement's keys or its lyrics sheet.
+ * The chart exactly as Planning Center renders it: Services' own PDF of the saved chart, for
+ * one of the arrangement's keys or (with `keyId` null) its lyrics sheet. Another key's pages
+ * never stand in while this key's load, so nobody reads the wrong key.
  */
-export const PlanningCenterPdfPreview = ({
+export const usePlanningCenterPdf = ({
   songId,
   arrangement,
-  actions,
-  status,
-}: PlanningCenterPdfPreviewProps) => {
-  const [target, setTarget] = useState<string>(
-    arrangement.keys[0]?.id ?? LYRICS_TARGET
-  );
-  const keyId = target === LYRICS_TARGET ? null : target;
+  keyId,
+}: {
+  songId: string;
+  arrangement: ChordChartArrangement;
+  keyId: string | null;
+}): PlanningCenterPdfRead => {
   const pdf = useChordChartPdf({
     songId,
     arrangementId: arrangement.id,
     keyId,
     updatedAt: arrangement.updatedAt,
   });
-  const { pagesRef, drawn, failed } = usePdfPages(pdf.data?.data);
-  const rendering = pdf.isFetching || (pdf.data !== undefined && !drawn);
+  const source = `${arrangement.id}:${keyId ?? "lyrics"}`;
+  // The chart the last real answer was for; a placeholder from another chart isn't drawn.
+  const [answeredSource, setAnsweredSource] = useState<string | null>(null);
+  if (
+    pdf.data !== undefined &&
+    !pdf.isPlaceholderData &&
+    answeredSource !== source
+  ) {
+    setAnsweredSource(source);
+  }
+  const foreign = pdf.isPlaceholderData && answeredSource !== source;
+  const { pagesRef, drawnSource, failed } = usePdfPages(
+    foreign ? undefined : pdf.data?.data,
+    source
+  );
+  const drawn = drawnSource === source;
+  const missing = pdf.error instanceof NotFound;
+  return {
+    pagesRef,
+    pdf: {
+      drawn,
+      failed,
+      rendering: pdf.isFetching || (pdf.data !== undefined && !drawn),
+      missing,
+      error:
+        pdf.error === null || missing
+          ? null
+          : failureMessage(pdf.error, "Planning Center’s chart didn’t load."),
+      handleRetry: () => {
+        void pdf.refetch();
+      },
+    },
+  };
+};
 
+/**
+ * The PDF's pages, with a letter-shaped placeholder until they are drawn. A chart Planning
+ * Center hasn't rendered says so in one line (`missing`), with `missingAction` beside it.
+ */
+export const PlanningCenterPdfPages = ({
+  pdf,
+  pagesRef,
+  missingLabel,
+  missingAction,
+}: {
+  pdf: PlanningCenterPdf;
+  pagesRef: RefObject<HTMLDivElement | null>;
+  missingLabel: string;
+  missingAction?: ReactNode;
+}) => {
+  const settled = pdf.missing || pdf.error !== null;
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-1.5 p-2">
-        <NativeSelect
-          aria-label="Chart to preview"
-          size="sm"
-          value={target}
-          onChange={(event) => {
-            setTarget(event.target.value);
-          }}
-        >
-          {arrangement.keys.map((key) => (
-            <NativeSelectOption key={key.id} value={key.id}>
-              {keyLabel(key)}
-            </NativeSelectOption>
-          ))}
-          <NativeSelectOption value={LYRICS_TARGET}>Lyrics</NativeSelectOption>
-        </NativeSelect>
-        {rendering ? (
-          <Spinner aria-label="Rendering in Planning Center" />
-        ) : null}
-        <div className="ml-auto flex items-center gap-1.5">{actions}</div>
-      </div>
-      {status}
-      {arrangement.keys.length === 0 ? (
-        <p className="text-muted-foreground px-3 pb-2 text-xs">
-          This arrangement has no key in Planning Center, so only its lyrics
-          sheet renders. Add a key there to preview chord charts.
+    <>
+      {pdf.missing ? (
+        <div className="flex flex-wrap items-center gap-3 py-2">
+          <p className="text-muted-foreground text-sm">{missingLabel}</p>
+          {missingAction}
+        </div>
+      ) : null}
+      {pdf.error === null ? null : (
+        <div className="flex flex-wrap items-center gap-3 py-2">
+          <p className="text-muted-foreground text-sm">{pdf.error}</p>
+          <Button variant="outline" size="xs" onClick={pdf.handleRetry}>
+            Retry
+          </Button>
+        </div>
+      )}
+      {pdf.failed ? (
+        <p className="text-muted-foreground py-2 text-sm">
+          The PDF from Planning Center could not be drawn.
         </p>
       ) : null}
-      <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
-        {pdf.isError ? (
-          <div className="flex flex-col items-start gap-2 p-2">
-            <p className="text-muted-foreground text-sm">
-              {failureMessage(
-                pdf.error,
-                "Planning Center’s preview didn’t load."
-              )}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                void pdf.refetch();
-              }}
-            >
-              Try again
-            </Button>
-          </div>
-        ) : null}
-        {failed ? (
-          <p className="text-muted-foreground p-2 text-sm">
-            The PDF from Planning Center could not be drawn.
-          </p>
-        ) : null}
-        {drawn || pdf.isError ? null : (
-          <Skeleton variant="control" className="aspect-[8.5/11] w-full" />
-        )}
-        <div
-          ref={pagesRef}
-          aria-label="Chord chart from Planning Center"
-          className="flex flex-col gap-4"
-        />
-      </div>
-    </div>
+      {pdf.drawn || settled ? null : (
+        <Skeleton variant="control" className="aspect-[8.5/11] w-full" />
+      )}
+      <div
+        ref={pagesRef}
+        aria-label="Chord chart from Planning Center"
+        aria-hidden={!pdf.drawn || settled}
+        // Until this chart's pages are drawn, another key's may still be here: they stay out
+        // of sight, keeping the width the next pages are drawn at.
+        className={
+          pdf.drawn && !settled
+            ? "flex flex-col gap-4"
+            : "invisible flex h-0 flex-col gap-4 overflow-hidden"
+        }
+      />
+    </>
   );
 };

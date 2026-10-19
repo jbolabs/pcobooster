@@ -28,6 +28,12 @@ interface SongArrangementsResponse {
   included: PCResource[];
 }
 
+/** The newest of a song's schedules, and whether Planning Center had more past the page read. */
+export interface SongSchedules {
+  readonly data: PCResource[];
+  readonly truncated: boolean;
+}
+
 export interface ArrangementResponse {
   data: PCResource;
   included: PCResource[];
@@ -229,19 +235,19 @@ export class PlanningCenterSongsService {
 
   /**
    * Every plan, in any service type, that scheduled the song from `afterDayKey` on,
-   * newest first. Without a filter Planning Center lists only upcoming ones.
+   * newest first, up to one page. Without a filter Planning Center lists only upcoming ones.
    */
   getSongSchedules(
     songId: string,
     afterDayKey: string
-  ): Effect.Effect<PCResource[], PlanningCenterError> {
+  ): Effect.Effect<SongSchedules, PlanningCenterError> {
     return this.core
       .fetchFirstPages(
         `/services/v2/songs/${songId}/song_schedules`,
         { filter: "after", after: afterDayKey, order: "-plan_sort_date" },
         SONG_SCHEDULES_PAGES
       )
-      .pipe(Effect.map(({ data }) => data));
+      .pipe(Effect.map(({ data, next }) => ({ data, truncated: next !== null })));
   }
 
   /** A song never scheduled for the service type has no last item. */

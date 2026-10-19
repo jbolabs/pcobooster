@@ -6,7 +6,6 @@ import {
   formatCompactAgo,
   songHistoryCountLabel,
   summarizeSongHistory,
-  tempoLabel,
 } from "./song-library";
 import type { ArrangementOption, KeyOption } from "./types";
 
@@ -128,41 +127,46 @@ export const historyDateLabel = (
     sameOrgYear(date, now, timeZone) ? "weekdayMonthDay" : "monthDayYear"
   );
 
-/** One fact on the song's summary. */
-export type SongFact =
-  | {
-      readonly kind: "value";
-      readonly label: string;
-      readonly value: string;
-      readonly caption: string | null;
-      readonly accessibilityValue: string;
-    }
-  | { readonly kind: "keys"; readonly label: string; readonly keys: string[] };
+/** One line of the song's summary: a label, its value, and a muted caption. */
+export interface SongFact {
+  readonly label: string;
+  readonly value: string;
+  readonly caption: string | null;
+  readonly accessibilityValue: string;
+}
 
 /**
- * Last sung, next planned, how often in the past year (and where), and the keys it was sung in,
- * counted from `now`.
+ * Last sung, next planned (and where), and how often in the past year (and in which keys),
+ * counted from `now`. A truncated history read only its newest page, so its count is a floor:
+ * "100+ times".
  */
 export const songFacts = (
   history: readonly SongHistoryEntry[],
   now: Date,
-  timeZone: string
+  timeZone: string,
+  truncated: boolean
 ): SongFact[] => {
   const summary = summarizeSongHistory(history, now, null);
-  const { upcoming, past } = splitSongHistory(history, now);
-  const counts = serviceTypeCounts(past);
-  const { last } = summary;
+  const { last, next, timesThisYear } = summary;
+  // Keys it was sung in: past plans only, not ones still ahead.
+  const sungKeys = [
+    ...new Set(
+      history.flatMap((entry) =>
+        entry.sortDate < now && entry.startingKey !== null
+          ? [entry.startingKey]
+          : []
+      )
+    ),
+  ];
   const lastSung: SongFact =
     last === null
       ? {
-          kind: "value",
           label: "Last sung",
           value: "Not in the past year",
           caption: null,
           accessibilityValue: "Not in the past year",
         }
       : {
-          kind: "value",
           label: "Last sung",
           value: compactDate(last.sortDate, now, timeZone),
           caption: `${formatCompactAgo(last.sortDate, now)} ago`,
@@ -172,19 +176,16 @@ export const songFacts = (
             "weekdayMonthDayYear"
           ),
         };
-  const [next] = upcoming;
   const nextPlanned: SongFact =
-    next === undefined
+    next === null
       ? {
-          kind: "value",
-          label: "Next planned",
+          label: "Next",
           value: "Not planned",
           caption: null,
           accessibilityValue: "Not planned",
         }
       : {
-          kind: "value",
-          label: "Next planned",
+          label: "Next",
           value: compactDate(next.sortDate, now, timeZone),
           caption: next.serviceTypeName === "" ? null : next.serviceTypeName,
           accessibilityValue: formatCalendarDateLabel(
@@ -193,36 +194,32 @@ export const songFacts = (
             "weekdayMonthDayYear"
           ),
         };
-  const times =
-    summary.timesThisYear === 1 ? "Once" : `${summary.timesThisYear} times`;
-  const caption =
-    counts.length > 1
-      ? counts
-          .slice(0, 2)
-          .map(({ name, count }) => `${count} at ${name}`)
-          .join(", ")
-      : (counts[0]?.name ?? null);
+  let times = `${timesThisYear} times`;
+  if (truncated) {
+    times = `${timesThisYear}+ times`;
+  } else if (timesThisYear === 1) {
+    times = "Once";
+  }
   return [
     lastSung,
     nextPlanned,
     {
-      kind: "value",
       label: "Past year",
       value: times,
-      caption,
+      caption: sungKeys.length === 0 ? null : `Sung in ${sungKeys.join(", ")}`,
       accessibilityValue: times,
     },
-    { kind: "keys", label: "Keys", keys: summary.keys },
   ];
 };
 
 /** "Sung 12 times in the past year · 10 at Sunday Gathering, 2 at Youth Night". */
 export const historyCountLine = (
   history: readonly SongHistoryEntry[],
-  now: Date
+  now: Date,
+  truncated: boolean
 ): string => {
   const summary = summarizeSongHistory(history, now, null);
-  const label = songHistoryCountLabel(summary, null);
+  const label = songHistoryCountLabel(summary, null, truncated);
   const counts = serviceTypeCounts(splitSongHistory(history, now).past);
   if (counts.length === 0) {
     return label;
@@ -250,12 +247,58 @@ export const formatLength = (seconds: number): string | null => {
     : `${minutes}:${rest}`;
 };
 
+/** An arrangement's length, tempo, and meter, as Planning Center has them. */
+export interface ArrangementTiming {
+  /** Seconds. */
+  readonly length: number | null;
+  readonly bpm: number | null;
+  readonly meter: string | null;
+}
+
+/** One part of an arrangement's facts line: "4:13", "70" with its unit "bpm", "4/4". */
+export interface ArrangementFact {
+  readonly label: "Length" | "Tempo" | "Meter";
+  readonly value: string;
+  readonly unit: string | null;
+}
+
+/** Length, tempo, then meter; a fact Planning Center doesn't set is left out. */
+export const arrangementFacts = (
+  arrangement: ArrangementTiming
+): ArrangementFact[] => {
+  const facts: ArrangementFact[] = [];
+  const length =
+    arrangement.length === null ? null : formatLength(arrangement.length);
+  if (length !== null) {
+    facts.push({ label: "Length", value: length, unit: null });
+  }
+  if (arrangement.bpm !== null && arrangement.bpm > 0) {
+    facts.push({ label: "Tempo", value: String(arrangement.bpm), unit: "bpm" });
+  }
+  const meter = arrangement.meter?.trim() ?? "";
+  if (meter !== "") {
+    facts.push({ label: "Meter", value: meter, unit: null });
+  }
+  return facts;
+};
+
+/** "4:13 · 70 bpm · 4/4", or null when Planning Center sets none of them. */
+export const arrangementFactsLine = (
+  arrangement: ArrangementTiming
+): string | null => {
+  const facts = arrangementFacts(arrangement).map((fact) =>
+    fact.unit === null ? fact.value : `${fact.value} ${fact.unit}`
+  );
+  return facts.length === 0 ? null : facts.join(" · ");
+};
+
 /** An arrangement as the chord chart read names it, before `songs.options` answers. */
-export interface ChartArrangementSummary {
+export interface ChartArrangementSummary extends ArrangementTiming {
   readonly id: string;
   readonly name: string;
   readonly archived: boolean;
   readonly keys: readonly KeyOption[];
+  readonly sequence: readonly string[];
 }
 
 /** What an arrangement row shows, from `songs.options` or, until it loads, the chart read. */
@@ -264,7 +307,7 @@ export interface ArrangementRowData {
   readonly name: string;
   readonly archived: boolean;
   readonly keys: readonly KeyOption[];
-  /** "74 bpm · 4/4 · 5:00", or null when Planning Center sets none of them. */
+  /** "5:00 · 74 bpm · 4/4", or null when Planning Center sets none of them. */
   readonly facts: string | null;
   readonly sequence: readonly string[];
 }
@@ -272,35 +315,223 @@ export interface ArrangementRowData {
 export const arrangementDisplayName = (name: string): string =>
   name === "" ? "Untitled arrangement" : name;
 
+const toArrangementRow = (
+  arrangement: ChartArrangementSummary
+): ArrangementRowData => ({
+  id: arrangement.id,
+  name: arrangementDisplayName(arrangement.name),
+  archived: arrangement.archived,
+  keys: arrangement.keys,
+  facts: arrangementFactsLine(arrangement),
+  sequence: arrangement.sequence,
+});
+
 export const arrangementRows = (
   options?: readonly ArrangementOption[],
   charts?: readonly ChartArrangementSummary[]
-): ArrangementRowData[] => {
-  if (options !== undefined && options.length > 0) {
-    return activeFirst(options).map((option) => {
-      const length =
-        option.length === null ? null : formatLength(option.length);
-      const parts = [tempoLabel(option), length].filter(
-        (part): part is string => part !== null && part !== ""
-      );
-      return {
-        id: option.id,
-        name: arrangementDisplayName(option.name),
-        archived: option.archived,
-        keys: option.keys,
-        facts: parts.length === 0 ? null : parts.join(" · "),
-        sequence: option.sequence,
-      };
-    });
+): ArrangementRowData[] =>
+  activeFirst(
+    options !== undefined && options.length > 0 ? options : (charts ?? [])
+  ).map(toArrangementRow);
+
+/** "G", or "A · Jordan's key" when the key has its own name. */
+export const keyLabel = (key: KeyOption): string => {
+  const name = key.name.trim();
+  const start = key.startingKey ?? "";
+  if (name === "" || name === "Original" || name === start) {
+    return start === "" ? "No key" : start;
   }
-  return activeFirst(charts ?? []).map((chart) => ({
-    id: chart.id,
-    name: arrangementDisplayName(chart.name),
-    archived: chart.archived,
-    keys: chart.keys,
-    facts: null,
-    sequence: [],
-  }));
+  return start === "" ? name : `${start} · ${name}`;
+};
+
+/** "Ends in B" when the key changes by the end of the song. */
+export const keyEndingLabel = (key: KeyOption): string | null =>
+  key.endingKey === null ||
+  key.endingKey === "" ||
+  key.endingKey === key.startingKey
+    ? null
+    : `Ends in ${key.endingKey}`;
+
+/** The primary chart action: "Chart in G", or "Chart" for the lyrics sheet. */
+export const chartActionLabel = (key: KeyOption | null): string => {
+  if (key === null) {
+    return "Chart";
+  }
+  const start = key.startingKey ?? "";
+  return start === "" ? `Chart in ${keyLabel(key)}` : `Chart in ${start}`;
+};
+
+/** Why a chart has no PDF yet: "No chart in G yet", or the lyrics sheet's. */
+export const missingChartLabel = (key: KeyOption | null): string =>
+  key === null
+    ? "No lyrics sheet yet"
+    : `No chart in ${key.startingKey ?? keyLabel(key)} yet`;
+
+/** "70 bpm · G, A": what tells arrangements apart in a picker. */
+export const arrangementPickerDetail = (
+  arrangement: Pick<ChartArrangementSummary, "bpm" | "keys">
+): string => {
+  const starts = [
+    ...new Set(
+      arrangement.keys.flatMap((key) =>
+        key.startingKey === null || key.startingKey === ""
+          ? []
+          : [key.startingKey]
+      )
+    ),
+  ];
+  return [
+    arrangement.bpm === null || arrangement.bpm <= 0
+      ? null
+      : `${arrangement.bpm} bpm`,
+    starts.length === 0 ? null : starts.join(", "),
+  ]
+    .filter((part) => part !== null)
+    .join(" · ");
+};
+
+/** What a song page's search asks for: `?arrangement=&key=`. */
+export interface SongPageSearch {
+  readonly arrangement?: string | undefined;
+  readonly key?: string | undefined;
+}
+
+export interface SongPageSelection<
+  Arrangement extends ChartArrangementSummary,
+> {
+  /** Active first, then archived. */
+  readonly arrangements: readonly Arrangement[];
+  /** Null when the song has no arrangements. */
+  readonly arrangement: Arrangement | null;
+  /** Null for the lyrics sheet: the arrangement has no keys. */
+  readonly key: KeyOption | null;
+  /** The search naming what is shown. */
+  readonly search: SongPageSearch;
+  /** The asked-for search names something else, so the URL should be replaced with `search`. */
+  readonly stale: boolean;
+}
+
+/**
+ * The arrangement and key a song page shows: the ones the URL names, else the first active
+ * arrangement (the first archived one when all are) and its first key.
+ */
+export const songPageSelection = <Arrangement extends ChartArrangementSummary>(
+  arrangements: readonly Arrangement[],
+  requested: SongPageSearch
+): SongPageSelection<Arrangement> => {
+  const ordered = activeFirst(arrangements);
+  const arrangement =
+    ordered.find((candidate) => candidate.id === requested.arrangement) ??
+    ordered[0] ??
+    null;
+  const key =
+    arrangement?.keys.find((candidate) => candidate.id === requested.key) ??
+    arrangement?.keys[0] ??
+    null;
+  const search: SongPageSearch = {
+    arrangement: arrangement?.id,
+    key: key?.id,
+  };
+  return {
+    arrangements: ordered,
+    arrangement,
+    key,
+    search,
+    stale:
+      search.arrangement !== requested.arrangement ||
+      search.key !== requested.key,
+  };
+};
+
+const COPYRIGHT_YEAR_PATTERN = /\b(?<year>(?:1[6-9]|20)\d{2})\b/u;
+
+/** The song's credits line: "Writers · CCLI 6605236 · © 2013"; missing parts are skipped. */
+export const songCreditsLine = (song: {
+  readonly author: string;
+  readonly ccliNumber: number | null;
+  readonly copyright: string | null;
+}): string | null => {
+  const parts: string[] = [];
+  const author = song.author.trim();
+  if (author !== "") {
+    parts.push(author);
+  }
+  if (song.ccliNumber !== null) {
+    parts.push(`CCLI ${song.ccliNumber}`);
+  }
+  const copyright = song.copyright?.trim() ?? "";
+  if (copyright !== "") {
+    const year = COPYRIGHT_YEAR_PATTERN.exec(copyright)?.groups?.year;
+    parts.push(year === undefined ? copyright : `© ${year}`);
+  }
+  return parts.length === 0 ? null : parts.join(" · ");
+};
+
+/** A group of files on the song page: the arrangement's own, or one key's. */
+export interface SongFileGroup<File> {
+  readonly id: string;
+  /** "Arrangement", a key ("G"), or "Other keys". */
+  readonly label: string;
+  readonly files: readonly File[];
+}
+
+/**
+ * The arrangement's own files first, then each key's in the arrangement's key order. With two
+ * or more keys, only the chosen key's files show beside the arrangement's, so a player sees
+ * one key's stems rather than every key's.
+ */
+export const songFileGroups = <File extends { readonly keyId: string | null }>(
+  files: readonly File[],
+  keys: readonly KeyOption[],
+  chosenKeyId: string | null
+): SongFileGroup<File>[] => {
+  const scoped = keys.length > 1;
+  const shownKeys = scoped
+    ? keys.filter((key) => key.id === chosenKeyId)
+    : keys;
+  const known = new Set(keys.map((key) => key.id));
+  const groups: SongFileGroup<File>[] = [
+    {
+      id: "arrangement",
+      label: "Arrangement",
+      files: files.filter((file) => file.keyId === null),
+    },
+    ...shownKeys.map((key) => ({
+      id: key.id,
+      label: keyLabel(key),
+      files: files.filter((file) => file.keyId === key.id),
+    })),
+    {
+      id: "other",
+      label: "Other keys",
+      files: files.filter(
+        (file) => file.keyId !== null && !known.has(file.keyId)
+      ),
+    },
+  ];
+  return groups.filter((group) => group.files.length > 0);
+};
+
+/** One of the song page's notes: the arrangement's (band directions) first, then the song's. */
+export interface SongNote {
+  readonly source: "Arrangement" | "Song";
+  readonly text: string;
+}
+
+export const songNotes = (
+  arrangement: { readonly notes: string | null } | null,
+  song: { readonly notes: string | null }
+): SongNote[] => {
+  const notes: SongNote[] = [];
+  const arrangementText = arrangement?.notes?.trim() ?? "";
+  if (arrangementText !== "") {
+    notes.push({ source: "Arrangement", text: arrangementText });
+  }
+  const songText = song.notes?.trim() ?? "";
+  if (songText !== "") {
+    notes.push({ source: "Song", text: songText });
+  }
+  return notes;
 };
 
 /**

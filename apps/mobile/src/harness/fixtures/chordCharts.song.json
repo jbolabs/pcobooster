@@ -1,6 +1,6 @@
 {
   "default": {
-    "song": {"id": "5501", "title": "Morning Light", "author": "Maya Ellison and Theo Park"},
+    "song": {"id": "5501", "title": "Morning Light", "author": "Maya Ellison and Theo Park", "ccliNumber": null, "copyright": null, "notes": null},
     "arrangements": [
       {
         "id": "55011",
@@ -14,7 +14,7 @@
           {"id": "550112", "name": "Jordan's key", "startingKey": "A", "endingKey": null}
         ],
         "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-        "updatedAt": "2026-09-24T03:12:45Z"
+        "updatedAt": "2026-09-24T03:12:45Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
       },
       {
         "id": "55012",
@@ -25,7 +25,7 @@
         "lyrics": "",
         "keys": [{"id": "550121", "name": "Original", "startingKey": "F", "endingKey": null}],
         "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-        "updatedAt": "2026-09-18T21:04:11Z"
+        "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
       }
     ]
   },
@@ -33,7 +33,7 @@
     {
       "match": {"songId": "5501"},
       "output": {
-        "song": {"id": "5501", "title": "Morning Light", "author": "Maya Ellison and Theo Park"},
+        "song": {"id": "5501", "title": "Morning Light", "author": "Maya Ellison and Theo Park", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55011",
@@ -47,7 +47,7 @@
               {"id": "550112", "name": "Jordan's key", "startingKey": "A", "endingKey": null}
             ],
             "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-            "updatedAt": "2026-09-24T03:12:45Z"
+            "updatedAt": "2026-09-24T03:12:45Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           },
           {
             "id": "55012",
@@ -58,7 +58,7 @@
             "lyrics": "",
             "keys": [{"id": "550121", "name": "Original", "startingKey": "F", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -66,7 +66,7 @@
     {
       "match": {"songId": "5502"},
       "output": {
-        "song": {"id": "5502", "title": "Steady Ground", "author": "Grace Whitfield"},
+        "song": {"id": "5502", "title": "Steady Ground", "author": "Grace Whitfield", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55021",
@@ -80,7 +80,7 @@
               {"id": "550212", "name": "Low", "startingKey": "C", "endingKey": null}
             ],
             "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -88,7 +88,7 @@
     {
       "match": {"songId": "5503"},
       "output": {
-        "song": {"id": "5503", "title": "Open Doors", "author": "Caleb Rhodes and Maya Ellison"},
+        "song": {"id": "5503", "title": "Open Doors", "author": "Caleb Rhodes and Maya Ellison", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55031",
@@ -102,7 +102,7 @@
               {"id": "550312", "name": "Low", "startingKey": "G", "endingKey": "A"}
             ],
             "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -110,7 +110,7 @@
     {
       "match": {"songId": "5504"},
       "output": {
-        "song": {"id": "5504", "title": "Here With Us", "author": "Lena Ortiz"},
+        "song": {"id": "5504", "title": "Here With Us", "author": "Lena Ortiz", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55041",
@@ -124,7 +124,7 @@
               {"id": "550412", "name": "Riley", "startingKey": "D", "endingKey": null}
             ],
             "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           },
           {
             "id": "55042",
@@ -135,7 +135,7 @@
             "lyrics": "",
             "keys": [{"id": "550421", "name": "Original", "startingKey": "E", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -143,7 +143,7 @@
     {
       "match": {"songId": "5505"},
       "output": {
-        "song": {"id": "5505", "title": "Harbor of Mercy", "author": "Samuel Achebe"},
+        "song": {"id": "5505", "title": "Harbor of Mercy", "author": "Samuel Achebe", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55051",
@@ -154,7 +154,7 @@
             "lyrics": "VERSE 1\nTired and tossed by the wind and the sea\nYour mercy comes looking for me\n\nCHORUS\nHarbor of mercy, safe in Your arms\nAnchored in love, held through the storm",
             "keys": [{"id": "550511", "name": "Original", "startingKey": "C", "endingKey": null}],
             "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -162,7 +162,7 @@
     {
       "match": {"songId": "5506"},
       "output": {
-        "song": {"id": "5506", "title": "Wide as the Sky", "author": "Theo Park"},
+        "song": {"id": "5506", "title": "Wide as the Sky", "author": "Theo Park", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55061",
@@ -176,7 +176,7 @@
               {"id": "550612", "name": "Jordan's key", "startingKey": "C", "endingKey": null}
             ],
             "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -184,7 +184,7 @@
     {
       "match": {"songId": "5507"},
       "output": {
-        "song": {"id": "5507", "title": "Lanterns", "author": "Iris Calder"},
+        "song": {"id": "5507", "title": "Lanterns", "author": "Iris Calder", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55071",
@@ -195,7 +195,7 @@
             "lyrics": "VERSE 1\nWe hold our lanterns in the dark\nA little light for every heart\n\nCHORUS\nShine on, shine on\nTill the morning comes",
             "keys": [{"id": "550711", "name": "Original", "startingKey": "F", "endingKey": null}],
             "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -203,7 +203,7 @@
     {
       "match": {"songId": "5508"},
       "output": {
-        "song": {"id": "5508", "title": "Evergreen", "author": "Noah Whitfield and Grace Whitfield"},
+        "song": {"id": "5508", "title": "Evergreen", "author": "Noah Whitfield and Grace Whitfield", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55081",
@@ -217,7 +217,7 @@
               {"id": "550812", "name": "Morgan", "startingKey": "E", "endingKey": null}
             ],
             "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -225,7 +225,7 @@
     {
       "match": {"songId": "5509"},
       "output": {
-        "song": {"id": "5509", "title": "Kingdom Come Slowly", "author": "Ruth Okafor"},
+        "song": {"id": "5509", "title": "Kingdom Come Slowly", "author": "Ruth Okafor", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55091",
@@ -236,7 +236,7 @@
             "lyrics": "",
             "keys": [{"id": "550911", "name": "Original", "startingKey": "E", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -244,7 +244,7 @@
     {
       "match": {"songId": "5510"},
       "output": {
-        "song": {"id": "5510", "title": "All the Way Home", "author": "Caleb Rhodes"},
+        "song": {"id": "5510", "title": "All the Way Home", "author": "Caleb Rhodes", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55101",
@@ -255,7 +255,7 @@
             "lyrics": "",
             "keys": [{"id": "551011", "name": "Original", "startingKey": "G", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -263,7 +263,7 @@
     {
       "match": {"songId": "5511"},
       "output": {
-        "song": {"id": "5511", "title": "River Song", "author": "Lena Ortiz"},
+        "song": {"id": "5511", "title": "River Song", "author": "Lena Ortiz", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55111",
@@ -274,7 +274,7 @@
             "lyrics": "VERSE 1\nDown to the river, down to the water\nCome and be new",
             "keys": [{"id": "551111", "name": "Original", "startingKey": "A", "endingKey": null}],
             "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -282,7 +282,7 @@
     {
       "match": {"songId": "5512"},
       "output": {
-        "song": {"id": "5512", "title": "Table of Plenty", "author": "Samuel Achebe and Iris Calder"},
+        "song": {"id": "5512", "title": "Table of Plenty", "author": "Samuel Achebe and Iris Calder", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55121",
@@ -293,7 +293,7 @@
             "lyrics": "",
             "keys": [{"id": "551211", "name": "Original", "startingKey": "C", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -301,7 +301,7 @@
     {
       "match": {"songId": "5513"},
       "output": {
-        "song": {"id": "5513", "title": "Every Breath", "author": "Maya Ellison"},
+        "song": {"id": "5513", "title": "Every Breath", "author": "Maya Ellison", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55131",
@@ -315,7 +315,7 @@
               {"id": "551312", "name": "Low", "startingKey": "A", "endingKey": null}
             ],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -323,7 +323,7 @@
     {
       "match": {"songId": "5514"},
       "output": {
-        "song": {"id": "5514", "title": "Old Stone Hymn", "author": "Traditional, arranged by Theo Park"},
+        "song": {"id": "5514", "title": "Old Stone Hymn", "author": "Traditional, arranged by Theo Park", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55141",
@@ -334,7 +334,7 @@
             "lyrics": "",
             "keys": [{"id": "551411", "name": "Original", "startingKey": "Eb", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -342,7 +342,7 @@
     {
       "match": {"songId": "5515"},
       "output": {
-        "song": {"id": "5515", "title": "Bright City", "author": "Ruth Okafor"},
+        "song": {"id": "5515", "title": "Bright City", "author": "Ruth Okafor", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55151",
@@ -353,7 +353,7 @@
             "lyrics": "",
             "keys": [{"id": "551511", "name": "Original", "startingKey": "A", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -361,7 +361,7 @@
     {
       "match": {"songId": "5516"},
       "output": {
-        "song": {"id": "5516", "title": "Shepherd of My Days", "author": "Grace Whitfield"},
+        "song": {"id": "5516", "title": "Shepherd of My Days", "author": "Grace Whitfield", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55161",
@@ -372,7 +372,7 @@
             "lyrics": "",
             "keys": [{"id": "551611", "name": "Original", "startingKey": "D", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -380,7 +380,7 @@
     {
       "match": {"songId": "5517"},
       "output": {
-        "song": {"id": "5517", "title": "Light the Way", "author": "Noah Whitfield"},
+        "song": {"id": "5517", "title": "Light the Way", "author": "Noah Whitfield", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55171",
@@ -391,7 +391,7 @@
             "lyrics": "",
             "keys": [{"id": "551711", "name": "Original", "startingKey": "F", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -399,7 +399,7 @@
     {
       "match": {"songId": "5518"},
       "output": {
-        "song": {"id": "5518", "title": "Thankful Heart", "author": "Iris Calder"},
+        "song": {"id": "5518", "title": "Thankful Heart", "author": "Iris Calder", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55181",
@@ -410,7 +410,7 @@
             "lyrics": "",
             "keys": [{"id": "551811", "name": "Original", "startingKey": "G", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -418,7 +418,7 @@
     {
       "match": {"songId": "5519"},
       "output": {
-        "song": {"id": "5519", "title": "Rest for the Weary", "author": "Traditional, arranged by Lena Ortiz"},
+        "song": {"id": "5519", "title": "Rest for the Weary", "author": "Traditional, arranged by Lena Ortiz", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55191",
@@ -429,7 +429,7 @@
             "lyrics": "",
             "keys": [{"id": "551911", "name": "Original", "startingKey": "E", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -437,7 +437,7 @@
     {
       "match": {"songId": "5520"},
       "output": {
-        "song": {"id": "5520", "title": "Unshaken", "author": "Caleb Rhodes"},
+        "song": {"id": "5520", "title": "Unshaken", "author": "Caleb Rhodes", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55201",
@@ -448,7 +448,7 @@
             "lyrics": "",
             "keys": [{"id": "552011", "name": "Original", "startingKey": "B", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -456,7 +456,7 @@
     {
       "match": {"songId": "5521"},
       "output": {
-        "song": {"id": "5521", "title": "Still Small Voice", "author": "Maya Ellison"},
+        "song": {"id": "5521", "title": "Still Small Voice", "author": "Maya Ellison", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55211",
@@ -467,7 +467,7 @@
             "lyrics": "",
             "keys": [{"id": "552111", "name": "Original", "startingKey": "Db", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -475,7 +475,7 @@
     {
       "match": {"songId": "5522"},
       "output": {
-        "song": {"id": "5522", "title": "Waiting Season", "author": "Theo Park"},
+        "song": {"id": "5522", "title": "Waiting Season", "author": "Theo Park", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55221",
@@ -486,7 +486,7 @@
             "lyrics": "",
             "keys": [{"id": "552211", "name": "Original", "startingKey": "C", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -494,7 +494,7 @@
     {
       "match": {"songId": "5523"},
       "output": {
-        "song": {"id": "5523", "title": "Songs in the Night", "author": "Ruth Okafor"},
+        "song": {"id": "5523", "title": "Songs in the Night", "author": "Ruth Okafor", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55231",
@@ -505,7 +505,7 @@
             "lyrics": "",
             "keys": [{"id": "552311", "name": "Original", "startingKey": "G", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -513,7 +513,7 @@
     {
       "match": {"songId": "5524"},
       "output": {
-        "song": {"id": "5524", "title": "Glory Rising", "author": "Samuel Achebe"},
+        "song": {"id": "5524", "title": "Glory Rising", "author": "Samuel Achebe", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55241",
@@ -524,7 +524,7 @@
             "lyrics": "",
             "keys": [{"id": "552411", "name": "Original", "startingKey": "A", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -532,7 +532,7 @@
     {
       "match": {"songId": "5525"},
       "output": {
-        "song": {"id": "5525", "title": "Gathered Here", "author": "Lena Ortiz and Caleb Rhodes"},
+        "song": {"id": "5525", "title": "Gathered Here", "author": "Lena Ortiz and Caleb Rhodes", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55251",
@@ -543,7 +543,7 @@
             "lyrics": "",
             "keys": [{"id": "552511", "name": "Original", "startingKey": "G", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -551,7 +551,7 @@
     {
       "match": {"songId": "5526"},
       "output": {
-        "song": {"id": "5526", "title": "Benediction Song", "author": "Grace Whitfield"},
+        "song": {"id": "5526", "title": "Benediction Song", "author": "Grace Whitfield", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55261",
@@ -562,7 +562,7 @@
             "lyrics": "",
             "keys": [{"id": "552611", "name": "Original", "startingKey": "D", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -570,7 +570,7 @@
     {
       "match": {"songId": "5527"},
       "output": {
-        "song": {"id": "5527", "title": "Brighter", "author": "Northbound Collective"},
+        "song": {"id": "5527", "title": "Brighter", "author": "Northbound Collective", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55271",
@@ -581,7 +581,7 @@
             "lyrics": "",
             "keys": [{"id": "552711", "name": "Original", "startingKey": "E", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -589,7 +589,7 @@
     {
       "match": {"songId": "5528"},
       "output": {
-        "song": {"id": "5528", "title": "Undivided", "author": "Northbound Collective"},
+        "song": {"id": "5528", "title": "Undivided", "author": "Northbound Collective", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55281",
@@ -600,7 +600,7 @@
             "lyrics": "",
             "keys": [{"id": "552811", "name": "Original", "startingKey": "A", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -608,7 +608,7 @@
     {
       "match": {"songId": "5529"},
       "output": {
-        "song": {"id": "5529", "title": "Hallelujah Road", "author": "Iris Calder"},
+        "song": {"id": "5529", "title": "Hallelujah Road", "author": "Iris Calder", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55291",
@@ -619,7 +619,7 @@
             "lyrics": "",
             "keys": [{"id": "552911", "name": "Original", "startingKey": "D", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -627,7 +627,7 @@
     {
       "match": {"songId": "5530"},
       "output": {
-        "song": {"id": "5530", "title": "Mountains Move", "author": "Caleb Rhodes"},
+        "song": {"id": "5530", "title": "Mountains Move", "author": "Caleb Rhodes", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55301",
@@ -638,7 +638,7 @@
             "lyrics": "",
             "keys": [{"id": "553011", "name": "Original", "startingKey": "C", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -646,7 +646,7 @@
     {
       "match": {"songId": "5531"},
       "output": {
-        "song": {"id": "5531", "title": "Into the Quiet", "author": "Iris Calder"},
+        "song": {"id": "5531", "title": "Into the Quiet", "author": "Iris Calder", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55311",
@@ -657,7 +657,7 @@
             "lyrics": "",
             "keys": [{"id": "553111", "name": "Original", "startingKey": "E", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -665,7 +665,7 @@
     {
       "match": {"songId": "5532"},
       "output": {
-        "song": {"id": "5532", "title": "Sound of Many Waters", "author": "Ruth Okafor"},
+        "song": {"id": "5532", "title": "Sound of Many Waters", "author": "Ruth Okafor", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55321",
@@ -676,7 +676,7 @@
             "lyrics": "",
             "keys": [{"id": "553211", "name": "Original", "startingKey": "D", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -684,7 +684,7 @@
     {
       "match": {"songId": "5533"},
       "output": {
-        "song": {"id": "5533", "title": "Morning Prayer Chant", "author": "Traditional"},
+        "song": {"id": "5533", "title": "Morning Prayer Chant", "author": "Traditional", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55331",
@@ -695,7 +695,7 @@
             "lyrics": "",
             "keys": [{"id": "553311", "name": "Original", "startingKey": "D", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -703,7 +703,7 @@
     {
       "match": {"songId": "5534"},
       "output": {
-        "song": {"id": "5534", "title": "A New Morning", "author": "Theo Park"},
+        "song": {"id": "5534", "title": "A New Morning", "author": "Theo Park", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55341",
@@ -714,7 +714,7 @@
             "lyrics": "",
             "keys": [{"id": "553411", "name": "Original", "startingKey": "G", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": null
+            "updatedAt": null, "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }
@@ -722,7 +722,7 @@
     {
       "match": {"songId": "5535"},
       "output": {
-        "song": {"id": "5535", "title": "Old Christmas Medley", "author": "Traditional"},
+        "song": {"id": "5535", "title": "Old Christmas Medley", "author": "Traditional", "ccliNumber": null, "copyright": null, "notes": null},
         "arrangements": [
           {
             "id": "55351",
@@ -733,7 +733,7 @@
             "lyrics": "",
             "keys": [{"id": "553511", "name": "Original", "startingKey": "G", "endingKey": null}],
             "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null},
-            "updatedAt": "2026-09-18T21:04:11Z"
+            "updatedAt": "2026-09-18T21:04:11Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
           }
         ]
       }

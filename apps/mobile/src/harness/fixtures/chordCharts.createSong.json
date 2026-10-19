@@ -1,8 +1,8 @@
 {
   "default": {
-    "song": {"id": "5599", "title": "New Song", "author": ""},
+    "song": {"id": "5599", "title": "New Song", "author": "", "ccliNumber": null, "copyright": null, "notes": null},
     "arrangements": [
-      {"id": "55991", "name": "Default Arrangement", "archived": false, "chordChart": "", "chordChartKey": null, "lyrics": "", "keys": [], "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null}, "updatedAt": "2026-10-01T17:00:00.000Z"}
+      {"id": "55991", "name": "Default Arrangement", "archived": false, "chordChart": "", "chordChartKey": null, "lyrics": "", "keys": [], "layout": {"font": null, "fontSize": null, "columns": null, "chordColor": null, "pageSize": null, "orientation": null, "margin": null}, "updatedAt": "2026-10-01T17:00:00.000Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null}
     ]
   }
 }

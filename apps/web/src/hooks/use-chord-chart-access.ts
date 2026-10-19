@@ -4,6 +4,6 @@ import type { ChordChartEditAccess } from "@/lib/chord-chart-access";
 
 /** Whether this person can save chord charts, from their Planning Center permissions. */
 export const useChordChartEditAccess = (): ChordChartEditAccess => {
-  const { snapshot, demo } = usePlanningCenterAccess();
-  return chordChartEditAccess(snapshot, demo);
+  const { snapshot, demo, status } = usePlanningCenterAccess();
+  return chordChartEditAccess(snapshot, demo, status === "error");
 };

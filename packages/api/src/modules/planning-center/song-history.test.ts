@@ -74,7 +74,7 @@ describe(getSongHistory, () => {
   it("asks for a year back from today in the org's calendar", async () => {
     const getSongSchedules = vi.fn<
       SongHistoryDependencies["songs"]["getSongSchedules"]
-    >(() => Effect.succeed([]));
+    >(() => Effect.succeed({ data: [], truncated: false }));
 
     // 7 PM in Los Angeles on Sep 28 is already Sep 29 in UTC.
     await Effect.runPromise(
@@ -88,5 +88,25 @@ describe(getSongHistory, () => {
       "song-1",
       "2025-09-28"
     );
+  });
+
+  it("says when Planning Center had more plans than the page read", async () => {
+    const history = await Effect.runPromise(
+      getSongHistory("song-1", new Date("2026-09-29T02:00:00Z"), {
+        songs: {
+          getSongSchedules: () =>
+            Effect.succeed({
+              data: [schedule("p1", "2026-09-27T17:00:00Z", "G")],
+              truncated: true,
+            }),
+        },
+        resolveTimeZone: Effect.succeed("America/Los_Angeles"),
+      })
+    );
+
+    expect({
+      plans: history.entries.map((entry) => entry.planId),
+      truncated: history.truncated,
+    }).toStrictEqual({ plans: ["p1"], truncated: true });
   });
 });

@@ -64,12 +64,24 @@ export const chordChartArrangementSchema = Schema.Struct({
   keys: mutableArray(keyOptionSchema),
   layout: chordChartLayoutSchema,
   updatedAt: Schema.NullOr(Schema.String),
+  /** Seconds. */
+  length: Schema.NullOr(finiteNumber),
+  bpm: Schema.NullOr(finiteNumber),
+  /** Time signature, such as "6/8". */
+  meter: Schema.NullOr(Schema.String),
+  /** Section labels in the order the band plays them, such as "V1", "C". */
+  sequence: mutableArray(Schema.String),
+  /** The band's notes on this arrangement, such as "Capo 2". */
+  notes: Schema.NullOr(Schema.String),
 });
 
 export const chordChartSongSchema = Schema.Struct({
   id: Schema.String,
   title: Schema.String,
   author: Schema.String,
+  ccliNumber: Schema.NullOr(integer),
+  copyright: Schema.NullOr(Schema.String),
+  notes: Schema.NullOr(Schema.String),
 });
 
 export const chordChartSongOutputSchema = Schema.Struct({
