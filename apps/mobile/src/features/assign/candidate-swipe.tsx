@@ -4,7 +4,10 @@ import { Pressable, StyleSheet, View } from "react-native";
 import type { ColorValue } from "react-native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import type { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
-import { useAnimatedReaction } from "react-native-reanimated";
+import Animated, {
+  useAnimatedReaction,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 
@@ -67,6 +70,24 @@ const ActionButton = ({
   </Pressable>
 );
 
+/** Gesture Handler 3 keeps both action containers mounted; closed actions must stay invisible. */
+const ActionContainer = ({
+  progress,
+  children,
+}: {
+  progress: SharedValue<number>;
+  children: ReactNode;
+}) => {
+  const visibility = useAnimatedStyle(() => ({
+    opacity: progress.value === 0 ? 0 : 1,
+  }));
+  return (
+    <Animated.View style={[styles.actions, visibility]}>
+      {children}
+    </Animated.View>
+  );
+};
+
 /** The lone leading Add, which runs on a full swipe as Swift's `allowsFullSwipe` does. */
 const FullSwipeAction = ({
   id,
@@ -91,10 +112,10 @@ const FullSwipeAction = ({
     }
   );
   return (
-    <View style={styles.actions}>
+    <ActionContainer progress={progress}>
       <View style={[styles.backdrop, { backgroundColor: action.tint }]} />
       <ActionButton id={id} action={action} close={close} />
-    </View>
+    </ActionContainer>
   );
 };
 
@@ -207,7 +228,7 @@ export const CandidateSwipe = ({
           );
         }
         return leading.length === 0 ? null : (
-          <View style={styles.actions}>
+          <ActionContainer progress={progress}>
             {leading.map((action) => (
               <ActionButton
                 key={action.key}
@@ -216,12 +237,12 @@ export const CandidateSwipe = ({
                 close={close}
               />
             ))}
-          </View>
+          </ActionContainer>
         );
       }}
-      renderRightActions={() =>
+      renderRightActions={(progress) =>
         trailing.length === 0 ? null : (
-          <View style={styles.actions}>
+          <ActionContainer progress={progress}>
             {trailing.map((action) => (
               <ActionButton
                 key={action.key}
@@ -230,7 +251,7 @@ export const CandidateSwipe = ({
                 close={close}
               />
             ))}
-          </View>
+          </ActionContainer>
         )
       }
     >

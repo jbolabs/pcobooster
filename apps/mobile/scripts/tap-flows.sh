@@ -25,7 +25,7 @@ done
 case "$suite" in
   session) defaults=(demo-link switch-account sign-out services-filter account-actions feedback) ;;
   features) defaults=(people-detail songs-library search-navigation) ;;
-  plan) defaults=(runsheet-edit runsheet-song runsheet-menus times-edit times-assign times-create plan-content-navigation) ;;
+  plan) defaults=(runsheet-edit runsheet-song runsheet-menus times-edit times-assign times-create plan-content-navigation assign-gestures) ;;
   *) echo "Unknown suite: $suite" >&2; exit 64 ;;
 esac
 if [ ${#flows[@]} -eq 0 ]; then flows=("${defaults[@]}"); fi
@@ -51,6 +51,7 @@ launch_args() {
   fi
   local segment=plan
   if [[ "$flow" == times-* ]]; then segment=times; fi
+  if [[ "$flow" == assign-* ]]; then segment=assign; fi
   if [ "$flow" = plan-content-navigation ]; then segment=""; fi
   echo "-PCOBRoute /services/1101/plans/881261004/$segment"
 }
