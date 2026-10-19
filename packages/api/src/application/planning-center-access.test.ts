@@ -500,9 +500,9 @@ describe("PlanningCenterAccess", () => {
 });
 
 describe("length validation regression", () => {
-  it.each([{ pointer: "/data/attributes/length" }, { parameter: "length" }])(
+  it.each(["pointer", "parameter"])(
     "explains the provider 24 hour validation and retains only safe validation metadata (%j)",
-    (source) => {
+    (sourceKey) => {
       expect(
         toApplicationFault(
           new PlanningCenterApiError({
@@ -513,7 +513,12 @@ describe("length validation regression", () => {
                 {
                   code: "too_long",
                   detail: "can not be longer than 24 hours",
-                  source,
+                  source: {
+                    [sourceKey]:
+                      sourceKey === "pointer"
+                        ? "/data/attributes/length"
+                        : "length",
+                  },
                 },
               ],
             },

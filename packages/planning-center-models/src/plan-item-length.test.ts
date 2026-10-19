@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildDraft, buildRunSheet, parseLengthText } from "./plan-item-draft";
 import {
   applyPlanItemDraft,
+  planItemDraftChangesItem,
   createOptimisticBasicPlanItem,
 } from "./plan-item-order";
 
@@ -25,6 +26,18 @@ describe("plan item length limits", () => {
       error: null,
     });
     expect(parseLengthText("4:00")).toStrictEqual({ length: 240, error: null });
+  });
+
+  it("does not autosave an unchanged header persisted with zero length", () => {
+    const header = {
+      ...createOptimisticBasicPlanItem("h", "header", 1),
+      length: 0,
+    };
+    const draft = buildDraft(header);
+    expect(planItemDraftChangesItem(header, draft, 0)).toBeFalsy();
+    expect(
+      planItemDraftChangesItem(header, { ...draft, title: "Changed header" }, 0)
+    ).toBeTruthy();
   });
 
   it("keeps section totals separate from header draft length", () => {

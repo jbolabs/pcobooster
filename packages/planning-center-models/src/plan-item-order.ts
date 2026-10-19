@@ -134,7 +134,7 @@ export const planItemDraftChangesItem = (
   if (draft.servicePosition !== item.servicePosition) {
     return true;
   }
-  if (normalizedLength !== item.length) {
+  if (normalizedLength !== draftItemLength(item.length, item.itemType)) {
     return true;
   }
   if (draft.description !== item.description) {
