@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 
 import { validationScope } from "../../ci/affected";
 import { trialContext } from "./settings";
@@ -47,9 +47,8 @@ if (mode === "check") {
   if (base.status !== 0) {
     throw new Error("Cannot resolve validation base");
   }
-  mkdirSync(".alchemy/trial-cache", { recursive: true });
-  writeFileSync(".alchemy/trial-cache/base", base.stdout.trim());
-  const cacheInputs = "--global-deps=.alchemy/trial-cache/base";
+  writeFileSync(".trial-validation-base", base.stdout.trim());
+  const cacheInputs = "--global-deps=.trial-validation-base";
   const validationEnv = {
     ...env,
     TURBO_FORCE: "false",
