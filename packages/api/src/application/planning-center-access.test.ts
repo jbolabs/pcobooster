@@ -329,6 +329,35 @@ describe("PlanningCenterAccess", () => {
     });
   });
 
+  it("names the attribute Planning Center rejected when its detail leaves it out", () => {
+    expect(
+      toApplicationFault(
+        new PlanningCenterApiError({
+          status: 422,
+          message: "Planning Center API error: 422",
+          details: {
+            errors: [
+              {
+                detail: "can not be longer than 24 hours",
+                status: "422",
+                title: "Validation Error",
+                source: { parameter: "length" },
+              },
+              {
+                detail: "Service position is not included in the list",
+                source: { pointer: "/data/attributes/service_position" },
+              },
+            ],
+          },
+        })
+      )
+    ).toMatchObject({
+      _tag: "InvalidInput",
+      message:
+        "Planning Center didn't accept that change: Length can not be longer than 24 hours; Service position is not included in the list",
+    });
+  });
+
   it("explains a blocked demo write as forbidden", () => {
     expect(
       toApplicationFault(

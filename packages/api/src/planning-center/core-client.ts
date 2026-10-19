@@ -193,6 +193,8 @@ interface AttemptContext {
   readonly endpoint: PlanningCenterEndpoint;
   /** 1 for the first attempt. */
   readonly attempt: number;
+  /** A write's attributes as `describeSentAttributes` logs them. */
+  readonly sentAttributes?: JsonObject;
 }
 
 export const buildPlanningCenterUrl = (
@@ -348,31 +350,90 @@ const decodeListedErrorCode = Schema.decodeUnknownOption(
   })
 );
 
-/** What a JSON:API error list says went wrong; validation errors put it in `detail`. */
-const decodeListedErrorDetails = Schema.decodeUnknownOption(
+/**
+ * What a JSON:API error list says went wrong; validation errors put it in `detail` and name
+ * the rejected attribute in `source` (`{ parameter: "length" }`), not in the detail itself.
+ */
+const decodeListedErrors = Schema.decodeUnknownOption(
   Schema.Struct({
     errors: Schema.Array(
       Schema.Struct({
         title: Schema.optional(Schema.String),
         detail: Schema.optional(Schema.String),
+        source: Schema.optional(
+          Schema.Struct({
+            parameter: Schema.optional(Schema.String),
+            pointer: Schema.optional(Schema.String),
+          })
+        ),
       })
     ).check(Schema.isMinLength(1)),
   })
 );
 
+/** `length` from `{ parameter: "length" }` or `{ pointer: "/data/attributes/length" }`. */
+const rejectedAttribute = (source?: {
+  readonly parameter?: string;
+  readonly pointer?: string;
+}): string | undefined => {
+  const name = source?.parameter ?? source?.pointer?.split("/").at(-1);
+  return isNonEmptyString(name) ? name : undefined;
+};
+
+/** `service_position` reads as "Service position". */
+const attributeLabel = (attribute: string): string => {
+  const words = attribute.replaceAll("_", " ");
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+};
+
 /**
- * Each listed error's detail, or its title when it has none; nothing when `body` is not a
- * JSON:API error list.
+ * Each listed error's detail (led by the attribute it names, when the detail doesn't already),
+ * or its title when it has none; nothing when `body` is not a JSON:API error list.
  */
 export const listedErrorDetails = (body: JsonValue | undefined): string[] =>
-  Option.match(decodeListedErrorDetails(body), {
+  Option.match(decodeListedErrors(body), {
     onNone: () => [],
     onSome: ({ errors }) =>
-      errors.flatMap(({ detail, title }) => {
+      errors.flatMap(({ detail, title, source }) => {
+        const attribute = rejectedAttribute(source);
+        if (isNonEmptyString(detail) && attribute !== undefined) {
+          const label = attributeLabel(attribute);
+          return detail.toLowerCase().startsWith(label.toLowerCase())
+            ? [detail]
+            : [`${label} ${detail}`];
+        }
         const text = detail ?? title;
         return isNonEmptyString(text) ? [text] : [];
       }),
   });
+
+const isJsonObject = (value: JsonValue | undefined): value is JsonObject =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * A write body's attributes fit for logs: numbers, booleans, nulls, and ids as sent, other
+ * text only as its length, since titles and notes are the church's own words.
+ */
+const describeSentAttributes = (
+  body: JsonObject | undefined
+): JsonObject | undefined => {
+  const data = body?.data;
+  const attributes =
+    isJsonObject(data) && isJsonObject(data.attributes)
+      ? data.attributes
+      : undefined;
+  if (attributes === undefined) {
+    return undefined;
+  }
+  const described: JsonObject = {};
+  for (const [key, value] of Object.entries(attributes)) {
+    described[key] =
+      isString(value) && !key.endsWith("_id")
+        ? `<${value.length} characters>`
+        : value;
+  }
+  return described;
+};
 
 const errorTitle = (body: ErrorBody): string | undefined => {
   if (isString(body.error)) {
@@ -778,6 +839,15 @@ export class PlanningCenterCoreClient {
           rateLimit: error.rateLimit,
           willRetry: willRetryRateLimit(method, context.attempt, error),
         });
+      } else if (!isReadMethod(method)) {
+        // The toast shows only Planning Center's words; this keeps what was sent beside them.
+        yield* log.warn("Planning Center rejected a write", {
+          endpoint,
+          method,
+          status: error.status,
+          errors: error.details,
+          sentAttributes: context.sentAttributes,
+        });
       }
       return yield* Effect.fail(error);
     }).pipe(
@@ -813,8 +883,9 @@ export class PlanningCenterCoreClient {
             JSON.stringify(options.body),
             "application/json"
           );
+    const sentAttributes = describeSentAttributes(options.body);
     const attemptRequest = (context: AttemptContext) =>
-      this.attempt(request, context);
+      this.attempt(request, { ...context, sentAttributes });
     return Effect.gen(function* sendWithRetries() {
       const pacer = Option.getOrUndefined(
         yield* Effect.serviceOption(PlanningCenterPacing)
