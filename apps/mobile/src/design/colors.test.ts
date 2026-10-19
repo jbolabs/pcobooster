@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -11,11 +10,11 @@ import {
   srgbOf,
 } from "../../scripts/color-tokens.ts";
 import type { SrgbColor, Variant } from "../../scripts/color-tokens.ts";
-
-const tokensCssPath = path.join(
-  import.meta.dirname,
-  "../../../../packages/design-tokens/src/tokens.css"
-);
+import {
+  nativeOnly,
+  tokensCssPath,
+  webCounterparts,
+} from "../../scripts/web-color-tokens.ts";
 
 /** `--name: oklch(L C H / A)` declarations inside the block that starts with `selector {`. */
 const readOklchBlock = (css: string, selector: string): Map<string, string> => {
@@ -60,63 +59,6 @@ const oklchToSrgb = (value: string): SrgbColor => {
   return { rgb: [red, green, blue], alpha };
 };
 
-/**
- * Color sets that are the web token of the same role, with the opacity the web applies at the
- * call site (`muted-foreground/60`, `ring-foreground/5`) per appearance.
- */
-interface WebCounterpart {
-  /** The CSS variable in packages/design-tokens/src/tokens.css, without `--`. */
-  readonly variable: string;
-  readonly light?: number;
-  readonly dark?: number;
-}
-
-const webCounterparts = new Map(
-  Object.entries({
-    SurfaceCanvas: { variable: "background" },
-    SurfaceCard: { variable: "card" },
-    SurfaceRaised: { variable: "popover" },
-    SurfaceMuted: { variable: "muted" },
-    SurfaceSecondary: { variable: "secondary" },
-    SurfaceHighlight: { variable: "accent" },
-    SurfaceInput: { variable: "input", light: 0.5, dark: 0.5 },
-    Ink: { variable: "foreground" },
-    InkSecondary: { variable: "muted-foreground" },
-    InkTertiary: { variable: "muted-foreground", light: 0.6, dark: 0.6 },
-    InkFill: { variable: "primary" },
-    OnInkFill: { variable: "primary-foreground" },
-    Hairline: { variable: "border" },
-    // The web ring is foreground/5 in light; the native card ring is 7% so it reads on the canvas.
-    HairlineSubtle: { variable: "foreground", light: 0.07, dark: 0.1 },
-    StatusConfirmed: { variable: "status-confirmed" },
-    StatusPending: { variable: "status-scheduled" },
-    StatusDeclined: { variable: "status-declined" },
-    StatusInfo: { variable: "status-info" },
-    StatusConfirmedBright: { variable: "status-confirmed-bright" },
-    StatusPendingBright: { variable: "status-scheduled-bright" },
-    StatusDeclinedBright: { variable: "status-declined-bright" },
-    Destructive: { variable: "destructive" },
-    InfoSurface: { variable: "info-surface" },
-    InfoBorder: { variable: "info-border" },
-    Chart1: { variable: "chart-1" },
-    Chart2: { variable: "chart-2" },
-    Chart3: { variable: "chart-3" },
-    Chart4: { variable: "chart-4" },
-    Chart5: { variable: "chart-5" },
-  } satisfies Record<string, WebCounterpart>)
-);
-
-/** Color sets with no web variable: text-safe status inks and the brand greens. */
-const nativeOnly = new Set([
-  "BrandRocket",
-  "BrandSage",
-  "BrandSageSoft",
-  "StatusConfirmedText",
-  "StatusPendingText",
-  "StatusDeclinedText",
-  "StatusInfoText",
-]);
-
 /** The asset catalog stores three decimals. */
 const TOLERANCE = 0.002;
 
@@ -151,7 +93,7 @@ describe("color tokens", () => {
   });
 
   it.each(cases)(
-    "$setName $variant equals the web token",
+    "$setName $variant equals the web token (bun run tokens syncs it)",
     ({ variant, entry, counterpart }) => {
       const declared = (variant === "dark" ? dark : light).get(
         counterpart.variable

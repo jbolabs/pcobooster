@@ -125,7 +125,7 @@ export const ScheduleCandidateAvatar = ({
               <span className="text-foreground/90 font-medium">
                 Also scheduled for:
               </span>{" "}
-              <span className="text-muted-foreground dark:text-info-foreground/85">
+              <span className="text-muted-foreground">
                 {selectedPlanAssignments.join(", ")}
               </span>
             </p>
