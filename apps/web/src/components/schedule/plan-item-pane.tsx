@@ -25,12 +25,14 @@ import type {
   SongOptionSet,
 } from "@pcobooster/planning-center-models/types";
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { ChevronRight, ExternalLink, Trash2, X } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ChevronRight, ExternalLink, Music, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { KeyTransitionPopover } from "@/components/schedule/key-transition-popover";
 import { PlanItemFiles } from "@/components/schedule/plan-files-browser";
 import { SongHistory } from "@/components/schedule/song-history";
+import { SongLink } from "@/components/songs/song-link";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
@@ -57,6 +59,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { useSongOptions } from "@/hooks/use-song-options";
 import { cn } from "@/lib/utils";
 
@@ -135,7 +138,14 @@ const PaneHeader = ({
     <CardHeader>
       {item.song ? (
         <>
-          <CardTitle>{item.song.title}</CardTitle>
+          <CardTitle>
+            <SongLink
+              songId={item.song.id}
+              arrangementId={item.arrangement?.id ?? null}
+            >
+              {item.song.title}
+            </SongLink>
+          </CardTitle>
           {item.song.author === "" ? null : (
             <CardDescription>
               <span className="line-clamp-1">{item.song.author}</span>
@@ -221,37 +231,54 @@ const PaneHeader = ({
 const SheetActions = ({
   item,
   onRemove,
-}: Pick<PlanItemPaneProps, "item" | "onRemove">) => (
-  <CardFooter>
-    <div className="flex w-full flex-col gap-2">
-      {item.song ? (
-        <a
-          href={planningCenterSongUrl(item.song.id)}
-          target="_blank"
-          rel="noreferrer"
-          className={buttonVariants({
-            variant: "outline",
-            className: "h-11 w-full",
-          })}
+}: Pick<PlanItemPaneProps, "item" | "onRemove">) => {
+  const songsEnabled = useFeatureEnabled("chordCharts");
+  return (
+    <CardFooter>
+      <div className="flex w-full flex-col gap-2">
+        {item.song && songsEnabled ? (
+          <Link
+            to="/songs/$songId"
+            params={{ songId: item.song.id }}
+            search={{ arrangement: item.arrangement?.id }}
+            className={buttonVariants({
+              variant: "outline",
+              className: "h-11 w-full",
+            })}
+          >
+            <Music />
+            Open song
+          </Link>
+        ) : null}
+        {item.song ? (
+          <a
+            href={planningCenterSongUrl(item.song.id)}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants({
+              variant: "outline",
+              className: "h-11 w-full",
+            })}
+          >
+            <ExternalLink />
+            Open in Planning Center
+          </a>
+        ) : null}
+        <Button
+          type="button"
+          variant="destructive"
+          className="h-11 w-full"
+          onClick={() => {
+            onRemove(item.id);
+          }}
         >
-          <ExternalLink />
-          Open in Planning Center
-        </a>
-      ) : null}
-      <Button
-        type="button"
-        variant="destructive"
-        className="h-11 w-full"
-        onClick={() => {
-          onRemove(item.id);
-        }}
-      >
-        <Trash2 />
-        Remove
-      </Button>
-    </div>
-  </CardFooter>
-);
+          <Trash2 />
+          Remove
+        </Button>
+      </div>
+    </CardFooter>
+  );
+};
 
 /** Arrangement and key as dropdowns, saved as soon as one is picked. */
 const SongFields = ({

@@ -171,8 +171,22 @@ describe(summarizeOrder, () => {
     ]);
 
     expect(order.songs).toStrictEqual([
-      { id: "a", title: "Song a", keyLabel: null, length: 300 },
-      { id: "b", title: "Song b", keyLabel: "G to A", length: null },
+      {
+        id: "a",
+        songId: "song-a",
+        arrangementId: null,
+        title: "Song a",
+        keyLabel: null,
+        length: 300,
+      },
+      {
+        id: "b",
+        songId: "song-b",
+        arrangementId: null,
+        title: "Song b",
+        keyLabel: "G to A",
+        length: null,
+      },
     ]);
     expect(order.songsWithoutKey).toBe(1);
     expect(order.serviceLength).toBe(420);
