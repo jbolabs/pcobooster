@@ -66,7 +66,6 @@ const environment = commandEnvironment("local", process.env, {
   PLANNING_CENTER_PAT: token,
 });
 environment.DEV_PLANNING_CENTER_ACCESS = profile.readOnly ? "read" : "write";
-environment.DEV_DATA_PROFILE = profile.label;
 if (args.includes("--present")) {
   environment.PRESENTATION_MODE = "1";
 }
