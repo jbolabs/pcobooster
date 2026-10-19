@@ -48,6 +48,9 @@ export const rememberWrittenArrangement = (
     queryKey: [queryKeys.planFiles("", "")[0]],
   });
   void queryClient.invalidateQueries({
+    queryKey: [queryKeys.planFileLink("", "", "", "pdf")[0]],
+  });
+  void queryClient.invalidateQueries({
     queryKey: queryKeys.songHistory(songId),
   });
 };
