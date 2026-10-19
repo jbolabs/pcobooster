@@ -1,5 +1,6 @@
 import type {
   PlanFile,
+  PlanFileLink,
   PlanFileOpenMode,
 } from "@pcobooster/contracts/http/plan-files";
 import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react";
@@ -21,17 +22,22 @@ import {
 } from "@/components/ui/empty";
 import { HoverLabel } from "@/components/ui/hover-card";
 import { Spinner } from "@/components/ui/spinner";
-import { usePlanFileLink } from "@/hooks/use-plan-files";
+import {
+  useOpenPlanFileOriginal,
+  usePlanFileLink,
+} from "@/hooks/use-plan-files";
 import { planFileKind, youtubeEmbedUrl } from "@/lib/plan-files";
 
 const OpenOriginal = ({
   url,
   preview,
   prominent = false,
+  onOpen,
 }: {
   url: string;
   preview: boolean;
   prominent?: boolean;
+  onOpen?: () => Promise<void>;
 }) => {
   const label = preview ? "Open preview" : "Open original";
   if (prominent) {
@@ -54,6 +60,14 @@ const OpenOriginal = ({
       render={
         <a
           href={url}
+          onClick={
+            onOpen === undefined
+              ? undefined
+              : (event) => {
+                  event.preventDefault();
+                  void onOpen();
+                }
+          }
           target="_blank"
           rel="noopener noreferrer"
           aria-label={label}
@@ -63,6 +77,30 @@ const OpenOriginal = ({
     >
       <ExternalLink />
     </HoverLabel>
+  );
+};
+
+const PlanFileOriginal = ({
+  serviceTypeId,
+  planId,
+  file,
+  link,
+}: {
+  serviceTypeId: string;
+  planId: string;
+  file: PlanFile;
+  link: PlanFileLink | undefined;
+}) => {
+  const openOriginal = useOpenPlanFileOriginal(serviceTypeId, planId, file);
+  if (link === undefined) {
+    return null;
+  }
+  return (
+    <OpenOriginal
+      url={link.url}
+      preview={link.preview}
+      onOpen={link.data === undefined ? undefined : openOriginal}
+    />
   );
 };
 
@@ -295,7 +333,12 @@ export const PlanFileViewer = ({
           {file.name}
         </h3>
         {canOpen && url !== "" ? (
-          <OpenOriginal url={url} preview={link.data?.preview ?? false} />
+          <PlanFileOriginal
+            serviceTypeId={serviceTypeId}
+            planId={planId}
+            file={file}
+            link={link.data}
+          />
         ) : null}
         {trailing}
       </div>

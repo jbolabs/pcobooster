@@ -77,6 +77,7 @@ describe("song cache freshness", () => {
     let saved = "Acoustic";
     const observers = [
       queryKeys.planFiles("30", "31"),
+      queryKeys.planFileLink("30", "31", "40", "pdf"),
       queryKeys.songOptions("20", "30"),
       queryKeys.songHistory("20"),
     ].map(
@@ -100,7 +101,7 @@ describe("song cache freshness", () => {
     );
     expect(
       observers.map((observer) => observer.getCurrentResult().data)
-    ).toStrictEqual(["Full band", "Full band", "Full band"]);
+    ).toStrictEqual(["Full band", "Full band", "Full band", "Full band"]);
     expect(client.getQueryData(queryKeys.chordChartSong("20"))).toMatchObject({
       arrangements: [{ name: "Full band", chordChartKey: "D" }],
     });
