@@ -40,6 +40,8 @@ export default defineConfig({
     "local/batch-gate-uses-batch-has-answered": "error",
     // Flush list rows keep hover backgrounds on the list's rounded border.
     "local/flush-list-rows": "error",
+    // Grid columns can shrink below their content, so long text truncates instead of overflowing.
+    "local/grid-tracks-shrink": "error",
     // Keep icons/buttons from overlapping Input/Textarea text; use InputGroup.
     "local/no-absolute-input-overlay": "error",
     // Backgrounds stay solid; no blurred/frosted backdrop-filter layers.
@@ -60,6 +62,19 @@ export default defineConfig({
     "local/prefer-shared-controls": "error",
   },
   overrides: [
+    {
+      // The surfaces people open on phones: the product, marketing, and their shared UI
+      // (docs/mobile-native-audit.md). Admin is desktop-only behind Cloudflare Access.
+      files: ["apps/web/**", "apps/marketing/**", "packages/ui/**"],
+      rules: {
+        // Text fields stay 16px on touch screens; iOS zooms into anything smaller.
+        "local/no-small-field-text": "error",
+        // Inner scrollers say what happens at their edge instead of scrolling the page behind.
+        "local/scroll-container-overscroll": "error",
+        // Search fields and numeric fields open the keyboard that fits them.
+        "local/field-keyboard-hints": "error",
+      },
+    },
     {
       // A test must be able to fail when the code under test does nothing (AGENTS.md "Testing
       // Guidelines"); vitest/expect-expect and anti-slop/no-module-mocking cover the rest.

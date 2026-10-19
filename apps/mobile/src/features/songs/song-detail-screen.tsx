@@ -1,3 +1,4 @@
+import { planningCenterSongUrl } from "@pcobooster/planning-center-models/song-detail";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import type { NativeStackHeaderItem } from "expo-router";
 import { useState } from "react";
@@ -14,7 +15,7 @@ import { PillButton } from "../../components/pill-button";
 import { colors } from "../../design/colors";
 import { Spacing } from "../../design/metrics";
 import { useToasts } from "../../lib/toasts";
-import { planningCenterSongUrl, songLoadFailureCopy } from "./detail";
+import { songLoadFailureCopy } from "./detail";
 import { songChartHref } from "./reads";
 import { copySongTitle } from "./song-actions";
 import {

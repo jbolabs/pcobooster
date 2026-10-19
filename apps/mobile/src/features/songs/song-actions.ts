@@ -1,8 +1,8 @@
+import { planningCenterSongUrl } from "@pcobooster/planning-center-models/song-detail";
 import * as Clipboard from "expo-clipboard";
 import { ActionSheetIOS, Linking } from "react-native";
 
 import { playHaptic } from "../../design/haptics";
-import { planningCenterSongUrl } from "./detail";
 
 /** Copies a song's title (Swift "Copy Title"); success is a haptic, not a toast. */
 export const copySongTitle = (title: string, onError: () => void): void => {

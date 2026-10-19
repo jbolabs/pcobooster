@@ -255,7 +255,11 @@ describe(getEnabledFeatures, () => {
     const { result, evaluations } = await readFeatures(
       unauthenticatedDependencies()
     );
-    expect(result).toStrictEqual({ people: true, chordCharts: false });
+    expect(result).toStrictEqual({
+      people: true,
+      chordCharts: false,
+      practice: false,
+    });
     expect(evaluations).toStrictEqual([
       {
         flag: "people",
@@ -263,6 +267,10 @@ describe(getEnabledFeatures, () => {
       },
       {
         flag: "chordCharts",
+        subject: { userId: null, planningCenterAccountId: null },
+      },
+      {
+        flag: "practice",
         subject: { userId: null, planningCenterAccountId: null },
       },
     ]);
@@ -316,6 +324,10 @@ describe(getEnabledFeatures, () => {
       unauthenticatedDependencies(),
       testFeatureFlags()
     );
-    expect(result).toStrictEqual({ people: false, chordCharts: false });
+    expect(result).toStrictEqual({
+      people: false,
+      chordCharts: false,
+      practice: false,
+    });
   });
 });

@@ -8,6 +8,7 @@ import { PlanningCenterApiError } from "@pcobooster/api/planning-center/api-erro
 import {
   isPlanningCenterError,
   listedErrorDetails,
+  listedValidationErrors,
 } from "@pcobooster/api/planning-center/core-client";
 import type {
   PlanningCenterError,
@@ -164,7 +165,12 @@ const decodeSafeValidation = Schema.decodeUnknownOption(
       Schema.Struct({
         code: Schema.optional(Schema.String),
         detail: Schema.String,
-        source: Schema.optional(Schema.Struct({ pointer: Schema.String })),
+        source: Schema.optional(
+          Schema.Struct({
+            pointer: Schema.optional(Schema.String),
+            parameter: Schema.optional(Schema.String),
+          })
+        ),
       })
     ),
   })
@@ -183,7 +189,7 @@ const safeValidation = (
     ) {
       continue;
     }
-    const pointer = entry.source?.pointer;
+    const pointer = entry.source?.pointer ?? entry.source?.parameter;
     if (
       pointer !== undefined &&
       pointer !== "/data/attributes/length" &&
@@ -205,7 +211,10 @@ const safeValidation = (
 /** Planning Center's own reason for rejecting a change, written for people. */
 const rejectedChangeMessage = (error: PlanningCenterApiError): string => {
   const details = listedErrorDetails(error.details);
-  if (safeValidation(error)?.detail === "can not be longer than 24 hours") {
+  if (
+    details.length === 1 &&
+    safeValidation(error)?.detail === "can not be longer than 24 hours"
+  ) {
     return "This item's length is over 24 hours in Planning Center. Shorten it in Planning Center and try again.";
   }
   return details.length > 0
@@ -246,10 +255,21 @@ export const planningCenterFault = (
         return new Forbidden({ message: NO_APP_ACCESS_MESSAGE });
       }
       if (error.status === PLANNING_CENTER_VALIDATION_STATUS) {
-        return new InvalidInput({
-          message: rejectedChangeMessage(error),
-          planningCenterValidation: safeValidation(error),
-        });
+        const message = rejectedChangeMessage(error);
+        const planningCenterValidation = safeValidation(error);
+        if (error.isWrite === true) {
+          return new InvalidInput({
+            message,
+            planningCenterValidation,
+            providerRejection: {
+              errors: listedValidationErrors(
+                error.details,
+                error.sentAttributeNames ?? []
+              ),
+            },
+          });
+        }
+        return new InvalidInput({ message, planningCenterValidation });
       }
       return new ExternalServiceFailure({
         message: "Planning Center request failed.",

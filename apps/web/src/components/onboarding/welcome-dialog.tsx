@@ -9,8 +9,9 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import type { PlanView } from "@pcobooster/planning-center-models/plan-overview";
 import { StarField } from "@pcobooster/ui/star-field";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { BrandRocketLogo } from "@/components/brand-rocket-logo";
 import { HotkeyChord } from "@/components/hotkey-chord";
@@ -28,8 +29,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SHORTCUTS_PALETTE_HOTKEY } from "@/lib/app-hotkeys";
-import { getPlanViewLabel } from "@/lib/app-routes";
+import { getPlanViewLabel, planViewEnabled } from "@/lib/app-routes";
 import { ROCKET_ANIMATION } from "@/lib/brand-rocket-animation";
+import { featuresQueryOptions } from "@/lib/features";
 import { cn } from "@/lib/utils";
 
 interface Area {
@@ -59,6 +61,11 @@ const planViewGuide: readonly {
   {
     view: "times",
     description: "Service and rehearsal times, and who’s in each.",
+  },
+  {
+    view: "practice",
+    description:
+      "Step through the songs with charts in any key and the rehearsal tracks.",
   },
   {
     view: "overview",
@@ -93,11 +100,23 @@ const songsArea: Area = {
   icon: MusicNote03Icon,
 };
 
-const nextPlanView = (current: PlanView): PlanView => {
-  const next =
-    (planViewGuide.findIndex((entry) => entry.view === current) + 1) %
-    planViewGuide.length;
-  return planViewGuide[next]?.view ?? current;
+type PlanViewGuide = typeof planViewGuide;
+
+const nextPlanView =
+  (guide: PlanViewGuide) =>
+  (current: PlanView): PlanView => {
+    const next =
+      (guide.findIndex((entry) => entry.view === current) + 1) % guide.length;
+    return guide[next]?.view ?? current;
+  };
+
+/** The guide without views this visitor can't open yet. */
+const useEnabledPlanViewGuide = (): PlanViewGuide => {
+  const { data } = useQuery(featuresQueryOptions);
+  return useMemo(
+    () => planViewGuide.filter((entry) => planViewEnabled(entry.view, data)),
+    [data]
+  );
 };
 
 const prefersReducedMotion = (): boolean =>
@@ -202,31 +221,37 @@ const planViewMocks: Record<
     { label: "Unanswered requests", detail: "3" },
     { label: "Songs without a key", detail: "None", accent: true },
   ],
+  practice: [
+    { label: "Morning Light", detail: "G · Capo 2", accent: true },
+    { label: "Original mix", detail: "1:24 / 4:10" },
+    { label: "Steady Ground", detail: "Eb" },
+  ],
 };
 
 /**
  * A miniature of the plan's view tabs that steps through each one, so people see the
- * workspace before they open it. Hovering or focusing it holds the current view; with
- * reduced motion it waits for a click.
+ * workspace before they open it. Hovering, touching, or focusing it holds the current view;
+ * with reduced motion it waits for a click.
  */
 const PlanViewShowcase = () => {
   // Phones get a row of icon tabs; wider screens list the views beside their preview.
   const vertical = !useIsMobile();
   const [view, setView] = useState<PlanView>("plan");
   const [held, setHeld] = useState(false);
+  const guide = useEnabledPlanViewGuide();
 
   useEffect(() => {
     // Held, or reduced motion: the person steps through the views themselves.
     const autoplay = !held && !prefersReducedMotion();
     const timer = autoplay
       ? window.setInterval(() => {
-          setView(nextPlanView);
+          setView(nextPlanView(guide));
         }, SHOWCASE_STEP_MS)
       : undefined;
     return () => {
       window.clearInterval(timer);
     };
-  }, [held]);
+  }, [held, guide]);
 
   return (
     <Tabs
@@ -238,8 +263,12 @@ const PlanViewShowcase = () => {
       onPointerEnter={() => {
         setHeld(true);
       }}
-      onPointerLeave={() => {
-        setHeld(false);
+      // A finger "leaves" as soon as it lifts; only a hovering pointer lets go on leave, so
+      // a tapped view stays put.
+      onPointerLeave={(event) => {
+        if (event.pointerType === "mouse") {
+          setHeld(false);
+        }
       }}
       onFocus={() => {
         setHeld(true);
@@ -249,7 +278,7 @@ const PlanViewShowcase = () => {
       }}
     >
       <TabsList className={vertical ? "w-40 shrink-0" : "w-full"}>
-        {planViewGuide.map((entry) => (
+        {guide.map((entry) => (
           <TabsTrigger key={entry.view} value={entry.view}>
             <SidebarNavIcon icon={planViewIcons[entry.view]} />
             {/* Phones show icons only; the line below names the view. */}
@@ -259,7 +288,7 @@ const PlanViewShowcase = () => {
           </TabsTrigger>
         ))}
       </TabsList>
-      {planViewGuide.map((entry) => (
+      {guide.map((entry) => (
         <TabsContent key={entry.view} value={entry.view}>
           <div className="animate-in fade-in-0 slide-in-from-bottom-1 flex flex-col gap-3 duration-300 motion-reduce:animate-none">
             <p className={cn("text-pretty", vertical ? "pt-1" : "text-center")}>
@@ -455,7 +484,7 @@ export const WelcomeDialog = ({
         initialFocus={nextButtonRef}
         desktopClassName="sm:max-w-xl"
       >
-        <div className="flex min-h-0 flex-col overflow-y-auto">
+        <div className="flex min-h-0 flex-col overflow-y-auto overscroll-contain">
           <WelcomeSky step={step} />
           <div
             key={step}

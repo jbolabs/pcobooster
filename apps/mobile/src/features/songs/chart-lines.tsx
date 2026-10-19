@@ -1,10 +1,13 @@
+import type {
+  ChartLine,
+  ChartSegment,
+} from "@pcobooster/planning-center-models/chord-chart-lines";
 import { Platform, StyleSheet, View } from "react-native";
 
 import { AppText } from "../../design/app-text";
 import { colors } from "../../design/colors";
 import { Spacing } from "../../design/metrics";
 import { displayKey } from "../../lib/song-keys";
-import type { ChartLine, ChartSegment } from "./chart";
 
 /** Chord lines keep their columns over the lyrics, so they need a fixed-width face. */
 const MONOSPACE = Platform.select({ ios: "Menlo", default: "monospace" });

@@ -207,7 +207,9 @@ export const ItemLengthEditor = ({
           <Input
             aria-label="Length"
             placeholder="m:ss"
-            inputMode="numeric"
+            // Minutes and seconds need a colon, which the digits-only keypad lacks.
+            autoComplete="off"
+            enterKeyHint="done"
             value={draft}
             onChange={(event) => {
               setDraft(event.target.value);

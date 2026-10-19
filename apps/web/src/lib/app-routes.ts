@@ -1,3 +1,7 @@
+import type {
+  EnabledFeatures,
+  FeatureFlagName,
+} from "@pcobooster/contracts/features";
 import type { PlanView } from "@pcobooster/planning-center-models/plan-overview";
 import { notFound } from "@tanstack/react-router";
 
@@ -7,6 +11,7 @@ export const planViews: readonly PlanView[] = [
   "lineup",
   "plan",
   "times",
+  "practice",
 ];
 
 /**
@@ -16,6 +21,20 @@ export const planViews: readonly PlanView[] = [
 export const phonePlanViews: readonly PlanView[] = planViews.filter(
   (view) => view !== "assign"
 );
+
+/** Views still behind a feature flag: they're listed and open only where it's on. */
+export const planViewFeatures: Partial<Record<PlanView, FeatureFlagName>> = {
+  practice: "practice",
+};
+
+/** Whether a visitor can open a view; a flagged view stays hidden until the flags answer. */
+export const planViewEnabled = (
+  view: PlanView,
+  features?: EnabledFeatures
+): boolean => {
+  const flag = planViewFeatures[view];
+  return flag === undefined || features?.[flag] === true;
+};
 
 /** The phone tab a view lives under. */
 export const phonePlanViewTab = (view: PlanView): PlanView =>
@@ -27,6 +46,7 @@ const planViewLabels: Record<PlanView, string> = {
   lineup: "Lineup",
   plan: "Plan",
   times: "Times",
+  practice: "Practice",
 };
 
 export const getPlanViewLabel = (view: PlanView): string =>
@@ -104,9 +124,12 @@ export interface DetailRoute {
   label: string;
   /** The person a People detail page shows, so the breadcrumb can name them. */
   personId: string | null;
+  /** The song a Songs detail page shows, so the breadcrumb can name it. */
+  songId: string | null;
 }
 
 const personDetailPattern = /^\/people\/(?<personId>[^/]+)/u;
+const songDetailPattern = /^\/songs\/(?<songId>[^/]+)/u;
 
 /** Detail pages that sit one level under a top-level section. */
 export const parseDetailRoute = (pathname: string): DetailRoute | null => {
@@ -118,14 +141,17 @@ export const parseDetailRoute = (pathname: string): DetailRoute | null => {
       parentLabel: "People",
       label: "Person",
       personId: decodeSegment(encodedPersonId),
+      songId: null,
     };
   }
-  if (/^\/songs\/[^/]+/u.test(pathname)) {
+  const encodedSongId = songDetailPattern.exec(pathname)?.groups?.songId;
+  if (encodedSongId !== undefined) {
     return {
       parentHref: "/songs",
       parentLabel: "Songs",
-      label: "Chord chart",
+      label: "Song",
       personId: null,
+      songId: decodeSegment(encodedSongId),
     };
   }
   return null;

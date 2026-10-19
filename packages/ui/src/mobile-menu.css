@@ -7,8 +7,8 @@
  * transition, so a quick reopen retargets mid-flight instead of restarting.
  *
  * The overlay transitions `display` so it fades out before leaving the render
- * tree: Safari 26 reads even transparent full-screen fixed layers when it
- * tints its bars and decides where the page may draw.
+ * tree. Fading its opacity is safe under Safari 26's toolbars because the
+ * overlay is never the layer Safari reads at an edge (see `MobileMenuOverlay`).
  */
 [data-slot="mobile-menu-overlay"] {
   display: none;
@@ -26,6 +26,11 @@
   @starting-style {
     opacity: 0;
   }
+}
+
+/* The menu's content clears the status bar; the surface behind it runs edge to edge. */
+[data-slot="mobile-menu-panel"] {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 [data-slot="mobile-menu-item"] {

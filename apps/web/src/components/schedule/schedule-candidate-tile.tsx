@@ -382,9 +382,7 @@ const ScheduleCandidateIdentity = ({
         <span
           className={cn(
             "shrink-0 text-xs font-semibold tracking-wide uppercase",
-            isBlocked
-              ? "text-status-scheduled dark:text-status-scheduled"
-              : "text-status-declined dark:text-status-declined"
+            isBlocked ? "text-status-scheduled" : "text-status-declined"
           )}
         >
           {unavailableSlotLabel}

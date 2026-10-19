@@ -123,7 +123,7 @@ describe(makeProductClient, () => {
 
   it("calls a procedure that takes no input without one", async () => {
     const { client, sent } = clientAnswering(() =>
-      Response.json({ people: true, chordCharts: false })
+      Response.json({ people: true, chordCharts: false, practice: false })
     );
 
     await expect(
@@ -131,6 +131,7 @@ describe(makeProductClient, () => {
     ).resolves.toStrictEqual({
       people: true,
       chordCharts: false,
+      practice: false,
     });
     expect(missingInput).toBeTypeOf("function");
     expect(sent.map((request) => request.url)).toStrictEqual([

@@ -174,6 +174,7 @@ const viewLabel: Record<PlanView, string> = {
   lineup: "Lineup",
   plan: "Plan",
   times: "Times",
+  practice: "Practice",
 };
 
 const OverviewCard = ({

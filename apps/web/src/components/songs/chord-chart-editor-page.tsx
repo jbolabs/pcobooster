@@ -1,4 +1,3 @@
-import { failureMessage } from "@pcobooster/client/product-client";
 import type {
   ChordChartArrangement,
   ChordChartSong,
@@ -8,8 +7,9 @@ import {
   parseKey,
   transposeKey,
 } from "@pcobooster/planning-center-models/chord-chart-chords";
+import { planningCenterArrangementUrl } from "@pcobooster/planning-center-models/song-detail";
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Check,
   ChevronDown,
@@ -36,6 +36,8 @@ import { highlightChordChart } from "@/components/songs/chord-chart-highlight";
 import { ChordChartImportDialog } from "@/components/songs/chord-chart-import-dialog";
 import { ChordChartLayoutPopover } from "@/components/songs/chord-chart-layout-popover";
 import { PlanningCenterPdfPreview } from "@/components/songs/planning-center-pdf-preview";
+import { BackToSongs, SongLoadError } from "@/components/songs/song-load-error";
+import { SongPageHeader } from "@/components/songs/song-page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -73,10 +75,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { useChordChartEditAccess } from "@/hooks/use-chord-chart-access";
-import {
-  chordChartLoadFailure,
-  useChordChartSong,
-} from "@/hooks/use-chord-chart-song";
+import { useChordChartSong } from "@/hooks/use-chord-chart-song";
 import { useChordChartWorkspace } from "@/hooks/use-chord-chart-workspace";
 import type { ChordChartWorkspace } from "@/hooks/use-chord-chart-workspace";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -86,9 +85,6 @@ import { rememberRecentSong } from "@/lib/recent-songs";
 const SAVE_HOTKEY = "Mod+S";
 const COPIED_LABEL_MS = 2000;
 const KEYS_PER_MODE = 12;
-
-const PLANNING_CENTER_SONGS_URL =
-  "https://services.planningcenteronline.com/songs";
 
 const SECTION_SNIPPETS = [
   "VERSE 1",
@@ -158,9 +154,6 @@ const insertAtCaret = (
   );
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
 };
-
-const planningCenterArrangementUrl = (songId: string, arrangementId: string) =>
-  `${PLANNING_CENTER_SONGS_URL}/${songId}/arrangements/${arrangementId}`;
 
 const scheduleReset = (reset: () => void): (() => void) => {
   const timeout = window.setTimeout(reset, COPIED_LABEL_MS);
@@ -427,8 +420,8 @@ interface WorkspaceHeaderProps {
 }
 
 /**
- * Phones put the save status beside the title and the arrangement and actions on the row
- * below; wider screens keep one row with the save status last.
+ * The editor's toolbar under the song's tabs: the arrangement and its actions, with the save
+ * status last; phones put the save status on its own row above them.
  */
 const WorkspaceHeader = ({
   song,
@@ -444,21 +437,8 @@ const WorkspaceHeader = ({
   const { copied, copy } = useCopyChart(workspace.draft.chart);
   const editable = access.canEdit && workspace.ready;
   return (
-    <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl">
-          {song.title}
-        </h1>
-        {song.author === "" ? null : (
-          <p className="text-muted-foreground truncate text-xs">
-            {song.author}
-          </p>
-        )}
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5 md:order-last">
-        <SaveControls workspace={workspace} access={access} />
-      </div>
-      <div className="flex min-w-0 items-center gap-1.5 max-md:w-full">
+    <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 max-md:w-full max-md:basis-full">
         <NativeSelect
           aria-label="Arrangement"
           size="sm"
@@ -466,7 +446,7 @@ const WorkspaceHeader = ({
           value={arrangement.id}
           onChange={(event) => {
             void navigate({
-              to: "/songs/$songId",
+              to: "/songs/$songId/chart",
               params: { songId: song.id },
               search: { arrangement: event.target.value },
               replace: true,
@@ -548,12 +528,15 @@ const WorkspaceHeader = ({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <div className="flex shrink-0 items-center gap-1.5 max-md:order-first max-md:ml-auto">
+        <SaveControls workspace={workspace} access={access} />
+      </div>
       {copied ? (
         <p className="text-muted-foreground w-full text-xs" aria-live="polite">
           Copied. Paste it into Lyrics &amp; Chords in Planning Center.
         </p>
       ) : null}
-    </header>
+    </div>
   );
 };
 
@@ -813,6 +796,13 @@ const ChordChartWorkspaceView = ({
 
   return (
     <PageShell layout="fill">
+      <SongPageHeader
+        songId={song.id}
+        title={song.title}
+        author={song.author}
+        tab="chart"
+        arrangementId={arrangement.id}
+      />
       <WorkspaceHeader
         song={song}
         arrangement={arrangement}
@@ -898,7 +888,7 @@ const ChordChartWorkspaceView = ({
         onCreated={(created) => {
           workspace.handleCopied();
           void navigate({
-            to: "/songs/$songId",
+            to: "/songs/$songId/chart",
             params: { songId: song.id },
             search: { arrangement: created.id },
           });
@@ -926,17 +916,11 @@ const ChordChartWorkspaceView = ({
 export const ChordChartEditorPageSkeleton = () => (
   <PageShell layout="fill" label="Loading chord chart" busy>
     <Skeleton variant="text" className="h-6 w-56" />
-    <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2">
+    <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-2">
       <Skeleton variant="control" className="h-96" />
       <Skeleton variant="control" className="h-96 max-md:hidden" />
     </div>
   </PageShell>
-);
-
-const BackToSongs = () => (
-  <Button variant="outline" nativeButton={false} render={<Link to="/songs" />}>
-    Back to Songs
-  </Button>
 );
 
 const NoArrangements = ({ song }: { song: ChordChartSong }) => {
@@ -976,54 +960,12 @@ const NoArrangements = ({ song }: { song: ChordChartSong }) => {
         copyOf={null}
         onCreated={(created) => {
           void navigate({
-            to: "/songs/$songId",
+            to: "/songs/$songId/chart",
             params: { songId: song.id },
             search: { arrangement: created.id },
           });
         }}
       />
-    </PageShell>
-  );
-};
-
-/** Says why a song didn't open, and offers what would help. */
-const SongLoadError = ({
-  error,
-  onRetry,
-}: {
-  error: Error;
-  onRetry: () => void;
-}) => {
-  const failure = chordChartLoadFailure(error);
-  let title = "This song didn’t load";
-  let description = "Planning Center didn’t answer. Try again in a moment.";
-  if (failure === "not-found") {
-    title = "Song not found";
-    description =
-      "Planning Center has no song at this link. It may have been deleted, or it belongs to another organization.";
-  } else if (failure === "no-access") {
-    title = "You can’t open this song";
-    description = failureMessage(
-      error,
-      "Your Planning Center account can’t view songs in Services."
-    );
-  }
-  return (
-    <PageShell layout="center">
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>{title}</EmptyTitle>
-          <EmptyDescription>{description}</EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <div className="flex flex-wrap justify-center gap-2">
-            {failure === "failed" ? (
-              <Button onClick={onRetry}>Try again</Button>
-            ) : null}
-            <BackToSongs />
-          </div>
-        </EmptyContent>
-      </Empty>
     </PageShell>
   );
 };

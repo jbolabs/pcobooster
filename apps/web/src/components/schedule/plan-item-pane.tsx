@@ -10,6 +10,7 @@ import {
 import type { DraftState } from "@pcobooster/planning-center-models/plan-item-draft";
 import { keyOptionLabelOf } from "@pcobooster/planning-center-models/plan-overview";
 import type { KeyTransition } from "@pcobooster/planning-center-models/plan-set-insights";
+import { planningCenterSongUrl } from "@pcobooster/planning-center-models/song-detail";
 import {
   describeKeyChange,
   tempoLabel,
@@ -25,19 +26,13 @@ import type {
 } from "@pcobooster/planning-center-models/types";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { Link } from "@tanstack/react-router";
-import {
-  ExternalLink,
-  FileMusic,
-  ChevronRight,
-  Replace,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ChevronRight, ExternalLink, Music, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { KeyTransitionPopover } from "@/components/schedule/key-transition-popover";
 import { PlanItemFiles } from "@/components/schedule/plan-files-browser";
 import { SongHistory } from "@/components/schedule/song-history";
+import { SongLink } from "@/components/songs/song-link";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
@@ -66,7 +61,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { useSongOptions } from "@/hooks/use-song-options";
-import { planningCenterSongUrl } from "@/lib/songs-index";
 import { cn } from "@/lib/utils";
 
 /** History rows shown before "Show all" once the section is open. */
@@ -113,8 +107,6 @@ interface PlanItemPaneProps {
     key: KeyOption
   ) => void;
   onRemove: (itemId: string) => void;
-  /** Swap this song for another in the same place. */
-  onReplaceSong: (itemId: string) => void;
   /** Open one of the item's files in the file dialog. */
   onOpenFile: (file: PlanFile) => void;
   /** Close the pane; Escape does too, handing the keyboard back to the run sheet. */
@@ -129,17 +121,12 @@ const PaneHeader = ({
   focusTitle,
   persist,
   onRemove,
-  onReplaceSong,
   onClose,
   inSheet,
-}: Pick<
-  PlanItemPaneProps,
-  "item" | "focusTitle" | "onRemove" | "onReplaceSong" | "onClose"
-> & {
+}: Pick<PlanItemPaneProps, "item" | "focusTitle" | "onRemove" | "onClose"> & {
   persist: Persist;
   inSheet: boolean;
 }) => {
-  const chordChartsEnabled = useFeatureEnabled("chordCharts");
   const titleRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (focusTitle) {
@@ -151,7 +138,14 @@ const PaneHeader = ({
     <CardHeader>
       {item.song ? (
         <>
-          <CardTitle>{item.song.title}</CardTitle>
+          <CardTitle>
+            <SongLink
+              songId={item.song.id}
+              arrangementId={item.arrangement?.id ?? null}
+            >
+              {item.song.title}
+            </SongLink>
+          </CardTitle>
           {item.song.author === "" ? null : (
             <CardDescription>
               <span className="line-clamp-1">{item.song.author}</span>
@@ -163,6 +157,7 @@ const PaneHeader = ({
           <Input
             ref={titleRef}
             aria-label="Title"
+            enterKeyHint="done"
             defaultValue={item.title}
             onBlur={(event) => {
               persist({ title: event.currentTarget.value });
@@ -178,60 +173,23 @@ const PaneHeader = ({
       {inSheet ? null : (
         <CardAction className="flex items-center">
           {item.song ? (
-            <>
-              <HoverLabel
-                label="Replace song"
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Replace ${item.song.title}`}
-                    onClick={() => {
-                      onReplaceSong(item.id);
-                    }}
-                  />
-                }
-              >
-                <Replace />
-              </HoverLabel>
-              {chordChartsEnabled ? (
-                <HoverLabel
-                  label="Edit chord chart"
-                  render={
-                    <Link
-                      to="/songs/$songId"
-                      params={{ songId: item.song.id }}
-                      search={{ arrangement: item.arrangement?.id }}
-                      aria-label={`Edit the chord chart for ${item.song.title}`}
-                      className={buttonVariants({
-                        variant: "ghost",
-                        size: "icon-sm",
-                      })}
-                    />
-                  }
-                >
-                  <FileMusic />
-                </HoverLabel>
-              ) : null}
-              <HoverLabel
-                label="Open in Planning Center"
-                render={
-                  <a
-                    href={planningCenterSongUrl(item.song.id)}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Open in Planning Center"
-                    className={buttonVariants({
-                      variant: "ghost",
-                      size: "icon-sm",
-                    })}
-                  />
-                }
-              >
-                <ExternalLink />
-              </HoverLabel>
-            </>
+            <HoverLabel
+              label="Open in Planning Center"
+              render={
+                <a
+                  href={planningCenterSongUrl(item.song.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open in Planning Center"
+                  className={buttonVariants({
+                    variant: "ghost",
+                    size: "icon-sm",
+                  })}
+                />
+              }
+            >
+              <ExternalLink />
+            </HoverLabel>
           ) : null}
           <HoverLabel
             label="Remove"
@@ -273,52 +231,38 @@ const PaneHeader = ({
 const SheetActions = ({
   item,
   onRemove,
-  onReplaceSong,
-}: Pick<PlanItemPaneProps, "item" | "onRemove" | "onReplaceSong">) => {
-  const chordChartsEnabled = useFeatureEnabled("chordCharts");
+}: Pick<PlanItemPaneProps, "item" | "onRemove">) => {
+  const songsEnabled = useFeatureEnabled("chordCharts");
   return (
     <CardFooter>
       <div className="flex w-full flex-col gap-2">
+        {item.song && songsEnabled ? (
+          <Link
+            to="/songs/$songId"
+            params={{ songId: item.song.id }}
+            search={{ arrangement: item.arrangement?.id }}
+            className={buttonVariants({
+              variant: "outline",
+              className: "h-11 w-full",
+            })}
+          >
+            <Music />
+            Open song
+          </Link>
+        ) : null}
         {item.song ? (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 w-full"
-              onClick={() => {
-                onReplaceSong(item.id);
-              }}
-            >
-              <Replace />
-              Replace song
-            </Button>
-            {chordChartsEnabled ? (
-              <Link
-                to="/songs/$songId"
-                params={{ songId: item.song.id }}
-                search={{ arrangement: item.arrangement?.id }}
-                className={buttonVariants({
-                  variant: "outline",
-                  className: "h-11 w-full",
-                })}
-              >
-                <FileMusic />
-                Edit chord chart
-              </Link>
-            ) : null}
-            <a
-              href={planningCenterSongUrl(item.song.id)}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonVariants({
-                variant: "outline",
-                className: "h-11 w-full",
-              })}
-            >
-              <ExternalLink />
-              Open in Planning Center
-            </a>
-          </>
+          <a
+            href={planningCenterSongUrl(item.song.id)}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants({
+              variant: "outline",
+              className: "h-11 w-full",
+            })}
+          >
+            <ExternalLink />
+            Open in Planning Center
+          </a>
         ) : null}
         <Button
           type="button"
@@ -436,27 +380,31 @@ const SongFields = ({
         <FieldLabel htmlFor={`pane-key-${item.id}`}>
           Key
           {transition === null ? null : (
-            <KeyTransitionPopover
-              transition={transition}
-              serviceTypeId={serviceTypeId}
-              songId={item.song?.id ?? null}
-              notes={item.description}
-              onChangeKey={(arrangement, key) => {
-                onChangeKey(item, arrangement, key);
-              }}
-              onAddNote={(note) => {
-                onSave({
-                  item,
-                  draft: {
-                    ...buildDraft(item),
-                    description: appendNote(item.description, note),
-                  },
-                  length: item.length,
-                  optimisticArrangement: item.arrangement,
-                  optimisticKey: item.key,
-                });
-              }}
-            />
+            // The icon button is taller than the label text; keep it from
+            // pushing this select below the Arrangement one.
+            <span className="-my-1.5 inline-flex">
+              <KeyTransitionPopover
+                transition={transition}
+                serviceTypeId={serviceTypeId}
+                songId={item.song?.id ?? null}
+                notes={item.description}
+                onChangeKey={(arrangement, key) => {
+                  onChangeKey(item, arrangement, key);
+                }}
+                onAddNote={(note) => {
+                  onSave({
+                    item,
+                    draft: {
+                      ...buildDraft(item),
+                      description: appendNote(item.description, note),
+                    },
+                    length: item.length,
+                    optimisticArrangement: item.arrangement,
+                    optimisticKey: item.key,
+                  });
+                }}
+              />
+            </span>
           )}
         </FieldLabel>
         <NativeSelect
@@ -508,7 +456,9 @@ const TimingFields = ({
         <Input
           id={`pane-length-${item.id}`}
           placeholder="m:ss"
-          inputMode="numeric"
+          // Minutes and seconds need a colon, which the digits-only keypad lacks.
+          autoComplete="off"
+          enterKeyHint="done"
           aria-invalid={lengthError === null ? undefined : true}
           defaultValue={buildDraft(item).lengthText}
           onBlur={(event) => {
@@ -602,7 +552,6 @@ export const PlanItemPane = ({
   onSave,
   onChangeKey,
   onRemove,
-  onReplaceSong,
   onOpenFile,
   onClose,
   inSheet = false,
@@ -645,11 +594,10 @@ export const PlanItemPane = ({
         focusTitle={focusTitle}
         persist={persist}
         onRemove={onRemove}
-        onReplaceSong={onReplaceSong}
         onClose={onClose}
         inSheet={inSheet}
       />
-      <CardContent className="min-h-0 overflow-y-auto">
+      <CardContent className="min-h-0 overflow-y-auto overscroll-contain">
         <div className="flex flex-col gap-4">
           {item.song ? (
             <SongFields
@@ -703,13 +651,7 @@ export const PlanItemPane = ({
           ) : null}
         </div>
       </CardContent>
-      {inSheet ? (
-        <SheetActions
-          item={item}
-          onRemove={onRemove}
-          onReplaceSong={onReplaceSong}
-        />
-      ) : null}
+      {inSheet ? <SheetActions item={item} onRemove={onRemove} /> : null}
     </Card>
   );
 };

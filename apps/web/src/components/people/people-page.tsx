@@ -369,12 +369,16 @@ export const PeoplePage = ({
           </Tabs>
         </div>
 
-        <div className="grid shrink-0 items-center gap-2 md:grid-cols-[minmax(0,1fr)_16rem]">
+        <div className="grid shrink-0 grid-cols-1 items-center gap-2 md:grid-cols-[minmax(0,1fr)_16rem]">
           <InputGroup>
             <InputGroupAddon>
               <Search />
             </InputGroupAddon>
             <InputGroupInput
+              enterKeyHint="search"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);

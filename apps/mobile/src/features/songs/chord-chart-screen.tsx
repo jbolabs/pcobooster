@@ -1,3 +1,7 @@
+import {
+  activeFirst,
+  planningCenterArrangementUrl,
+} from "@pcobooster/planning-center-models/song-detail";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import type { NativeStackHeaderItem } from "expo-router";
@@ -30,12 +34,7 @@ import {
 } from "./chart";
 import type { ChartTarget } from "./chart";
 import { ChartLines } from "./chart-lines";
-import {
-  activeFirst,
-  planningCenterArrangementUrl,
-  songLoadFailure,
-  songLoadFailureCopy,
-} from "./detail";
+import { songLoadFailure, songLoadFailureCopy } from "./detail";
 import type { ChordChartArrangement } from "./detail";
 import { songDisplayTitle } from "./library";
 import { songChartPdfHref, songFilesHref } from "./preview-reads";

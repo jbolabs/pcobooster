@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "@pcobooster/design-tokens/tokens.css";
 
+@import "@pcobooster/ui/mobile-native.css";
 @import "@pcobooster/ui/mobile-menu.css";
 @import "@pcobooster/ui/star-field.css";
 
@@ -54,9 +55,16 @@
     background: color-mix(in oklch, var(--border) 70%, transparent);
     pointer-events: none;
   }
-  &:has(> [data-plan-item-id]:is(:hover, [data-selected="true"]))::before,
-  &:has(> [data-plan-item-id]:is(:hover, [data-selected="true"])) + &::before {
+  &:has(> [data-plan-item-id][data-selected="true"])::before,
+  &:has(> [data-plan-item-id][data-selected="true"]) + &::before {
     display: none;
+  }
+  /* Touch rows never show a hover highlight, so only a hovering pointer hides the line. */
+  @media (hover: hover) and (pointer: fine) {
+    &:has(> [data-plan-item-id]:hover)::before,
+    &:has(> [data-plan-item-id]:hover) + &::before {
+      display: none;
+    }
   }
 }
 
@@ -111,64 +119,9 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-status-confirmed: var(--status-confirmed);
-  --color-status-scheduled: var(--status-scheduled);
-  --color-status-declined: var(--status-declined);
-  --color-status-confirmed-bright: var(--status-confirmed-bright);
-  --color-status-scheduled-bright: var(--status-scheduled-bright);
-  --color-status-declined-bright: var(--status-declined-bright);
-  --color-status-confirmed-deep: var(--status-confirmed-deep);
-  --color-status-scheduled-deep: var(--status-scheduled-deep);
-  --color-status-declined-deep: var(--status-declined-deep);
-  --color-status-info: var(--status-info);
-  --color-info-surface: var(--info-surface);
-  --color-info-border: var(--info-border);
-  --color-info-foreground: var(--info-foreground);
-  --color-overlay-shadow: var(--overlay-shadow);
-  --color-pc-services-foreground: var(--pc-services-foreground);
-  --color-pc-services-gradient-start: var(--pc-services-gradient-start);
-  --color-pc-services-gradient-end: var(--pc-services-gradient-end);
   --font-heading: var(--font-sans);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
 }
 
 @keyframes status-dot-pulse {
@@ -808,44 +761,6 @@
   }
 }
 
-/* Safe-area insets for notched phones (viewport-fit=cover). */
-@utility pt-safe {
-  padding-top: env(safe-area-inset-top);
-}
-
-@utility px-safe {
-  padding-right: env(safe-area-inset-right);
-  padding-left: env(safe-area-inset-left);
-}
-
-@utility pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-@utility pb-safe-4 {
-  padding-bottom: max(--spacing(4), env(safe-area-inset-bottom));
-}
-
-@utility pb-safe-2 {
-  padding-bottom: max(--spacing(2), env(safe-area-inset-bottom));
-}
-
-@utility pb-safe-3 {
-  padding-bottom: max(--spacing(3), env(safe-area-inset-bottom));
-}
-
-@utility pt-safe-2 {
-  padding-top: max(--spacing(2), env(safe-area-inset-top));
-}
-
-@utility pt-safe-6 {
-  padding-top: max(--spacing(6), env(safe-area-inset-top));
-}
-
-@utility pb-safe-6 {
-  padding-bottom: max(--spacing(6), env(safe-area-inset-bottom));
-}
-
 @utility no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -880,42 +795,45 @@
       border-radius: 9999px;
     }
 
-    *::-webkit-scrollbar-thumb:hover {
-      background-color: var(--scrollbar-thumb-hover);
-    }
-
     *::-webkit-scrollbar-corner {
       background: transparent;
     }
   }
 
+  @media (hover: hover) and (pointer: fine) {
+    *::-webkit-scrollbar-thumb:hover {
+      background-color: var(--scrollbar-thumb-hover);
+    }
+  }
+
+  /*
+   * Phones scroll the document so Safari can draw the page under its bars. The app has its
+   * own refresh and pull-down surfaces, so the page never rubber-bands or pulls to refresh;
+   * the viewport takes this from the root element, so it sits on html as well as body.
+   * Inner scrollers use overscroll-contain (`local/scroll-container-overscroll`).
+   */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
   body {
     @apply bg-background text-foreground;
-    overscroll-behavior-y: none;
   }
   /*
-   * No theme-color meta: Safari would paint its bars that flat color. With the
-   * document scrolling on phones, Safari tints its bars from the page and draws
-   * content beneath them; the html background covers overscroll.
+   * No theme-color meta: Safari would paint its bars that flat color, and with one,
+   * opening the phone menu left a line above Safari's bottom bar on every page until a
+   * reload (`lint/mobile-native.test.ts`). With the document
+   * scrolling on phones, Safari tints its bars from the page and draws content beneath
+   * them; the html background covers overscroll.
    */
   html {
     @apply bg-background;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
   }
-  a,
-  button,
-  input,
-  label,
-  select,
-  summary,
-  textarea,
-  [role="button"],
-  [role="tab"],
-  [role="menuitem"],
-  [role="option"] {
-    touch-action: manipulation;
+  [data-sidebar="menu-button"],
+  [data-sidebar="menu-sub-button"] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),

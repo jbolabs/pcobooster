@@ -280,12 +280,14 @@ const buildSongAttributes = (input: ChordChartSongCreateInput): JsonObject => {
  * Adds a song and makes sure it has an arrangement to write the chart in: Services may
  * create a default one itself, and otherwise this does. At most three requests.
  */
-export const createChordChartSong = (
+export const createChordChartSong = <E = never, R = never>(
   input: ChordChartSongCreateInput,
-  songs: ChordChartSongsService
-): Effect.Effect<ChordChartSongOutput, PlanningCenterError> =>
+  songs: ChordChartSongsService,
+  onSongCreated: Effect.Effect<void, E, R> = Effect.void
+): Effect.Effect<ChordChartSongOutput, PlanningCenterError | E, R> =>
   Effect.gen(function* addSong() {
     const song = yield* songs.createSong(buildSongAttributes(input));
+    yield* onSongCreated;
     const existing = yield* songs.getSongArrangementsForEditing(song.id);
     const arrangements = existing.data.map((arrangement) =>
       normalizeChordChartArrangement(arrangement, existing.included)

@@ -66,6 +66,14 @@ export const queryKeys = {
   songHistory: (songId: string | null) => ["song-history", songId] as const,
   songOptions: (songId: string | null, serviceTypeId: string | null) =>
     ["song-options", songId, serviceTypeId] as const,
+  songAttachments: (songId: string, arrangementId: string) =>
+    ["song-attachments", songId, arrangementId] as const,
+  /** A signed link, read fresh on each open and never kept. */
+  songAttachmentLink: (
+    songId: string,
+    arrangementId: string,
+    attachmentId: string
+  ) => ["song-attachment-link", songId, arrangementId, attachmentId] as const,
   chordChartSong: (songId: string) => ["chord-chart-song", songId] as const,
   lyricsSearch: (query: string) => ["lyrics-search", query] as const,
   /** Keyed by the saved version, so each save renders again. */

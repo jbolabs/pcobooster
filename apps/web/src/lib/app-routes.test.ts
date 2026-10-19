@@ -8,6 +8,7 @@ import {
   parsePlanRoute,
   phonePlanViews,
   phonePlanViewTab,
+  planViewEnabled,
 } from "@/lib/app-routes";
 
 describe(parsePlanRoute, () => {
@@ -55,9 +56,31 @@ describe("phone plan tabs", () => {
       "lineup",
       "plan",
       "times",
+      "practice",
     ]);
     expect(phonePlanViewTab("assign")).toBe("lineup");
     expect(phonePlanViewTab("times")).toBe("times");
+  });
+});
+
+describe(planViewEnabled, () => {
+  const flags = { people: true, chordCharts: true };
+
+  it("shows Practice only where its flag is on, and hides it until the flags answer", () => {
+    expect(
+      planViewEnabled("practice", { ...flags, practice: true })
+    ).toBeTruthy();
+    expect(
+      planViewEnabled("practice", { ...flags, practice: false })
+    ).toBeFalsy();
+    expect(planViewEnabled("practice")).toBeFalsy();
+  });
+
+  it("always shows views without a flag", () => {
+    expect(planViewEnabled("plan")).toBeTruthy();
+    expect(
+      planViewEnabled("lineup", { ...flags, practice: false })
+    ).toBeTruthy();
   });
 });
 
@@ -74,14 +97,17 @@ describe("app sections", () => {
       parentLabel: "People",
       label: "Person",
       personId: "99",
+      songId: null,
     });
     expect(parseDetailRoute("/people")).toBeNull();
     expect(parseDetailRoute("/songs/12")).toStrictEqual({
       parentHref: "/songs",
       parentLabel: "Songs",
-      label: "Chord chart",
+      label: "Song",
       personId: null,
+      songId: "12",
     });
+    expect(parseDetailRoute("/songs/12/chart")?.songId).toBe("12");
     expect(parseDetailRoute("/songs")).toBeNull();
   });
 });

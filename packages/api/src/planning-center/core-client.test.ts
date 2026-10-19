@@ -6,6 +6,7 @@ import { PlanningCenterAccounting } from "@pcobooster/api/planning-center/accoun
 import {
   PlanningCenterCoreClient,
   createBasicPlanningCenterClient,
+  listedValidationErrors,
 } from "@pcobooster/api/planning-center/core-client";
 import type { PlanningCenterError } from "@pcobooster/api/planning-center/core-client";
 import { PlanningCenterPacing } from "@pcobooster/api/planning-center/pacing";
@@ -28,6 +29,104 @@ const jsonResponse = (body: JsonValue, init?: ResponseInit): Response =>
 const person = { id: "1", type: "Person", attributes: { name: "Alex" } };
 
 const fetchMock = (): FetchMock => vi.fn<typeof globalThis.fetch>();
+
+describe(listedValidationErrors, () => {
+  it("omits reflected church text and unknown provider wording, retaining safe field diagnostics", () => {
+    expect(
+      listedValidationErrors(
+        {
+          errors: [
+            {
+              source: { parameter: "title" },
+              detail: "Private church title is already taken",
+            },
+            {
+              source: { parameter: "description" },
+              detail: "Description 'Private church notes' is invalid",
+            },
+            {
+              source: { parameter: "length" },
+              detail: "Length can not be longer than 24 hours",
+            },
+            { detail: "Unknown message with a person's name" },
+            {
+              source: { parameter: "Private church title" },
+              detail: "is invalid",
+            },
+            {
+              source: { parameter: "private_church_title" },
+              detail: "Private church title is invalid",
+            },
+          ],
+        },
+        ["title", "description", "length"]
+      )
+    ).toStrictEqual([
+      {
+        attribute: "title",
+        detail: "Validation failed (detail omitted for privacy)",
+      },
+      {
+        attribute: "description",
+        detail: "Validation failed (detail omitted for privacy)",
+      },
+      { attribute: "length", detail: "can not be longer than 24 hours" },
+      {
+        attribute: undefined,
+        detail: "Validation failed (detail omitted for privacy)",
+      },
+      {
+        attribute: undefined,
+        detail: "Validation failed (detail omitted for privacy)",
+      },
+      {
+        attribute: undefined,
+        detail: "Validation failed (detail omitted for privacy)",
+      },
+    ]);
+  });
+
+  it("keeps only validation sources and details, with a safe missing-detail fallback", () => {
+    expect(
+      listedValidationErrors(
+        {
+          errors: [
+            {
+              source: { parameter: "length" },
+              detail: "must be a number",
+              title: "ignored",
+              meta: { value: "private" },
+            },
+            {
+              source: { pointer: "/data/attributes/title" },
+              title: "private title",
+              value: "private",
+            },
+          ],
+        },
+        ["title", "description", "length"]
+      )
+    ).toStrictEqual([
+      { attribute: "length", detail: "must be a number" },
+      { attribute: "title", detail: "Validation failed" },
+    ]);
+  });
+
+  it("bounds diagnostic count and text before reporting", () => {
+    const diagnostics = listedValidationErrors(
+      {
+        errors: Array.from({ length: 12 }, () => ({
+          source: { parameter: "a".repeat(150) },
+          detail: `must be greater than ${"1".repeat(600)}`,
+        })),
+      },
+      ["a".repeat(150)]
+    );
+    expect(diagnostics).toHaveLength(10);
+    expect(diagnostics[0]?.attribute).toHaveLength(100);
+    expect(diagnostics[0]?.detail).toHaveLength(500);
+  });
+});
 
 const songsPageUrl = (offset: number) =>
   `https://api.planningcenteronline.com/services/v2/songs?offset=${offset}&per_page=100`;
@@ -247,6 +346,98 @@ describe(PlanningCenterCoreClient, () => {
       status: 422,
       message: "Planning Center API error: 422 - Length must be a number",
     });
+  });
+
+  it("marks an attachment-opening POST rejection as a read", async () => {
+    const fetch = fetchMock().mockResolvedValue(
+      jsonResponse({ errors: [{ detail: "is invalid" }] }, { status: 422 })
+    );
+    const error = await failureOf(
+      basicClient(fetch).fetch(
+        "/services/v2/service_types/1/plans/2/attachments/3/open",
+        {
+          method: "POST",
+          body: {},
+          readAction: true,
+        }
+      )
+    );
+    expect(error).toMatchObject({
+      status: 422,
+      method: "POST",
+      isWrite: false,
+      sentAttributeNames: [],
+    });
+  });
+
+  it("logs a rejected write with what was sent, keeping the church's text out", async () => {
+    // Planning Center's answer to a song item 86,401 seconds long (sandbox, 2026-10-18).
+    const rejection = {
+      errors: [
+        {
+          detail: "can not be longer than 24 hours",
+          status: "422",
+          title: "Validation Error",
+          source: { parameter: "length" },
+          meta: { resource: "PlanItem", associated_resources: [] },
+        },
+      ],
+    };
+    const fetch = fetchMock().mockResolvedValue(
+      jsonResponse(rejection, { status: 422 })
+    );
+    const { lines, capture: logger } = recordLogs();
+    await expect(
+      Effect.runPromise(
+        logger(
+          Effect.flip(
+            basicClient(fetch).fetch(
+              "/services/v2/service_types/1/plans/2/items",
+              {
+                method: "POST",
+                body: {
+                  data: {
+                    type: "Item",
+                    attributes: {
+                      title: "King of My Heart",
+                      song_id: "15813603",
+                      length: 86_401,
+                    },
+                  },
+                },
+              }
+            )
+          )
+        )
+      )
+    ).resolves.toMatchObject({
+      status: 422,
+      method: "POST",
+      sentAttributeNames: ["title", "song_id", "length"],
+      isWrite: true,
+      message:
+        "Planning Center API error: 422 - Length can not be longer than 24 hours",
+    });
+    expect(lines).toStrictEqual([
+      {
+        level: "warn",
+        message: "Planning Center rejected a write",
+        fields: {
+          endpoint: {
+            path: "/services/v2/service_types/1/plans/2/items",
+            queryKeys: [],
+          },
+          method: "POST",
+          status: 422,
+          errors: rejection,
+          sentAttributes: {
+            title: "<16 characters>",
+            song_id: "15813603",
+            length: 86_401,
+          },
+        },
+      },
+    ]);
   });
 
   it("rejects an empty response where a JSON resource is required", async () => {

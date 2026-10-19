@@ -1,13 +1,13 @@
 import { causeError } from "@pcobooster/api/http/outcome";
 import type { ReportProcedureFailure } from "@pcobooster/api/http/outcome";
-/** Where the API Worker reports 5xx outcomes: PostHog, in production only. */
+/** Where the API Worker reports failures: PostHog, in production only. */
 import { moduleLog } from "@pcobooster/api/logging";
 import { createPostHogExceptionReporter } from "@pcobooster/api/modules/analytics/posthog-exception";
 import { Effect } from "effect";
 
 const reportLog = moduleLog("rpc");
 
-/** Sends 5xx outcomes to PostHog; null where the stage has no project (all but production). */
+/** Sends reportable outcomes; null where the stage has no project (all but production). */
 export const postHogProcedureReporter = (
   apiKey: string | null
 ): ReportProcedureFailure | null => {
@@ -26,6 +26,7 @@ export const postHogProcedureReporter = (
         path: fields.route ?? "unknown",
         method: fields.method ?? "unknown",
         requestId: fields.requestId,
+        procedure: fields.procedure,
       });
     }).pipe(
       Effect.catchCause((cause) =>

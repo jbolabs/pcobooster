@@ -203,3 +203,9 @@ export const planningCenterAccountIdentities = sqliteTable(
     ),
   ]
 );
+
+/** Changes the shared catalog key after song creation, across every API Worker. */
+export const songCatalogRevision = sqliteTable("song_catalog_revision", {
+  scope: text("scope").primaryKey(),
+  revision: integer("revision").notNull().default(0),
+});

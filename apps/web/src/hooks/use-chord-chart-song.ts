@@ -11,12 +11,16 @@ import type {
   ChordChartUpdateInput,
   LyricsSearchResult,
 } from "@pcobooster/contracts/http/chord-charts";
+import type { SongLibrary } from "@pcobooster/contracts/http/songs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient, QueryFunctionContext } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 import { queryKeys } from "@/lib/query-keys";
-import { clearCachedSongOptionsForSong } from "@/lib/song-options-cache";
+import {
+  rememberWrittenArrangement,
+  settleSongCreation,
+} from "@/lib/song-query-state";
 import { productClient } from "@/product-client";
 
 export const createChordChartSongQueryOptions = (songId: string) => ({
@@ -30,6 +34,34 @@ export const createChordChartSongQueryOptions = (songId: string) => ({
 
 export const useChordChartSong = (songId: string) =>
   useQuery<ChordChartSongOutput>(createChordChartSongQueryOptions(songId));
+
+const readCachedSongTitle = (
+  queryClient: QueryClient,
+  songId: string
+): string | null =>
+  queryClient.getQueryData<ChordChartSongOutput>(
+    queryKeys.chordChartSong(songId)
+  )?.song.title ??
+  queryClient
+    .getQueryData<SongLibrary>(queryKeys.songLibrary())
+    ?.songs.find((song) => song.id === songId)?.title ??
+  null;
+
+const noTitle = () => null;
+
+/** A song's title for breadcrumbs, once the song or the library has it. */
+export const useSongTitle = (songId: string | null): string | null => {
+  const queryClient = useQueryClient();
+  const subscribe = useCallback(
+    (onChange: () => void) => queryClient.getQueryCache().subscribe(onChange),
+    [queryClient]
+  );
+  const read = useCallback(
+    () => (songId === null ? null : readCachedSongTitle(queryClient, songId)),
+    [songId, queryClient]
+  );
+  return useSyncExternalStore(subscribe, read, noTitle);
+};
 
 /** A copy of the song read this recently when an arrangement opens counts as read on opening. */
 const READ_ON_OPEN_MS = 5000;
@@ -67,44 +99,6 @@ export const fetchLatestChordChartArrangement = async (
     song.arrangements.find((candidate) => candidate.id === arrangementId) ??
     null
   );
-};
-
-const replaceArrangement = (
-  current: ChordChartSongOutput | undefined,
-  arrangement: ChordChartArrangement
-): ChordChartSongOutput | undefined => {
-  if (current === undefined) {
-    return current;
-  }
-  const exists = current.arrangements.some(
-    (candidate) => candidate.id === arrangement.id
-  );
-  return {
-    ...current,
-    arrangements: exists
-      ? current.arrangements.map((candidate) =>
-          candidate.id === arrangement.id ? arrangement : candidate
-        )
-      : [...current.arrangements, arrangement],
-  };
-};
-
-/**
- * Keeps the editor's copy of the song current after a write, and makes the plan builder read
- * the song's arrangements again, here and in this browser's saved copy.
- */
-const rememberWrittenArrangement = (
-  queryClient: QueryClient,
-  songId: string,
-  arrangement: ChordChartArrangement
-) => {
-  queryClient.setQueryData<ChordChartSongOutput>(
-    queryKeys.chordChartSong(songId),
-    (current) => replaceArrangement(current, arrangement)
-  );
-  clearCachedSongOptionsForSong(songId);
-  const [songOptionsScope] = queryKeys.songOptions(songId, null);
-  void queryClient.invalidateQueries({ queryKey: [songOptionsScope, songId] });
 };
 
 export const isChordChartConflict = (error: Error): boolean =>
@@ -179,6 +173,9 @@ export const useCreateSong = () => {
         created
       );
     },
+    onSettled: () => {
+      settleSongCreation(queryClient);
+    },
   });
 };
 
@@ -192,8 +189,12 @@ export interface ChordChartPdfTarget {
 }
 
 /** Planning Center's own PDF of the saved chart; a save changes the key and renders again. */
-export const useChordChartPdf = (target: ChordChartPdfTarget) =>
+export const useChordChartPdf = (
+  target: ChordChartPdfTarget,
+  { enabled = true }: { readonly enabled?: boolean } = {}
+) =>
   useQuery<ChordChartPdf>({
+    enabled,
     queryKey: queryKeys.chordChartPdf(
       target.arrangementId,
       target.keyId,

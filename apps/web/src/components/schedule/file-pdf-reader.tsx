@@ -5,8 +5,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { loadPdfDocument } from "@/lib/pdf-pages";
+import { loadPdfDocument, PDF_PAGE_DARK_CLASS } from "@/lib/pdf-pages";
 import { cn } from "@/lib/utils";
+
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 2;
+const ZOOM_STEP = 0.25;
 
 export const FilePdfReader = ({ data }: { data: string }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -106,10 +110,13 @@ export const FilePdfReader = ({ data }: { data: string }) => {
   };
   const pageCount = document?.numPages ?? null;
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* Sized by its pane alone (contain-inline-size): a zoomed page scrolls here instead of
+          widening every pane around it, which would re-center the controls and feed its
+          own width back into the measurement. */}
       <div
         ref={container}
-        className="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pb-16 sm:px-6"
+        className="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pb-16 contain-inline-size sm:px-6"
       >
         {state === "loading" ? (
           <div className="text-muted-foreground flex justify-center gap-2 py-12 text-sm">
@@ -126,6 +133,7 @@ export const FilePdfReader = ({ data }: { data: string }) => {
           aria-label={`PDF page ${String(page)}`}
           className={cn(
             "mx-auto block h-auto w-(--pdf-width) bg-white",
+            PDF_PAGE_DARK_CLASS,
             state !== "ready" && "hidden"
           )}
           style={pageStyle}
@@ -167,9 +175,9 @@ export const FilePdfReader = ({ data }: { data: string }) => {
             variant="ghost"
             size="icon-sm"
             aria-label="Zoom out"
-            disabled={zoom <= 1}
+            disabled={zoom <= MIN_ZOOM}
             onClick={() => {
-              setZoom((value) => Math.max(1, value - 0.25));
+              setZoom((value) => Math.max(MIN_ZOOM, value - ZOOM_STEP));
             }}
           >
             <Minus />
@@ -181,9 +189,9 @@ export const FilePdfReader = ({ data }: { data: string }) => {
             variant="ghost"
             size="icon-sm"
             aria-label="Zoom in"
-            disabled={zoom >= 2}
+            disabled={zoom >= MAX_ZOOM}
             onClick={() => {
-              setZoom((value) => Math.min(2, value + 0.25));
+              setZoom((value) => Math.min(MAX_ZOOM, value + ZOOM_STEP));
             }}
           >
             <Plus />

@@ -26,6 +26,12 @@ const classStatus = (tag: string) =>
 
 describe("faults on the wire", () => {
   it("never encodes server-only detail", () => {
+    const invalid = new InvalidInput({
+      message: "Planning Center didn't accept that change: Length is invalid",
+      providerRejection: {
+        errors: [{ attribute: "length", detail: "is invalid" }],
+      },
+    });
     const external = new ExternalServiceFailure({
       message: "Planning Center request failed.",
       service: "planning-center",
@@ -46,6 +52,12 @@ describe("faults on the wire", () => {
       _tag: "PersistenceFailure",
       message: "Internal server error",
     });
+    expect(encode(invalid)).toStrictEqual({
+      _tag: "InvalidInput",
+      message: "Planning Center didn't accept that change: Length is invalid",
+    });
+    expect(decode(encode(invalid))).toBeInstanceOf(InvalidInput);
+    expect(decode(encode(invalid))).not.toHaveProperty("providerRejection");
   });
 
   it("decodes each fault into its class, with the fixed persistence message", () => {

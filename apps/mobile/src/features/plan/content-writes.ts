@@ -97,7 +97,11 @@ export class PlanContentWriter {
       enqueue,
       onError,
       onSuccess,
-      reconciler
+      reconciler,
+      [
+        { queryKey: [scope, "songs.history"] },
+        { queryKey: [scope, "songs.options"] },
+      ]
     );
     this.times = new OptimisticList(
       cache,

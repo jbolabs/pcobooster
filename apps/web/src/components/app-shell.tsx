@@ -97,13 +97,16 @@ import {
   useAccountPanel,
   useAccountsQuery,
 } from "@/hooks/use-account-panel";
+import { useSongTitle } from "@/hooks/use-chord-chart-song";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { usePersonName } from "@/hooks/use-people-dashboard-person";
 import { usePlanRoute } from "@/hooks/use-plan-route";
+import { useEnabledPlanViews } from "@/hooks/use-plan-views";
 import {
   APP_SHORTCUTS,
   PLAN_BUILDER_SHORTCUTS,
   FILE_DIALOG_SHORTCUTS,
+  PRACTICE_SHORTCUTS,
   SHORTCUTS_PALETTE_HOTKEY,
 } from "@/lib/app-hotkeys";
 import type { DetailRoute } from "@/lib/app-routes";
@@ -159,15 +162,16 @@ const headerTabClass = (active: boolean) =>
 
 const PlanViewTabs = () => {
   const planRoute = usePlanRoute();
+  const views = useEnabledPlanViews(planViews);
   if (planRoute === null) {
     return null;
   }
   return (
     <nav
       aria-label="Plan views"
-      className="flex min-w-0 items-center gap-0.5 overflow-x-auto"
+      className="flex min-w-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain"
     >
-      {planViews.map((view) => {
+      {views.map((view) => {
         const active = planRoute.view === view;
         return (
           <Link
@@ -182,7 +186,7 @@ const PlanViewTabs = () => {
           >
             <SidebarNavIcon icon={planViewIcons[view]} className="size-4" />
             {/* The hidden bold copy reserves the active width so tabs don't shift. */}
-            <span className="grid">
+            <span className="grid grid-cols-[max-content]">
               <span
                 aria-hidden
                 className="invisible col-start-1 row-start-1 font-semibold"
@@ -200,13 +204,14 @@ const PlanViewTabs = () => {
   );
 };
 
-/** A detail page's breadcrumb: the person's name once it is known. */
+/** A detail page's breadcrumb: the person's name or the song's title once it is known. */
 const DetailBreadcrumbLabel = ({ detail }: { detail: DetailRoute }) => {
   const personName = usePersonName(detail.personId);
+  const songTitle = useSongTitle(detail.songId);
   return (
     <span className="block max-w-56 truncate">
       {personName === null ? (
-        detail.label
+        (songTitle ?? detail.label)
       ) : (
         <ReplayMask>{personName}</ReplayMask>
       )}
@@ -507,12 +512,13 @@ const servicesRootItem: SidebarTabGroupItem<ServicesSidebarKey> = {
 const ServicesSidebarMenuItem = () => {
   const pathname = usePathname();
   const planRoute = usePlanRoute();
+  const views = useEnabledPlanViews(planViews);
   const servicesViewItems: SidebarTabGroupItem<ServicesSidebarKey>[] =
     planRoute === null
       ? [servicesRootItem]
       : [
           servicesRootItem,
-          ...planViews.map((view) => ({
+          ...views.map((view) => ({
             key: view,
             label: getPlanViewLabel(view),
             // Keeps the selected slot across views.
@@ -557,7 +563,7 @@ const ShortcutList = ({
     binding: RegisterableHotkey;
   }[];
 }) => (
-  <dl className="grid gap-3 text-sm">
+  <dl className="grid grid-cols-1 gap-3 text-sm">
     {shortcuts.map((shortcut) => (
       <div
         key={shortcut.id}
@@ -581,6 +587,7 @@ const AppSidebar = ({
 }) => {
   const pathname = usePathname();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const practiceEnabled = useFeatureEnabled("practice");
 
   useHotkey(
     SHORTCUTS_PALETTE_HOTKEY,
@@ -676,6 +683,12 @@ const AppSidebar = ({
             <h3 className="text-sm font-medium">Song files</h3>
             <ShortcutList shortcuts={FILE_DIALOG_SHORTCUTS} />
           </section>
+          {practiceEnabled ? (
+            <section className="flex flex-col gap-3">
+              <h3 className="text-sm font-medium">Practice</h3>
+              <ShortcutList shortcuts={PRACTICE_SHORTCUTS} />
+            </section>
+          ) : null}
         </DialogContent>
       </Dialog>
     </>

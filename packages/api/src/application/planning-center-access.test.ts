@@ -329,6 +329,35 @@ describe("PlanningCenterAccess", () => {
     });
   });
 
+  it("names the attribute Planning Center rejected when its detail leaves it out", () => {
+    expect(
+      toApplicationFault(
+        new PlanningCenterApiError({
+          status: 422,
+          message: "Planning Center API error: 422",
+          details: {
+            errors: [
+              {
+                detail: "can not be longer than 24 hours",
+                status: "422",
+                title: "Validation Error",
+                source: { parameter: "length" },
+              },
+              {
+                detail: "Service position is not included in the list",
+                source: { pointer: "/data/attributes/service_position" },
+              },
+            ],
+          },
+        })
+      )
+    ).toMatchObject({
+      _tag: "InvalidInput",
+      message:
+        "Planning Center didn't accept that change: Length can not be longer than 24 hours; Service position is not included in the list",
+    });
+  });
+
   it("explains a blocked demo write as forbidden", () => {
     expect(
       toApplicationFault(
@@ -471,34 +500,37 @@ describe("PlanningCenterAccess", () => {
 });
 
 describe("length validation regression", () => {
-  it("explains the provider 24 hour validation and retains only safe validation metadata", () => {
-    expect(
-      toApplicationFault(
-        new PlanningCenterApiError({
-          status: 422,
-          message: "private title",
-          details: {
-            errors: [
-              {
-                code: "too_long",
-                detail: "can not be longer than 24 hours",
-                source: { pointer: "/data/attributes/length" },
-              },
-            ],
-          },
-        })
-      )
-    ).toMatchObject({
-      _tag: "InvalidInput",
-      message:
-        "This item's length is over 24 hours in Planning Center. Shorten it in Planning Center and try again.",
-      planningCenterValidation: {
-        code: "too_long",
-        detail: "can not be longer than 24 hours",
-        field: "length",
-      },
-    });
-  });
+  it.each([{ pointer: "/data/attributes/length" }, { parameter: "length" }])(
+    "explains the provider 24 hour validation and retains only safe validation metadata (%j)",
+    (source) => {
+      expect(
+        toApplicationFault(
+          new PlanningCenterApiError({
+            status: 422,
+            message: "private title",
+            details: {
+              errors: [
+                {
+                  code: "too_long",
+                  detail: "can not be longer than 24 hours",
+                  source,
+                },
+              ],
+            },
+          })
+        )
+      ).toMatchObject({
+        _tag: "InvalidInput",
+        message:
+          "This item's length is over 24 hours in Planning Center. Shorten it in Planning Center and try again.",
+        planningCenterValidation: {
+          code: "too_long",
+          detail: "can not be longer than 24 hours",
+          field: "length",
+        },
+      });
+    }
+  );
 });
 
 describe("Planning Center validation privacy", () => {

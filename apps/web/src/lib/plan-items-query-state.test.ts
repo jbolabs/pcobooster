@@ -16,6 +16,7 @@ import type {
   SongOptionSet,
 } from "@pcobooster/planning-center-models/types";
 import {
+  InfiniteQueryObserver,
   MutationObserver,
   QueryClient,
   QueryObserver,
@@ -472,10 +473,118 @@ describe("plan item query state", () => {
 
     vi.advanceTimersByTime(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
 
-    expect(refetchQueries).toHaveBeenCalledExactlyOnceWith({
+    expect(refetchQueries).toHaveBeenCalledWith({
       queryKey,
       type: "active",
     });
+  });
+
+  it("refreshes the plan's paginated files after an arrangement change without reloading", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    const filesKey = ["plan-files", "service-1", "plan-1"] as const;
+    const otherFilesKey = ["plan-files", "service-1", "plan-2"] as const;
+    let savedArrangement = "old";
+    const observer = new InfiniteQueryObserver(queryClient, {
+      queryKey: filesKey,
+      initialPageParam: 0,
+      queryFn: ({ pageParam }) => ({
+        files: [`${savedArrangement}-${pageParam === 0 ? "chart" : "audio"}`],
+        nextOffset: pageParam === 0 ? 100 : null,
+      }),
+      getNextPageParam: (last) => last.nextOffset ?? undefined,
+      staleTime: Infinity,
+    });
+    const unsubscribe = observer.subscribe(() => {});
+    await observer.refetch();
+    await observer.fetchNextPage();
+    queryClient.setQueryData(otherFilesKey, { files: ["other-plan-chart"] });
+
+    savedArrangement = "new";
+    settlePlanItemsQuery(queryClient, queryKey);
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+
+    expect(
+      observer.getCurrentResult().data?.pages.flatMap((page) => page.files)
+    ).toStrictEqual(["new-chart", "new-audio"]);
+    expect(queryClient.getQueryState(otherFilesKey)?.isInvalidated).toBeFalsy();
+    expect(queryClient.getQueryData(otherFilesKey)).toStrictEqual({
+      files: ["other-plan-chart"],
+    });
+    unsubscribe();
+    queryClient.clear();
+  });
+
+  it("refreshes song history and suggested options after a plan edit", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient();
+    let savedKey = "C";
+    const observers = [
+      new QueryObserver(queryClient, {
+        queryKey: ["song-history", "song-1"],
+        queryFn: () => savedKey,
+        staleTime: Infinity,
+      }),
+      new QueryObserver(queryClient, {
+        queryKey: ["song-options", "song-1", "service-1"],
+        queryFn: () => savedKey,
+        staleTime: Infinity,
+      }),
+    ];
+    const unsubscribe = observers.map((observer) =>
+      observer.subscribe(() => {})
+    );
+    await Promise.all(
+      observers.map(async (observer) => await observer.refetch())
+    );
+    savedKey = "D";
+    settlePlanItemsQuery(queryClient, ["plan-items", "service-1", "plan-1"]);
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(
+      observers.map((observer) => observer.getCurrentResult().data)
+    ).toStrictEqual(["D", "D"]);
+    for (const stop of unsubscribe) {
+      stop();
+    }
+    queryClient.clear();
+  });
+
+  it("loads files from an empty arrangement after overlapping edits finish", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    let serverFiles: string[] = [];
+    const observer = new QueryObserver(queryClient, {
+      queryKey: ["plan-files", "service-1", "plan-1"],
+      queryFn: () => serverFiles,
+      staleTime: Infinity,
+    });
+    const unsubscribe = observer.subscribe(() => {});
+    await observer.refetch();
+    settlePlanItemsQuery(queryClient, queryKey);
+    const finishEdit = Promise.withResolvers<undefined>();
+    const mutation = new MutationObserver(queryClient, {
+      mutationKey: queryKey,
+      mutationFn: async () => {
+        await finishEdit.promise;
+        serverFiles = ["new-arrangement-chart"];
+      },
+      onSettled: () => {
+        settlePlanItemsQuery(queryClient, queryKey);
+      },
+    });
+    const edit = mutation.mutate();
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(observer.getCurrentResult().data).toStrictEqual([]);
+    finishEdit.resolve();
+    await edit;
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(observer.getCurrentResult().data).toStrictEqual([
+      "new-arrangement-chart",
+    ]);
+    unsubscribe();
+    queryClient.clear();
   });
 
   it("keeps an added song visible while a key edit outlasts an earlier refresh timer", async () => {

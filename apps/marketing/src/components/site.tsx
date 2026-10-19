@@ -100,59 +100,63 @@ const OpenAppLink = () => (
 /**
  * The header stays pinned at every width. Desktop shows the links inline; phones get a menu
  * button that opens the shared full-screen menu (`@pcobooster/ui/mobile-menu`) under the header.
+ * The menu renders beside the sticky header, not inside it, so Safari 26 keeps its glass
+ * toolbar over the open menu instead of drawing a hard line above it.
  */
 export const SiteHeader = () => {
   const menu = useMobileMenu();
 
   return (
-    <header
-      data-open={menu.open ? "" : undefined}
-      className="group/menu sticky top-0 z-20"
-    >
-      <div className="bg-background relative z-10 group-data-[open]/menu:bg-transparent">
-        <div className="wrap flex h-14 items-center justify-between gap-3 md:grid md:h-(--header-height) md:grid-cols-[1fr_auto_1fr]">
-          <div className="flex items-center gap-2.5 justify-self-start">
-            <Brand />
-            <span className="hidden sm:inline-flex">
-              <Badge variant="brand">Beta</Badge>
-            </span>
-          </div>
-          <nav
-            aria-label="Main navigation"
-            className="text-muted-foreground hidden gap-1 md:flex"
-          >
-            {NAV_LINKS.map((link) => (
-              <LinkButton
-                key={link.href}
-                href={link.href}
-                variant="ghost"
-                size="sm"
-              >
-                {link.label}
-              </LinkButton>
-            ))}
-          </nav>
-          <div className="flex items-center gap-1 justify-self-end">
-            <OpenAppLink />
-            <span className="-mr-2 md:hidden">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={menu.open ? "Close menu" : "Open menu"}
-                aria-expanded={menu.open}
-                aria-controls="mobile-menu"
-                onClick={menu.handleToggle}
-              >
-                <MobileMenuIcon open={menu.open} />
-              </Button>
-            </span>
+    <>
+      <header
+        data-open={menu.open ? "" : undefined}
+        className="group/menu sticky top-0 z-20"
+      >
+        <div className="bg-background pt-safe relative z-10 group-data-[open]/menu:bg-transparent">
+          <div className="wrap flex h-14 items-center justify-between gap-3 md:grid md:h-(--header-height) md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+            <div className="flex items-center gap-2.5 justify-self-start">
+              <Brand />
+              <span className="hidden sm:inline-flex">
+                <Badge variant="brand">Beta</Badge>
+              </span>
+            </div>
+            <nav
+              aria-label="Main navigation"
+              className="text-muted-foreground hidden gap-1 md:flex"
+            >
+              {NAV_LINKS.map((link) => (
+                <LinkButton
+                  key={link.href}
+                  href={link.href}
+                  variant="ghost"
+                  size="sm"
+                >
+                  {link.label}
+                </LinkButton>
+              ))}
+            </nav>
+            <div className="flex items-center gap-1 justify-self-end">
+              <OpenAppLink />
+              <span className="-mr-2 md:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={menu.open ? "Close menu" : "Open menu"}
+                  aria-expanded={menu.open}
+                  aria-controls="mobile-menu"
+                  onClick={menu.handleToggle}
+                >
+                  <MobileMenuIcon open={menu.open} />
+                </Button>
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-      <MobileMenuOverlay id="mobile-menu" open={menu.open} className="pt-14">
+      </header>
+      <MobileMenuOverlay id="mobile-menu" open={menu.open} className="z-19">
         <nav
           aria-label="Mobile navigation"
-          className="wrap flex h-full flex-col pt-6 pb-8"
+          className="wrap pb-safe-8 flex h-full flex-col overflow-y-auto overscroll-contain pt-20"
         >
           <ul>
             {NAV_LINKS.map((link, index) => (
@@ -164,7 +168,7 @@ export const SiteHeader = () => {
                 <a
                   href={link.href}
                   onClick={menu.handleClose}
-                  className="font-book block py-3 text-4xl tracking-tight"
+                  className="font-book active:text-muted-foreground block py-3 text-4xl tracking-tight select-none"
                 >
                   {link.label}
                 </a>
@@ -185,12 +189,12 @@ export const SiteHeader = () => {
           </div>
         </nav>
       </MobileMenuOverlay>
-    </header>
+    </>
   );
 };
 
 export const SiteFooter = () => (
-  <footer className="wrap mt-[clamp(64px,8vw,112px)] pb-8">
+  <footer className="wrap pb-safe-8 mt-[clamp(64px,8vw,112px)]">
     <Separator />
     <div className="flex flex-col justify-between gap-5 pt-10 md:flex-row md:gap-8">
       <div>

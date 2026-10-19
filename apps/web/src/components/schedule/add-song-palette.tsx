@@ -269,7 +269,7 @@ const TappedSongPreview = ({
         Songs
       </Button>
     </div>
-    <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <SongPreview song={song} {...previewProps} />
     </div>
     <div className="p-3">
@@ -290,8 +290,6 @@ const TappedSongPreview = ({
 interface AddSongPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** "Add song", or "Replace Egypt" when swapping a song out. */
-  title: string;
   serviceTypeId: string | null;
   planId: string | null;
   /** The plan's service date, which times and history are counted from. */
@@ -310,7 +308,6 @@ interface AddSongPaletteProps {
 export const AddSongPalette = ({
   open,
   onOpenChange,
-  title,
   serviceTypeId,
   planId,
   planDate,
@@ -360,7 +357,7 @@ export const AddSongPalette = ({
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
-      title={title}
+      title="Add song"
       description="Search the song catalog"
       className="sm:max-w-2xl"
     >
@@ -384,7 +381,7 @@ export const AddSongPalette = ({
         shouldFilter={false}
         value={activeSongId}
         onValueChange={setHighlightedSongId}
-        label={title}
+        label="Add song"
       >
         <CommandInput
           value={query}
@@ -394,7 +391,7 @@ export const AddSongPalette = ({
         />
         <div
           className={cn(
-            "mt-1 grid h-[min(26rem,60svh)]",
+            "mt-1 grid h-[min(26rem,60svh)] grid-cols-1",
             previewSong !== null && "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
           )}
         >
@@ -425,7 +422,7 @@ export const AddSongPalette = ({
             )}
           </CommandList>
           {previewSong === null ? null : (
-            <div className="animate-in fade-in-0 slide-in-from-right-2 border-border/60 hidden min-w-0 overflow-y-auto border-l duration-150 ease-out motion-reduce:animate-none md:block">
+            <div className="animate-in fade-in-0 slide-in-from-right-2 border-border/60 hidden min-w-0 overflow-y-auto overscroll-contain border-l duration-150 ease-out motion-reduce:animate-none md:block">
               <SongPreview
                 key={previewSong.id}
                 song={previewSong}

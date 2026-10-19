@@ -133,6 +133,202 @@ describe("faults", () => {
     vi.unstubAllGlobals();
   });
 
+  it("alerts on a provider's rejected write while keeping the client's BAD_REQUEST", async () => {
+    const captures: Request[] = [];
+    vi.stubGlobal(
+      "fetch",
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        captures.push(new Request(input, init));
+        return await Promise.resolve(new Response("ok"));
+      }
+    );
+    const route = serve({
+      report: postHogProcedureReporter("phc_test_key"),
+      httpClient: httpClientFor(
+        async () =>
+          await Promise.resolve(
+            Response.json(
+              {
+                errors: [
+                  {
+                    source: { parameter: "length" },
+                    detail: "can not be longer than 24 hours",
+                  },
+                  {
+                    source: { pointer: "/data/attributes/service_position" },
+                    detail: "is not included in the list",
+                  },
+                  {
+                    source: { parameter: "title" },
+                    detail: "Private church title is already taken",
+                  },
+                  {
+                    source: { parameter: "private_church_title" },
+                    detail: "Private church title is invalid",
+                  },
+                ],
+                privateData: "private provider response",
+              },
+              { status: 422 }
+            )
+          )
+      ),
+    });
+    const response = await route.request(
+      "/api/v1/service-types/1/plans/2/items",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-request-id": "request-422",
+          "x-pcobooster-client": "web;api=2",
+        },
+        body: JSON.stringify({
+          title: "Private church title",
+          description: "Private church notes",
+          length: 90_000,
+        }),
+      }
+    );
+    const body: unknown = await response.json();
+    expect({ status: response.status, body }).toStrictEqual({
+      status: 400,
+      body: {
+        _tag: "InvalidInput",
+        message:
+          "Planning Center didn't accept that change: Length can not be longer than 24 hours; Service position is not included in the list; Title Private church title is already taken; Private church title is invalid",
+      },
+    });
+    expect(outcomeLines(route)[0]?.fields).toMatchObject({
+      code: "BAD_REQUEST",
+      status: 400,
+    });
+    expect(captures).toHaveLength(1);
+    const capture = await captures[0]?.text();
+    expect(JSON.parse(capture ?? "{}")).toMatchObject({
+      event: "$exception",
+      distinct_id: "pcobooster-api",
+      properties: {
+        error_code: "PROVIDER_REJECTED",
+        $exception_fingerprint:
+          "api:/api/v1/service-types/:serviceTypeId/plans/:planId/items:PROVIDER_REJECTED",
+        $exception_list: [
+          {
+            type: "ProviderRejected",
+            value: "Planning Center rejected a write",
+          },
+        ],
+        path: "/api/v1/service-types/:serviceTypeId/plans/:planId/items",
+        method: "POST",
+        request_id: "request-422",
+        procedure: "planItems.create",
+        provider: "planning-center",
+        provider_status: 422,
+        provider_errors: [
+          { attribute: "length", detail: "can not be longer than 24 hours" },
+          {
+            attribute: "service_position",
+            detail: "is not included in the list",
+          },
+          {
+            attribute: "title",
+            detail: "Validation failed (detail omitted for privacy)",
+          },
+          { detail: "Validation failed (detail omitted for privacy)" },
+        ],
+      },
+    });
+    expect({
+      leaksChurchText: capture?.includes("Private church"),
+      leaksResponse: capture?.includes("private provider response"),
+      url: captures[0]?.url,
+    }).toStrictEqual({
+      leaksChurchText: false,
+      leaksResponse: false,
+      url: "https://us.i.posthog.com/i/v0/e/",
+    });
+  });
+
+  it("keeps ordinary invalid input and provider read validation quiet", async () => {
+    const { reports, report } = recordingReporter();
+    const route = serve({
+      report,
+      httpClient: httpClientFor(
+        async () =>
+          await Promise.resolve(
+            Response.json(
+              { errors: [{ detail: "invalid filter" }] },
+              { status: 422 }
+            )
+          )
+      ),
+    });
+    const invalid = await route.request(
+      "/api/v1/service-types/1/plans/2/items",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-pcobooster-client": "web;api=2",
+        },
+        body: JSON.stringify({ length: -1 }),
+      }
+    );
+    const read = await route.fetch(rawGet("/api/v1/service-types/1/plans/2"));
+    expect({
+      statuses: [invalid.status, read.status],
+      errors: reports.map(({ error }) => error.message),
+    }).toStrictEqual({ statuses: [400, 400], errors: [] });
+    await expect(read.json()).resolves.toMatchObject({
+      _tag: "InvalidInput",
+      message: "Planning Center didn't accept that change: invalid filter",
+    });
+    expect(reports).toStrictEqual([]);
+  });
+
+  it("keeps a provider POST used to open a file quiet as a read", async () => {
+    const { reports, report } = recordingReporter();
+    const providerMethods: string[] = [];
+    const route = serve({
+      report,
+      httpClient: httpClientFor(async (input, init) => {
+        const request = new Request(input, init);
+        providerMethods.push(request.method);
+        return await Promise.resolve(
+          request.method === "POST"
+            ? Response.json(
+                { errors: [{ detail: "is invalid" }] },
+                { status: 422 }
+              )
+            : Response.json({
+                data: {
+                  type: "Attachment",
+                  id: "3",
+                  attributes: { filename: "chart.pdf", downloadable: true },
+                },
+              })
+        );
+      }),
+    });
+    const response = await route.fetch(
+      rawGet("/api/v1/service-types/1/plans/2/files/3/link")
+    );
+    expect({ status: response.status, providerMethods }).toStrictEqual({
+      status: 400,
+      providerMethods: ["GET", "POST"],
+    });
+    await expect(response.json()).resolves.toStrictEqual({
+      _tag: "InvalidInput",
+      message: "Planning Center didn't accept that change: is invalid",
+    });
+    expect(reports).toStrictEqual([]);
+    expect(
+      route.logs.filter(
+        ({ message }) => message === "Planning Center rejected a write"
+      )
+    ).toHaveLength(0);
+  });
+
   it("answers a product fault with its status and code, logs it at info, and never reports it", async () => {
     const { reports, report } = recordingReporter();
     const route = serve({

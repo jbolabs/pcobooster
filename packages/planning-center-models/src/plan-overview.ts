@@ -7,7 +7,13 @@ import type {
 
 import { collectUnnotifiedPeople } from "./scheduling-notifications";
 
-export type PlanView = "overview" | "lineup" | "plan" | "times" | "assign";
+export type PlanView =
+  | "overview"
+  | "lineup"
+  | "plan"
+  | "times"
+  | "assign"
+  | "practice";
 
 /** A position that still needs people, as a link target into Assign. */
 export interface OpenPosition {
@@ -89,6 +95,9 @@ export const summarizeStaffing = (
 
 export interface PlanSong {
   id: string;
+  /** The song in the library, and the arrangement the plan uses; null for an unlinked item. */
+  songId: string | null;
+  arrangementId: string | null;
   title: string;
   /** "G", or "G to A" when the song modulates; null when the item has no key. */
   keyLabel: string | null;
@@ -151,6 +160,8 @@ export const summarizeOrder = (items: readonly PlanItem[]): PlanOrder => {
     if (item.itemType === "song") {
       songs.push({
         id: item.id,
+        songId: item.song?.id ?? null,
+        arrangementId: item.arrangement?.id ?? null,
         title: item.song?.title ?? item.title,
         keyLabel: keyLabelOf(item.key),
         length: item.length,

@@ -1,14 +1,20 @@
+import { failureMessage } from "@pcobooster/client/product-client";
 import { callForQuery } from "@pcobooster/client/query";
 import type {
   PlanFile,
-  PlanFileLink,
   PlanFileOpenMode,
   PlanFiles,
 } from "@pcobooster/contracts/http/plan-files";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
+import { createPlanFileQueryOptions } from "@/lib/plan-file-query";
 import { queryKeys } from "@/lib/query-keys";
 import { productClient } from "@/product-client";
 
@@ -52,24 +58,62 @@ export const useAllPlanFiles = (serviceTypeId: string, planId: string) => {
   };
 };
 
-/** A fresh signed link each time a file opens: Planning Center's links expire quickly. */
+/** Reuse PDF bytes between visits; other media still gets a fresh signed link. */
 export const usePlanFileLink = (
   serviceTypeId: string,
   planId: string,
   file: PlanFile,
   as: PlanFileOpenMode
-) =>
-  useQuery<PlanFileLink>({
-    queryKey: queryKeys.planFileLink(serviceTypeId, planId, file.id, as),
-    queryFn: async (context) =>
-      await callForQuery(context, productClient, (api) =>
-        api.planFiles.open({
-          params: { serviceTypeId, planId, attachmentId: file.id },
-          query: as === "link" ? {} : { as },
-        })
-      ),
-    staleTime: 0,
-    gcTime: 0,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
+) => {
+  const input = { serviceTypeId, planId, attachmentId: file.id, as };
+  return useQuery(
+    createPlanFileQueryOptions(
+      input,
+      async (context) =>
+        await callForQuery(context, productClient, (api) =>
+          api.planFiles.open({
+            params: { serviceTypeId, planId, attachmentId: file.id },
+            query: as === "link" ? {} : { as },
+          })
+        )
+    )
+  );
+};
+
+/** A cached PDF's original URL may have expired. Resolve a fresh link on the click. */
+export const useOpenPlanFileOriginal = (
+  serviceTypeId: string,
+  planId: string,
+  file: PlanFile
+) => {
+  const queryClient = useQueryClient();
+  return async (): Promise<void> => {
+    const tab = window.open("", "_blank");
+    if (tab !== null) {
+      tab.opener = null;
+    }
+    const input = { serviceTypeId, planId, attachmentId: file.id };
+    try {
+      const { url } = await queryClient.query(
+        createPlanFileQueryOptions(
+          input,
+          async (context) =>
+            await callForQuery(context, productClient, (api) =>
+              api.planFiles.open({ params: input, query: {} })
+            )
+        )
+      );
+      if (tab === null) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        tab.location.href = url;
+      }
+    } catch (error) {
+      tab?.close();
+      const fallback = "The original file didn’t open.";
+      toast.error(
+        error instanceof Error ? failureMessage(error, fallback) : fallback
+      );
+    }
+  };
+};

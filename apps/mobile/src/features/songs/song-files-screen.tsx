@@ -1,3 +1,7 @@
+import {
+  activeFirst,
+  planningCenterArrangementUrl,
+} from "@pcobooster/planning-center-models/song-detail";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import type { NativeStackHeaderItem } from "expo-router";
@@ -35,12 +39,7 @@ import {
   groupAttachments,
 } from "./attachments";
 import type { SongAttachment, SongAttachments } from "./attachments";
-import {
-  activeFirst,
-  planningCenterArrangementUrl,
-  songLoadFailure,
-  songLoadFailureCopy,
-} from "./detail";
+import { songLoadFailure, songLoadFailureCopy } from "./detail";
 import type { ChordChartArrangement } from "./detail";
 import { attachmentReads, songFileHref } from "./preview-reads";
 import { songsReads } from "./reads";

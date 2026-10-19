@@ -37,6 +37,12 @@ export const featureFlags = {
       "Shows the Songs pages (the song library and chord chart editor) and serves their API, which writes arrangement chord charts to Planning Center. Managed by Alchemy; dashboard edits are overwritten on deploy.",
     enabled: { local: true, preview: true, production: true },
   },
+  practice: {
+    key: "practice-view",
+    description:
+      "Shows a plan's Practice view (charts, lyrics, and rehearsal tracks for each song). Production serves it only to targeted users. Managed by Alchemy; dashboard edits are overwritten on deploy.",
+    enabled: { local: true, preview: true, production: false },
+  },
 } as const satisfies Readonly<Record<FeatureFlagName, BooleanFeatureFlag>>;
 
 export const deploymentTier = (stage: {

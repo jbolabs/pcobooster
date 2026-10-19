@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DashboardPage } from "@/components/dashboard-page";
-import { assertPlanView, getPlanViewLabel } from "@/lib/app-routes";
+import {
+  assertPlanView,
+  getPlanViewLabel,
+  planViewFeatures,
+} from "@/lib/app-routes";
+import { featureGuard } from "@/lib/features";
 import { planWorkspaceSearchSchema } from "@/lib/route-search";
 
 const PlanWorkspacePage = () => {
@@ -22,6 +27,12 @@ export const Route = createFileRoute(
     stringify: ({ view }) => ({ view }),
   },
   validateSearch: planWorkspaceSearchSchema,
+  beforeLoad: async ({ context, params }) => {
+    const flag = planViewFeatures[params.view];
+    if (flag !== undefined) {
+      await featureGuard(flag)({ context });
+    }
+  },
   head: ({ params }) => ({
     meta: [{ title: `${getPlanViewLabel(params.view)} · pcobooster.com` }],
   }),

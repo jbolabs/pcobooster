@@ -64,8 +64,10 @@ const MenuLink = ({
     props: {
       "aria-current": active ? "page" : undefined,
       className: cn(
-        "block py-2.5 text-4xl tracking-tight outline-none focus-visible:underline",
-        active ? "text-foreground" : "text-muted-foreground"
+        "block py-2.5 text-4xl tracking-tight outline-none select-none focus-visible:underline",
+        active
+          ? "text-foreground"
+          : "text-muted-foreground active:text-foreground"
       ),
       children: label,
     },
@@ -141,7 +143,7 @@ const AccountRow = ({
     props: {
       ...props,
       className:
-        "focus-visible:ring-ring/50 text-muted-foreground flex h-11 w-full items-center gap-3 rounded-lg text-left text-base outline-none focus-visible:ring-2 disabled:opacity-50",
+        "focus-visible:ring-ring/50 text-muted-foreground active:text-foreground flex h-11 w-full items-center gap-3 rounded-lg text-left text-base outline-none focus-visible:ring-2 disabled:opacity-50",
       children,
     },
   });
@@ -348,8 +350,10 @@ const MenuAccount = ({
 /**
  * The phone header: a pinned bar with the menu button on the right and the
  * shared full-screen menu (`@pcobooster/ui/mobile-menu`) beneath it. The bar
- * covers content scrolling under it with a solid background; the header itself
- * stays filter-free so the fixed overlay is not trapped. `className` places the header (for example,
+ * covers content scrolling under it with a solid background. The menu renders
+ * beside the sticky header, stacked just under it, never inside it: Safari 26
+ * reads a sticky ancestor as a layer at its bottom edge and draws a hard line
+ * above its toolbar. `className` places the header (for example,
  * `-mx-4` inside padded pages); `subbar` is a second pinned row under the bar,
  * such as plan view tabs, hidden while the menu is open.
  */
@@ -376,61 +380,59 @@ export const MobileHeader = ({
   );
 
   return (
-    <header
-      data-open={menu.open ? "" : undefined}
-      className={cn(
-        "group/menu pt-safe sticky top-0 z-30 shrink-0 md:hidden",
-        className
-      )}
-    >
-      {/*
-       * The background sits on an absolute layer, not the sticky header: Safari 26
-       * tints its bars from sticky elements' own backgrounds, while this layer
-       * lets the header show through the status bar like the page beneath.
-       */}
-      <div
-        aria-hidden
-        className="bg-background absolute inset-0 group-data-open/menu:hidden"
-      />
-      <div className="relative z-10 flex h-14 items-center gap-1 px-4">
+    <>
+      <header
+        data-open={menu.open ? "" : undefined}
+        className={cn(
+          "group/menu pt-safe sticky top-0 z-30 shrink-0 md:hidden",
+          className
+        )}
+      >
         {/*
-         * Fades with the overlay through the container's own opacity: hiding
-         * with `visibility` lets children with `transition-all` (buttons)
-         * animate it and linger after the menu opens.
+         * The background sits on an absolute layer, not the sticky header: Safari 26
+         * tints its bars from sticky elements' own backgrounds, while this layer
+         * lets the header show through the status bar like the page beneath.
          */}
         <div
-          inert={menu.open}
-          className="flex min-w-0 flex-1 items-center gap-1 transition-opacity duration-150 ease-(--ease-snappy) group-data-open/menu:opacity-0"
-        >
-          {children}
+          aria-hidden
+          className="bg-background absolute inset-0 group-data-open/menu:hidden"
+        />
+        <div className="relative z-10 flex h-14 items-center gap-1 px-4">
+          {/*
+           * Fades with the overlay through the container's own opacity: hiding
+           * with `visibility` lets children with `transition-all` (buttons)
+           * animate it and linger after the menu opens.
+           */}
+          <div
+            inert={menu.open}
+            className="flex min-w-0 flex-1 items-center gap-1 transition-opacity duration-150 ease-(--ease-snappy) group-data-open/menu:opacity-0"
+          >
+            {children}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-lg"
+            aria-label={menu.open ? "Close menu" : "Open menu"}
+            aria-expanded={menu.open}
+            aria-controls={MOBILE_MENU_ID}
+            data-tour="mobile-menu"
+            className="-mr-2 shrink-0"
+            onClick={menu.handleToggle}
+          >
+            <MobileMenuIcon open={menu.open} />
+          </Button>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-lg"
-          aria-label={menu.open ? "Close menu" : "Open menu"}
-          aria-expanded={menu.open}
-          aria-controls={MOBILE_MENU_ID}
-          data-tour="mobile-menu"
-          className="-mr-2 shrink-0"
-          onClick={menu.handleToggle}
-        >
-          <MobileMenuIcon open={menu.open} />
-        </Button>
-      </div>
-      {subbar === undefined ? null : (
-        <div
-          inert={menu.open}
-          className="relative z-10 transition-opacity duration-150 ease-(--ease-snappy) group-data-open/menu:opacity-0"
-        >
-          {subbar}
-        </div>
-      )}
-      <MobileMenuOverlay
-        id={MOBILE_MENU_ID}
-        open={menu.open}
-        className="pt-safe"
-      >
+        {subbar === undefined ? null : (
+          <div
+            inert={menu.open}
+            className="relative z-10 transition-opacity duration-150 ease-(--ease-snappy) group-data-open/menu:opacity-0"
+          >
+            {subbar}
+          </div>
+        )}
+      </header>
+      <MobileMenuOverlay id={MOBILE_MENU_ID} open={menu.open} className="z-29">
         <nav
           aria-label="Mobile navigation"
           className="pb-safe-4 flex h-full flex-col justify-between gap-8 overflow-y-auto overscroll-contain px-4 pt-18"
@@ -451,6 +453,6 @@ export const MobileHeader = ({
         open={feedbackOpen}
         onOpenChange={setFeedbackOpen}
       />
-    </header>
+    </>
   );
 };

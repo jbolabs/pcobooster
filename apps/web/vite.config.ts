@@ -66,9 +66,6 @@ const faviconForStage = (stage: string | undefined): string => {
 
 /** Public values inlined into both the server and browser bundles. */
 const publicDefines = (devServer: boolean) => ({
-  "import.meta.env.VITE_DEVELOPMENT_PROFILE": JSON.stringify(
-    devServer ? (process.env.DEV_DATA_PROFILE ?? "Live data · read-only") : ""
-  ),
   // The stack binds the same public configuration to the API.
   "import.meta.env.VITE_POSTHOG_KEY": JSON.stringify(
     process.env.POSTHOG_PROJECT_KEY ?? ""

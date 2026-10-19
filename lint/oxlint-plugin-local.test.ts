@@ -13,6 +13,10 @@ import {
   noPopoverContentPaddingRule,
   noTransitionColorsRule,
   preferSharedControlsRule,
+  noSmallFieldTextRule,
+  scrollContainerOverscrollRule,
+  fieldKeyboardHintsRule,
+  gridTracksShrinkRule,
 } from "./oxlint-plugin-local.mjs";
 
 RuleTester.describe = describe;
@@ -807,6 +811,217 @@ ruleTester.run(
         name: "MenuPrimitive.GroupLabel outside a group",
         code: `<MenuPrimitive.GroupLabel>Section</MenuPrimitive.GroupLabel>`,
         errors: [{ messageId: "outsideGroup" }],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "no-small-field-text",
+  noSmallFieldTextRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "16px on touch, smaller for fine pointers on wide screens",
+        code: `<Input className="text-base md:pointer-fine:text-sm" />`,
+      },
+      {
+        name: "file button and placeholder parts",
+        code: `<input className="text-base file:text-sm placeholder:text-xs" />`,
+      },
+      {
+        name: "checkbox takes no typed text",
+        code: `<input type="checkbox" className="text-xs" />`,
+      },
+      {
+        name: "small text on a non-field",
+        code: `<span className="text-xs">Hint</span>`,
+      },
+    ],
+    invalid: [
+      {
+        name: "width-gated small text still reaches tablets and landscape phones",
+        code: `<Textarea className="text-base md:text-sm" />`,
+        errors: [
+          { messageId: "smallFieldText", data: { token: "md:text-sm" } },
+        ],
+      },
+      {
+        name: "arbitrary pixel size",
+        code: `<HighlightedTextarea className="text-[13px]" />`,
+        errors: [
+          { messageId: "smallFieldText", data: { token: "text-[13px]" } },
+        ],
+      },
+      {
+        name: "class constant on a primitive input",
+        code: `
+        const FIELD = "h-9 text-sm";
+        const Field = () => <InputPrimitive className={cn(FIELD, "px-3")} />;`,
+        errors: [{ messageId: "smallFieldText", data: { token: "text-sm" } }],
+      },
+      {
+        name: "member-expression input",
+        code: `<CommandPrimitive.Input className="text-xs" />`,
+        errors: [{ messageId: "smallFieldText", data: { token: "text-xs" } }],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "scroll-container-overscroll",
+  scrollContainerOverscrollRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "contained vertical scroller",
+        code: `<div className="max-h-72 overflow-y-auto overscroll-contain" />`,
+      },
+      {
+        name: "overscroll class in another cn argument",
+        code: `<div className={cn("overflow-y-auto", open && "md:overscroll-contain")} />`,
+      },
+      {
+        name: "sideways strip contained on x",
+        code: `<div className="flex overflow-x-auto overscroll-x-contain" />`,
+      },
+      {
+        name: "class map entry holds both",
+        code: `const layouts = { scroll: "md:overflow-y-auto md:overscroll-contain" };`,
+      },
+      {
+        name: "clipping is not scrolling",
+        code: `<div className="overflow-hidden" />`,
+      },
+    ],
+    invalid: [
+      {
+        name: "menu list chains to the page",
+        code: `<div className="max-h-72 overflow-y-auto" />`,
+        errors: [{ messageId: "missingOverscroll", data: { axes: "y" } }],
+      },
+      {
+        name: "x containment leaves the y axis of a two-axis scroller",
+        code: `<pre className="h-48 overflow-auto overscroll-x-contain" />`,
+        errors: [{ messageId: "missingOverscroll", data: { axes: "y" } }],
+      },
+      {
+        name: "cva base",
+        code: `const list = cva("flex overflow-x-auto", { variants: {} });`,
+        errors: [{ messageId: "missingOverscroll", data: { axes: "x" } }],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "field-keyboard-hints",
+  fieldKeyboardHintsRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "search field with keyboard hints",
+        code: `<InputGroupInput placeholder="Search people" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" />`,
+      },
+      {
+        name: "digits-only code",
+        code: `<Input inputMode="numeric" placeholder="1234567" />`,
+      },
+      {
+        name: "plain name field",
+        code: `<Input placeholder="Position name" />`,
+      },
+    ],
+    invalid: [
+      {
+        name: "filter field without hints",
+        code: `<InputGroupInput aria-label="Filter people" />`,
+        errors: [{ messageId: "searchKeyboard" }],
+      },
+      {
+        name: "search field missing autocorrect",
+        code: `<input placeholder="Search songs" enterKeyHint="search" autoCapitalize="none" />`,
+        errors: [{ messageId: "searchKeyboard" }],
+      },
+      {
+        name: "numeric keypad for a value with a colon",
+        code: `<Input inputMode="numeric" placeholder="m:ss" />`,
+        errors: [
+          { messageId: "numericSeparators", data: { placeholder: "m:ss" } },
+        ],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "grid-tracks-shrink",
+  gridTracksShrinkRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "one shrinkable column",
+        code: `<div className="grid grid-cols-1 gap-3" />`,
+      },
+      {
+        name: "template behind the grid's own variant",
+        code: `<div className="flex md:grid md:grid-cols-[minmax(0,1fr)_auto]" />`,
+      },
+      {
+        name: "template in another cn argument",
+        code: `<div className={cn("grid gap-2", wide ? "grid-cols-2" : "grid-cols-1")} />`,
+      },
+      {
+        name: "content-sized on purpose",
+        code: `<span className="grid grid-cols-[max-content]" />`,
+      },
+      {
+        name: "fr tracks floored at zero",
+        code: `<div className="grid grid-cols-[4.5rem_minmax(0,1fr)_minmax(0,2fr)]" />`,
+      },
+      {
+        name: "a grid value that is not a class",
+        code: `<Toggle value="grid" />`,
+      },
+      {
+        name: "flowing into columns",
+        code: `<div className="grid grid-flow-col auto-cols-max" />`,
+      },
+    ],
+    invalid: [
+      {
+        name: "dialog box grows to a long file name",
+        code: `const dialog = cva("fixed grid max-w-md gap-6 p-6");`,
+        errors: [{ messageId: "implicitColumn", data: { token: "grid" } }],
+        output: `const dialog = cva("fixed grid grid-cols-1 max-w-md gap-6 p-6");`,
+      },
+      {
+        name: "bare below the breakpoint",
+        code: `<div className="grid gap-4 md:grid-cols-2" />`,
+        errors: [{ messageId: "implicitColumn", data: { token: "grid" } }],
+        output: `<div className="grid grid-cols-1 gap-4 md:grid-cols-2" />`,
+      },
+      {
+        name: "bare behind a variant",
+        code: `<div className="hidden md:grid" />`,
+        errors: [{ messageId: "implicitColumn", data: { token: "md:grid" } }],
+        output: `<div className="hidden md:grid md:grid-cols-1" />`,
+      },
+      {
+        name: "fr tracks keep content width as their minimum",
+        code: `<div className="grid grid-cols-[auto_1fr] md:grid-cols-[1.15fr_minmax(0,380px)_2fr]" />`,
+        errors: [
+          {
+            messageId: "bareFrTrack",
+            data: { token: "grid-cols-[auto_1fr]" },
+          },
+          {
+            messageId: "bareFrTrack",
+            data: { token: "md:grid-cols-[1.15fr_minmax(0,380px)_2fr]" },
+          },
+        ],
+        output: `<div className="grid grid-cols-[auto_minmax(0,1fr)] md:grid-cols-[minmax(0,1.15fr)_minmax(0,380px)_minmax(0,2fr)]" />`,
       },
     ],
   }

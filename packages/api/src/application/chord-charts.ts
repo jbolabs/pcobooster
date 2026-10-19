@@ -1,9 +1,11 @@
 import type { ApplicationFault } from "@pcobooster/api/application/errors";
+import type { PlanningCenterAccess } from "@pcobooster/api/application/planning-center-access";
 import {
   explainPlanningCenterDenial,
   withPlanningCenterFaults,
 } from "@pcobooster/api/application/planning-center-access";
 import { PlanningCenterSongs } from "@pcobooster/api/application/planning-center/songs";
+import { invalidateSongCatalog } from "@pcobooster/api/application/song-catalog-revision";
 import { searchLyrics } from "@pcobooster/api/modules/lyrics/lrclib-search";
 import type { LyricsSearchDependencies } from "@pcobooster/api/modules/lyrics/lrclib-search";
 import {
@@ -15,6 +17,7 @@ import {
   prepareChordChartUpdate,
 } from "@pcobooster/api/modules/planning-center/chord-charts";
 import type { PreparedChordChartUpdate } from "@pcobooster/api/modules/planning-center/chord-charts";
+import type { Server } from "@pcobooster/api/server";
 import type {
   ChordChartArrangement,
   ChordChartCreateInput,
@@ -83,10 +86,18 @@ export const createChordChart = (
 
 export const addChordChartSong = (
   input: ChordChartSongCreateInput
-): Effect.Effect<ChordChartSongOutput, ApplicationFault, PlanningCenterSongs> =>
+): Effect.Effect<
+  ChordChartSongOutput,
+  ApplicationFault,
+  PlanningCenterSongs | PlanningCenterAccess | Server
+> =>
   Effect.gen(function* addSong() {
     const songsService = yield* PlanningCenterSongs;
-    return yield* createChordChartSong(input, songsService);
+    return yield* createChordChartSong(
+      input,
+      songsService,
+      invalidateSongCatalog
+    );
   }).pipe(editDenied, withPlanningCenterFaults);
 
 /**

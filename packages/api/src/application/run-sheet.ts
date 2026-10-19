@@ -1,16 +1,15 @@
 import { ensureRequestIsOpen } from "@pcobooster/api/application/context";
 import type { RequestContext } from "@pcobooster/api/application/context";
 import type { ApplicationFault } from "@pcobooster/api/application/errors";
-import {
-  PlanningCenterAccess,
-  withPlanningCenterFaults,
-} from "@pcobooster/api/application/planning-center-access";
+import type { PlanningCenterAccess } from "@pcobooster/api/application/planning-center-access";
+import { withPlanningCenterFaults } from "@pcobooster/api/application/planning-center-access";
 import { PlanningCenterCatalog } from "@pcobooster/api/application/planning-center/catalog";
 import { OrganizationTimeZone } from "@pcobooster/api/application/planning-center/organization-time-zone";
 import { PlanningCenterPeople } from "@pcobooster/api/application/planning-center/people";
 import { PlanningCenterPlanItems } from "@pcobooster/api/application/planning-center/plan-items";
 import { PlanningCenterPlans } from "@pcobooster/api/application/planning-center/plans";
 import { PlanningCenterSongs } from "@pcobooster/api/application/planning-center/songs";
+import { songCatalogCacheScope } from "@pcobooster/api/application/song-catalog-revision";
 import {
   commitCreatePlanItem,
   prepareCreatePlanItem,
@@ -108,7 +107,7 @@ export const prepareRunSheetItemCreate = (
 ): Effect.Effect<
   PreparedCreatePlanItem,
   ApplicationFault,
-  PlanningCenterAccess | PlanningCenterSongs
+  PlanningCenterAccess | PlanningCenterSongs | Server
 > =>
   Effect.gen(function* prepareItemCreate() {
     return yield* prepareCreatePlanItem(
@@ -145,7 +144,7 @@ export const prepareRunSheetItemUpdate = (
 ): Effect.Effect<
   PreparedUpdatePlanItem,
   ApplicationFault,
-  PlanningCenterAccess | PlanningCenterSongs | PlanningCenterPlanItems
+  PlanningCenterAccess | PlanningCenterSongs | PlanningCenterPlanItems | Server
 > =>
   Effect.gen(function* prepareItemUpdate() {
     return yield* prepareUpdatePlanItem(
@@ -296,11 +295,11 @@ export const searchRunSheetSongs = (
   PlanningCenterAccess | PlanningCenterSongs | Server
 > =>
   Effect.gen(function* searchRunSheetCatalog() {
-    const access = yield* PlanningCenterAccess;
+    const cacheScope = yield* songCatalogCacheScope;
     const songsService = yield* PlanningCenterSongs;
     const { moduleReadCaches } = yield* Server;
     return yield* searchSongs(
-      access.cacheScope,
+      cacheScope,
       input.query,
       songsService,
       moduleReadCaches.songSearchResults
@@ -310,12 +309,12 @@ export const searchRunSheetSongs = (
 export const suggestRunSheetSongs = (): Effect.Effect<
   SongSuggestions,
   ApplicationFault,
-  PlanningCenterAccess | PlanningCenterSongs
+  PlanningCenterAccess | PlanningCenterSongs | Server
 > =>
   Effect.gen(function* suggestFromCatalog() {
-    const access = yield* PlanningCenterAccess;
+    const cacheScope = yield* songCatalogCacheScope;
     const songsService = yield* PlanningCenterSongs;
-    return yield* suggestSongs(access.cacheScope, songsService, new Date());
+    return yield* suggestSongs(cacheScope, songsService, new Date());
   }).pipe(withPlanningCenterFaults);
 
 export const getRunSheetSongHistory = (

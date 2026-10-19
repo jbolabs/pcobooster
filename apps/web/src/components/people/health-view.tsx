@@ -115,7 +115,7 @@ export const PeopleHealthView = ({
         canLoadMore={canLoadMore}
         onLoadMore={onLoadMore}
       />
-      <div className="grid items-start gap-3 @2xl:grid-cols-2 @5xl:grid-cols-3">
+      <div className="grid grid-cols-1 items-start gap-3 @2xl:grid-cols-2 @5xl:grid-cols-3">
         <WaitingOnReplyList
           entries={health.waitingOnReply}
           progress={progress}

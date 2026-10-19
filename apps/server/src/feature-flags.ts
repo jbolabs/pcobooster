@@ -20,7 +20,24 @@ const targetingRules: Partial<
     DeployedTier,
     Partial<Record<FeatureFlagName, Cloudflare.Flagship.FlagRule[]>>
   >
-> = {};
+> = {
+  production: {
+    // Jake Bodea's production user, to try Practice before everyone sees it.
+    practice: [
+      {
+        priority: 1,
+        serveVariation: "on",
+        conditions: [
+          {
+            attribute: "userId",
+            operator: "equals",
+            value: "fur6vu90eJOhtJqLzwsgvbCBGxOsZTcI",
+          },
+        ],
+      },
+    ],
+  },
+};
 
 const logicalId = (name: FeatureFlagName) =>
   `${name.charAt(0).toUpperCase()}${name.slice(1)}Flag`;

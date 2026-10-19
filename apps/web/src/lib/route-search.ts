@@ -32,10 +32,11 @@ export const authSearchSchema = routeSearch({
   error: optionalParam,
 });
 
-/** Plan workspace views: the selected team position slot. */
+/** Plan workspace views: the selected team position slot, and the item Practice shows. */
 export const planWorkspaceSearchSchema = routeSearch({
   teamId: optionalParam,
   positionId: optionalParam,
+  item: optionalParam,
 });
 
 /**
@@ -58,7 +59,7 @@ export const songsSearchSchema = routeSearch({
   sort: optionalParam,
 });
 
-/** Song chord chart: the arrangement being edited; unknown ids fall back to the first. */
-export const songChartSearchSchema = routeSearch({
+/** A song's pages: the arrangement shown and edited; unknown ids fall back to the first. */
+export const songSearchSchema = routeSearch({
   arrangement: optionalParam,
 });

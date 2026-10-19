@@ -86,3 +86,32 @@ export const FILE_DIALOG_SHORTCUTS = [
   label: string;
   binding: RegisterableHotkey;
 }[];
+
+/** Practice keys: step through the songs and run the player; they skip text fields. */
+export const PRACTICE_SHORTCUTS = [
+  { id: "practice.next", label: "Next song", binding: "J" },
+  { id: "practice.previous", label: "Previous song", binding: "K" },
+  { id: "practice.play", label: "Play or pause the track", binding: "Space" },
+  { id: "practice.back", label: "Back 5 seconds", binding: "ArrowLeft" },
+  { id: "practice.forward", label: "Forward 5 seconds", binding: "ArrowRight" },
+  {
+    id: "practice.loop",
+    label: "Loop: mark the start, then the end, then stop",
+    binding: "L",
+  },
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  binding: RegisterableHotkey;
+}[];
+
+export type PracticeShortcutId = (typeof PRACTICE_SHORTCUTS)[number]["id"];
+
+/** The key a practice shortcut is bound to. */
+export const practiceBinding = (id: PracticeShortcutId): RegisterableHotkey => {
+  const found = PRACTICE_SHORTCUTS.find((entry) => entry.id === id);
+  if (found === undefined) {
+    throw new Error(`Unknown practice shortcut: ${id}`);
+  }
+  return found.binding;
+};

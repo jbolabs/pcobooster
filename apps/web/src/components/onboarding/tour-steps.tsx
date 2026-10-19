@@ -27,7 +27,7 @@ export const appTourSteps: readonly TourStep[] = [
   {
     target: "nav-songs",
     title: "Songs",
-    body: "Your Planning Center song library. Open a song to write or import its chord chart.",
+    body: "Your Planning Center song library. Open a song to see its arrangements, files, and schedule, and to write its chord chart.",
   },
   {
     target: "mobile-menu",
@@ -72,6 +72,12 @@ export const planTourSteps: readonly TourStep[] = [
     target: "plan-view-times",
     title: "Times",
     body: "Service and rehearsal times, and who each one involves.",
+    side: "bottom",
+  },
+  {
+    target: "plan-view-practice",
+    title: "Practice",
+    body: "Step through the songs to rehearse: the chart in any key or with a capo, the lyrics, and the plan’s recordings.",
     side: "bottom",
   },
   {

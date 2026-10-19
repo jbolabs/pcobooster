@@ -28,6 +28,7 @@ export const resolveTheme = (
   return preference;
 };
 
+/** Applies a theme to the document. */
 export const applyResolvedTheme = (
   root: ThemeRoot,
   theme: ResolvedTheme

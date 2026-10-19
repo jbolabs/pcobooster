@@ -193,6 +193,9 @@ interface AttemptContext {
   readonly endpoint: PlanningCenterEndpoint;
   /** 1 for the first attempt. */
   readonly attempt: number;
+  /** A write's attributes as `describeSentAttributes` logs them. */
+  readonly sentAttributes?: JsonObject;
+  readonly readAction?: true;
 }
 
 export const buildPlanningCenterUrl = (
@@ -348,31 +351,143 @@ const decodeListedErrorCode = Schema.decodeUnknownOption(
   })
 );
 
-/** What a JSON:API error list says went wrong; validation errors put it in `detail`. */
-const decodeListedErrorDetails = Schema.decodeUnknownOption(
+/**
+ * What a JSON:API error list says went wrong; validation errors put it in `detail` and name
+ * the rejected attribute in `source` (`{ parameter: "length" }`), not in the detail itself.
+ */
+const decodeListedErrors = Schema.decodeUnknownOption(
   Schema.Struct({
     errors: Schema.Array(
       Schema.Struct({
         title: Schema.optional(Schema.String),
         detail: Schema.optional(Schema.String),
+        source: Schema.optional(
+          Schema.Struct({
+            parameter: Schema.optional(Schema.String),
+            pointer: Schema.optional(Schema.String),
+          })
+        ),
       })
     ).check(Schema.isMinLength(1)),
   })
 );
 
+/** `length` from `{ parameter: "length" }` or `{ pointer: "/data/attributes/length" }`. */
+const rejectedAttribute = (source?: {
+  readonly parameter?: string;
+  readonly pointer?: string;
+}): string | undefined => {
+  const name = source?.parameter ?? source?.pointer?.split("/").at(-1);
+  return isNonEmptyString(name) ? name : undefined;
+};
+
+/** `service_position` reads as "Service position". */
+const attributeLabel = (attribute: string): string => {
+  const words = attribute.replaceAll("_", " ");
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+};
+
 /**
- * Each listed error's detail, or its title when it has none; nothing when `body` is not a
- * JSON:API error list.
+ * Each listed error's detail (led by the attribute it names, when the detail doesn't already),
+ * or its title when it has none; nothing when `body` is not a JSON:API error list.
  */
 export const listedErrorDetails = (body: JsonValue | undefined): string[] =>
-  Option.match(decodeListedErrorDetails(body), {
+  Option.match(decodeListedErrors(body), {
     onNone: () => [],
     onSome: ({ errors }) =>
-      errors.flatMap(({ detail, title }) => {
+      errors.flatMap(({ detail, title, source }) => {
+        const attribute = rejectedAttribute(source);
+        if (isNonEmptyString(detail) && attribute !== undefined) {
+          const label = attributeLabel(attribute);
+          return detail.toLowerCase().startsWith(label.toLowerCase())
+            ? [detail]
+            : [`${label} ${detail}`];
+        }
         const text = detail ?? title;
         return isNonEmptyString(text) ? [text] : [];
       }),
   });
+
+/** Whole validation phrases with no slot for submitted text; unknown wording stays private. */
+const VALUE_FREE_VALIDATION_DETAIL =
+  /^(?:can(?: ?not|'t) be longer than \d+ (?:hours?|minutes?|seconds?)|(?:can(?: ?not|'t)|must not) be blank|is (?:invalid|not included in the list|reserved)|has already been taken|must be (?:a number|an integer|(?:greater|less) than(?: or equal to)? -?\d+(?:\.\d+)?|other than -?\d+(?:\.\d+)?)|is too (?:long|short) \((?:maximum|minimum) is \d+ characters?\))$/iu;
+const PRIVATE_VALIDATION_DETAIL =
+  "Validation failed (detail omitted for privacy)";
+const DIAGNOSTIC_ATTRIBUTE = /^[a-z][a-z0-9_]*$/u;
+
+const validationDiagnostic = (
+  detail: string | undefined,
+  attribute: string | undefined
+): string => {
+  if (detail === undefined) {
+    return "Validation failed";
+  }
+  const label = attribute === undefined ? undefined : attributeLabel(attribute);
+  const phrase =
+    label !== undefined &&
+    detail.toLowerCase().startsWith(`${label.toLowerCase()} `)
+      ? detail.slice(label.length + 1)
+      : detail;
+  return VALUE_FREE_VALIDATION_DETAIL.test(phrase)
+    ? phrase.slice(0, 500)
+    : PRIVATE_VALIDATION_DETAIL;
+};
+
+/** Only value-free provider diagnostics, never reflected write text or raw response bodies. */
+export const listedValidationErrors = (
+  body: JsonValue | undefined,
+  sentAttributeNames: readonly string[]
+) => {
+  const sentNames = new Set(sentAttributeNames);
+  return Option.match(decodeListedErrors(body), {
+    onNone: () => [],
+    onSome: ({ errors }) =>
+      errors.slice(0, 10).map(({ detail, source }) => {
+        const name = rejectedAttribute(source);
+        const attribute =
+          name !== undefined &&
+          sentNames.has(name) &&
+          DIAGNOSTIC_ATTRIBUTE.test(name)
+            ? name.slice(0, 100)
+            : undefined;
+        return {
+          attribute,
+          detail:
+            source !== undefined && attribute === undefined
+              ? PRIVATE_VALIDATION_DETAIL
+              : validationDiagnostic(detail, attribute),
+        };
+      }),
+  });
+};
+
+const isJsonObject = (value: JsonValue | undefined): value is JsonObject =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * A write body's attributes fit for logs: numbers, booleans, nulls, and ids as sent, other
+ * text only as its length, since titles and notes are the church's own words.
+ */
+const describeSentAttributes = (
+  body: JsonObject | undefined
+): JsonObject | undefined => {
+  const data = body?.data;
+  const attributes =
+    isJsonObject(data) && isJsonObject(data.attributes)
+      ? data.attributes
+      : undefined;
+  if (attributes === undefined) {
+    return undefined;
+  }
+  const described: JsonObject = {};
+  for (const [key, value] of Object.entries(attributes)) {
+    described[key] =
+      isString(value) && !key.endsWith("_id")
+        ? `<${value.length} characters>`
+        : value;
+  }
+  return described;
+};
 
 const errorTitle = (body: ErrorBody): string | undefined => {
   if (isString(body.error)) {
@@ -398,7 +513,10 @@ const parseErrorBody = (responseBody: string): ErrorBody | null =>
 const buildApiError = (
   status: number,
   responseBody: string,
-  headers: ResponseHeaders
+  headers: ResponseHeaders,
+  method: string,
+  isWrite: boolean,
+  sentAttributeNames: readonly string[]
 ): PlanningCenterApiError => {
   let code: string | undefined;
   let details: JsonValue | undefined;
@@ -420,6 +538,9 @@ const buildApiError = (
   return new PlanningCenterApiError({
     message,
     status,
+    method,
+    isWrite,
+    sentAttributeNames,
     code,
     details,
     responseBody,
@@ -712,6 +833,7 @@ export class PlanningCenterCoreClient {
   ): Effect.Effect<SentResponse, AttemptError> {
     const { cacheScope, httpClient } = this;
     const { method } = request;
+    const isWrite = !isReadMethod(method) && context.readAction !== true;
     const { accounting, endpoint, pacer } = context;
     const execute = Effect.gen(function* sendRequest() {
       const startedAt = yield* Clock.currentTimeMillis;
@@ -766,7 +888,10 @@ export class PlanningCenterCoreClient {
       const error = buildApiError(
         response.status,
         responseBody,
-        response.headers
+        response.headers,
+        method,
+        isWrite,
+        Object.keys(context.sentAttributes ?? {})
       );
       if (error.status === 429) {
         accounting?.recordRateLimited();
@@ -777,6 +902,15 @@ export class PlanningCenterCoreClient {
           retryAfterSeconds: error.retryAfterSeconds,
           rateLimit: error.rateLimit,
           willRetry: willRetryRateLimit(method, context.attempt, error),
+        });
+      } else if (isWrite) {
+        // The toast shows only Planning Center's words; this keeps what was sent beside them.
+        yield* log.warn("Planning Center rejected a write", {
+          endpoint,
+          method,
+          status: error.status,
+          errors: error.details,
+          sentAttributes: context.sentAttributes,
         });
       }
       return yield* Effect.fail(error);
@@ -813,8 +947,13 @@ export class PlanningCenterCoreClient {
             JSON.stringify(options.body),
             "application/json"
           );
+    const sentAttributes = describeSentAttributes(options.body);
     const attemptRequest = (context: AttemptContext) =>
-      this.attempt(request, context);
+      this.attempt(request, {
+        ...context,
+        sentAttributes,
+        readAction: options.readAction,
+      });
     return Effect.gen(function* sendWithRetries() {
       const pacer = Option.getOrUndefined(
         yield* Effect.serviceOption(PlanningCenterPacing)

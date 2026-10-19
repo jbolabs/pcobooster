@@ -1,6 +1,7 @@
 import { useParams } from "@tanstack/react-router";
 
 import { PageShell } from "@/components/page-shell";
+import { PracticeTabSkeleton } from "@/components/practice/practice-tab";
 import { LineupTabSkeleton } from "@/components/schedule/lineup-tab";
 import { PlanItemListSkeleton } from "@/components/schedule/plan-item-list";
 import { PlanOverviewSkeleton } from "@/components/schedule/plan-overview-tab";
@@ -19,7 +20,7 @@ export const SchedulePlansFallback = () => (
   <PageShell label="Loading services" busy>
     <section className="flex shrink-0 flex-col gap-2.5">
       <Skeleton variant="text" className="h-3 w-24" />
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <Skeleton className="h-[5.25rem] w-full" />
         <Skeleton className="hidden h-[5.25rem] w-full sm:block" />
         <Skeleton className="hidden h-[5.25rem] w-full lg:block" />
@@ -73,6 +74,9 @@ const ViewSkeleton = ({
   }
   if (view === "assign") {
     return <AssignSkeleton />;
+  }
+  if (view === "practice") {
+    return <PracticeTabSkeleton />;
   }
   return <PlanOverviewSkeleton plan={plan} />;
 };

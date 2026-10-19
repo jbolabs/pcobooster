@@ -39,6 +39,7 @@ import { PageScrollArea } from "@/components/page-shell";
 import { QueryDataBoundary } from "@/components/query-data-boundary";
 import type { ReadQueryState } from "@/components/query-data-boundary";
 import { PlanFilesBrowser } from "@/components/schedule/plan-files-browser";
+import { SongLink } from "@/components/songs/song-link";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
@@ -259,7 +260,7 @@ const ReadinessCard = ({
       </CardDescription>
     </CardHeader>
     <CardContent>
-      <ul className="grid gap-1 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
         {checks.map((check) => (
           <li key={check.id}>
             <ReadinessCheckItem
@@ -517,7 +518,18 @@ const SongsCard = ({
               <span className="text-muted-foreground w-4 shrink-0 text-right text-xs tabular-nums">
                 {index + 1}
               </span>
-              <span className="min-w-0 flex-1 truncate">{song.title}</span>
+              <span className="min-w-0 flex-1 truncate">
+                {song.songId === null ? (
+                  song.title
+                ) : (
+                  <SongLink
+                    songId={song.songId}
+                    arrangementId={song.arrangementId}
+                  >
+                    {song.title}
+                  </SongLink>
+                )}
+              </span>
               {song.keyLabel === null ? (
                 <span className="text-status-scheduled text-xs">No key</span>
               ) : (
@@ -616,7 +628,7 @@ interface PlanOverviewTabProps {
 }
 
 const overviewGridClassName =
-  "pb-safe-4 grid gap-4 pt-1 md:grid-cols-2 md:pb-6";
+  "pb-safe-4 grid grid-cols-1 gap-4 pt-1 md:grid-cols-2 md:pb-6";
 
 /** A stand-in for handlers the loading overview never calls. */
 const ignore = () => {

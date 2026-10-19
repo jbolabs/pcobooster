@@ -165,7 +165,6 @@ export const commandEnvironment = (
     if (
       key.startsWith("INFISICAL_") ||
       key === "DEV_AUTH_BYPASS" ||
-      key === "DEV_DATA_PROFILE" ||
       key === "DEV_PLANNING_CENTER_ACCESS" ||
       key === "PRESENTATION_MODE"
     ) {

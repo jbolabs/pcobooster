@@ -72,8 +72,14 @@ export const pageTitle = (title?: string): string =>
 export const siteHead = (): PageHead => ({
   meta: [
     { charSet: "utf-8" },
-    { name: "viewport", content: "width=device-width, initial-scale=1" },
-    { name: "theme-color", content: "#eff2ee" },
+    // Edge to edge under the notch (the header pads itself back out), and the keyboard
+    // resizes the layout on Android as it does on iOS. Pinch zoom always stays on.
+    {
+      name: "viewport",
+      content:
+        "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
+    },
+    // No theme-color: Safari tints its bars from the page (see the product's globals.css).
     { name: "color-scheme", content: "light" },
   ],
   links: [{ rel: "icon", href: marketingAssetUrl("icon.svg") }],

@@ -57,14 +57,14 @@ import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
 /**
  * What the Worker hands each request: the isolate's server dependencies (built by the first
- * request, since bindings are only readable inside one) and where 5xx outcomes are reported.
+ * request, since bindings are only readable inside one) and where reportable outcomes are sent.
  * The router is built before any request, so it reads these per request and never keeps them.
  */
 export class IsolateServer extends Context.Service<
   IsolateServer,
   {
     readonly server: ServerDependencies;
-    /** Sends 5xx outcomes to error tracking; null where the stage has none. */
+    /** Sends reportable outcomes to error tracking; null where the stage has none. */
     readonly report: ReportProcedureFailure | null;
   }
 >()("@pcobooster/api/IsolateServer") {}
@@ -193,7 +193,7 @@ const responseExtras = (
     );
   });
 
-/** Writes the one outcome line and reports a 5xx; never fails. */
+/** Writes the one outcome line and reports a failure; never fails. */
 export const writeOutcome = (
   report: ReportProcedureFailure | null,
   fields: ProcedureLogFields,

@@ -1,6 +1,7 @@
 import {
   Clock01Icon,
   DashboardSquare01Icon,
+  HeadphonesIcon,
   Layout3ColumnIcon,
   ListMusicIcon,
   UserAdd01Icon,
@@ -14,4 +15,5 @@ export const planViewIcons: Record<PlanView, IconSvgElement> = {
   lineup: Layout3ColumnIcon,
   plan: ListMusicIcon,
   times: Clock01Icon,
+  practice: HeadphonesIcon,
 };

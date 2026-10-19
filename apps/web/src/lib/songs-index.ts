@@ -1,10 +1,6 @@
 import type { SongLibraryEntry } from "@pcobooster/contracts/http/songs";
 import { scoreSongSearch } from "@pcobooster/planning-center-models/song-search";
 
-/** The song in Planning Center Services, where it can be hidden or deleted. */
-export const planningCenterSongUrl = (songId: string): string =>
-  `https://services.planningcenteronline.com/songs/${encodeURIComponent(songId)}`;
-
 /** Which songs the library lists; the `unused` filters reach back whole calendar months. */
 export const songLibraryFilters = [
   { value: "all", label: "All songs" },

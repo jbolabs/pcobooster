@@ -43,7 +43,7 @@ const dialogContentVariants = cva(
     variants: {
       variant: {
         default:
-          "data-open:zoom-in-95 data-closed:zoom-out-95 grid max-w-[calc(100%-2rem)] gap-6 rounded-4xl p-6 sm:max-w-md",
+          "data-open:zoom-in-95 data-closed:zoom-out-95 grid max-w-[calc(100%-2rem)] grid-cols-1 gap-6 rounded-4xl p-6 sm:max-w-md",
         /** Documents and media need the full phone viewport and a roomy desktop workspace; panes own their padding and safe areas. */
         viewer:
           "flex h-dvh max-h-dvh max-w-full flex-col overflow-hidden rounded-none sm:h-[90dvh] sm:max-h-[900px] sm:max-w-6xl sm:rounded-2xl",

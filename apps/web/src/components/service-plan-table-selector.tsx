@@ -306,7 +306,7 @@ const MyScheduledServiceCards = ({
       className="flex shrink-0 flex-col gap-2.5"
     >
       <h2 className={selectionPickerSectionTitleClass}>Your services</h2>
-      <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-2 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-3">
+      <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-2 overflow-x-auto overscroll-x-contain px-4 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-3">
         {isLoading
           ? Array.from({ length: 3 }).map((_, index) => (
               <Skeleton
@@ -523,6 +523,10 @@ export const ServicePlanTableSelector = ({
               <Search />
             </InputGroupAddon>
             <InputGroupInput
+              enterKeyHint="search"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={searchValue}
               onChange={(event) => {
                 setSearchValue(event.target.value);

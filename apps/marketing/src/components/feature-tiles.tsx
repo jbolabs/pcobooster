@@ -41,7 +41,7 @@ const Todo = () => (
   <CircleAlert className="text-status-scheduled size-3.5 shrink-0" />
 );
 const Done = () => (
-  <span className="border-status-confirmed text-status-confirmed grid size-3.5 shrink-0 place-items-center rounded-full border">
+  <span className="border-status-confirmed text-status-confirmed grid size-3.5 shrink-0 grid-cols-1 place-items-center rounded-full border">
     <Check className="size-2.5" strokeWidth={3} />
   </span>
 );
@@ -190,10 +190,10 @@ const UnsentSnippet = () => (
       { initials: "EL", name: "Eden Lane", role: "Lyrics" },
     ].map((row) => (
       <p key={row.name} className="flex items-center gap-2.5 py-1">
-        <span className="bg-muted text-muted-foreground grid size-7 place-items-center rounded-full text-xs font-medium">
+        <span className="bg-muted text-muted-foreground grid size-7 grid-cols-1 place-items-center rounded-full text-xs font-medium">
           {row.initials}
         </span>
-        <span className="grid flex-1">
+        <span className="grid flex-1 grid-cols-1">
           <span className="font-medium">{row.name}</span>
           <span className="text-muted-foreground text-xs">{row.role}</span>
         </span>
@@ -238,15 +238,15 @@ const Line = ({ className }: { className: string }) => (
 const DevicesSnippet = () => (
   <div aria-hidden="true" className="flex items-end gap-4">
     <div className="bg-card shadow-frame border-primary flex h-36 w-52 gap-2 rounded-2xl border-4 p-2">
-      <div className="bg-muted grid w-10 content-start gap-1.5 rounded-md p-1.5">
+      <div className="bg-muted grid w-10 grid-cols-1 content-start gap-1.5 rounded-md p-1.5">
         <Line className="bg-foreground/30 w-6" />
         <Line className="bg-foreground/15 w-5" />
         <Line className="bg-foreground/15 w-6" />
         <Line className="bg-foreground/15 w-4" />
       </div>
-      <div className="grid flex-1 content-start gap-1.5 pt-1">
+      <div className="grid flex-1 grid-cols-1 content-start gap-1.5 pt-1">
         <Line className="bg-foreground/40 w-20" />
-        <div className="border-border mt-1 grid gap-1.5 rounded-md border p-1.5">
+        <div className="border-border mt-1 grid grid-cols-1 gap-1.5 rounded-md border p-1.5">
           <span className="flex items-center gap-1">
             <span className="bg-status-scheduled size-1.5 rounded-full" />
             <Line className="bg-foreground/20 w-16" />
@@ -386,7 +386,7 @@ const tileClass =
 
 /** The smaller jobs of a planning week as a bento grid; tiles with a view open it in the demo. */
 export const FeatureTiles = ({ demoAnchorId }: { demoAnchorId: string }) => (
-  <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+  <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
     {tiles.map((tile) => (
       <li
         key={tile.title}

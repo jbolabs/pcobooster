@@ -156,7 +156,7 @@ export const KeyTransitionPopover = ({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="max-h-(--available-height) w-80 overflow-y-auto"
+        className="max-h-(--available-height) w-80 overflow-y-auto overscroll-contain"
       >
         <PopoverHeader className="mx-4 mt-4">
           <PopoverTitle>

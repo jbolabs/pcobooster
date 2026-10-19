@@ -1,6 +1,7 @@
 import { speculativeQuery } from "@pcobooster/client/query";
 import type { SongLibraryEntry } from "@pcobooster/contracts/http/songs";
 import { formatCalendarDateLabel } from "@pcobooster/planning-center-models/calendar";
+import { planningCenterSongUrl } from "@pcobooster/planning-center-models/song-detail";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ExternalLink, Plus, Search } from "lucide-react";
@@ -34,7 +35,7 @@ import { useBrowserStorage } from "@/hooks/use-browser-storage";
 import { createChordChartSongQueryOptions } from "@/hooks/use-chord-chart-song";
 import { useIntentPrefetch } from "@/hooks/use-intent-prefetch";
 import type { GetIntentPrefetchProps } from "@/hooks/use-intent-prefetch";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useOrganizationTimeZone } from "@/hooks/use-organization-timezone";
 import { useSongLibrary } from "@/hooks/use-song-library";
 import { isQueryFresh } from "@/lib/intent-prefetch";
@@ -45,7 +46,6 @@ import {
 } from "@/lib/recent-songs";
 import type { RecentSong } from "@/lib/recent-songs";
 import {
-  planningCenterSongUrl,
   selectSongLibrary,
   songLibraryCutoff,
   songLibraryFilters,
@@ -361,7 +361,8 @@ export const SongsPage = ({
 }) => {
   const navigate = useNavigate({ from: "/songs/" });
   const orgTimeZone = useOrganizationTimeZone();
-  const isMobile = useIsMobile();
+  // Touch screens would open the keyboard over the list; ask the pointer, not the width.
+  const touchScreen = useMediaQuery("(pointer: coarse)");
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const deferredQuery = useDeferredValue(query).trim();
@@ -435,14 +436,17 @@ export const SongsPage = ({
         </Button>
       </header>
 
-      <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
         <InputGroup>
           <InputGroupAddon>
             <Search />
           </InputGroupAddon>
           <InputGroupInput
-            // Phones would open the keyboard over the list.
-            autoFocus={!isMobile}
+            enterKeyHint="search"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            autoFocus={!touchScreen}
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);

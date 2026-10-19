@@ -223,6 +223,9 @@ export const ChordChartImportDialog = ({
             <Textarea
               aria-label="Text to import"
               autoFocus
+              // Chord names like Cmaj7 are not words to correct.
+              autoCorrect="off"
+              spellCheck={false}
               className="h-72"
               placeholder={
                 "{title: Song}\n{comment: Verse 1}\n[G]Lyrics with [C]chords"
@@ -269,7 +272,7 @@ export const ChordChartImportDialog = ({
             </NativeSelect>
           ) : null}
           {state.tab !== "paste" && preview !== null ? (
-            <pre className="bg-muted/50 h-48 overflow-auto rounded-2xl p-3 font-mono text-xs whitespace-pre-wrap">
+            <pre className="bg-muted/50 h-48 overflow-auto overscroll-contain rounded-2xl p-3 font-mono text-xs whitespace-pre-wrap">
               {preview.text.chart}
             </pre>
           ) : null}

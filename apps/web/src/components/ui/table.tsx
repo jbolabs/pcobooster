@@ -2,7 +2,10 @@ import { cn } from "cn";
 import * as React from "react";
 
 const Table = ({ className, ...props }: React.ComponentProps<"table">) => (
-  <div data-slot="table-container" className="relative w-full overflow-x-auto">
+  <div
+    data-slot="table-container"
+    className="relative w-full overflow-x-auto overscroll-x-contain"
+  >
     <table
       data-slot="table"
       className={cn("w-full caption-bottom text-sm", className)}

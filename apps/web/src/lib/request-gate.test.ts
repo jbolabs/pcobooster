@@ -88,6 +88,10 @@ describe(decideRequestGate, () => {
     "/api/updates/assets/47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU",
     "/auth",
     "/auth?next=%2Fpeople",
+    "/ingest/i/v0/e/",
+    "/ingest/s/",
+    "/ingest/static/recorder.js",
+    "/ingest/array/phc_key/config",
     "/robots.txt",
     "/sitemap.xml",
   ])("lets signed-out visitors reach %s", (path) => {

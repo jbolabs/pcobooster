@@ -2,6 +2,7 @@
 @import "shadcn/tailwind.css";
 @import "@pcobooster/design-tokens/tokens.css";
 
+@import "@pcobooster/ui/mobile-native.css";
 @import "@pcobooster/ui/mobile-menu.css";
 @import "@pcobooster/ui/star-field.css";
 
@@ -23,42 +24,11 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-sidebar: var(--sidebar);
-  --color-status-confirmed: var(--status-confirmed);
-  --color-status-declined: var(--status-declined);
-  --color-status-scheduled: var(--status-scheduled);
-  --color-status-info: var(--status-info);
-  --color-chart-2: var(--chart-2);
   --color-logo: var(--logo);
   --color-brand: var(--brand);
   --color-brand-soft: var(--brand-soft);
   --color-stage: var(--stage);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
   --color-mask-visible: #fff;
   --color-mask-hidden: #000;
   --ease-glide: cubic-bezier(0.77, 0, 0.175, 1);
@@ -99,10 +69,13 @@
 }
 
 @layer base {
+  /*
+   * A scrolling document: pull-to-refresh and the page bounce stay, so no root
+   * overscroll-behavior. The replica's own scrollers choose theirs.
+   */
   html {
     scroll-padding-top: calc(var(--header-height) + 24px);
     scroll-behavior: smooth;
-    text-size-adjust: 100%;
     color-scheme: light;
     background: var(--background);
   }
@@ -114,11 +87,6 @@
   ::selection {
     background: var(--brand-soft);
     color: var(--foreground);
-  }
-  a,
-  button,
-  summary {
-    -webkit-tap-highlight-color: transparent;
   }
   :where(a):focus-visible {
     outline: 2px solid var(--ring);
@@ -141,15 +109,23 @@
   }
 }
 
+/*
+ * The page column. Bands still paint edge to edge; the column also clears a landscape
+ * phone's notch and rounded corners (`--safe-x`, 0 everywhere else).
+ */
 @utility wrap {
-  width: calc(100% - 40px);
+  --safe-x: max(
+    env(safe-area-inset-left, 0px),
+    env(safe-area-inset-right, 0px)
+  );
+  width: calc(100% - 40px - 2 * var(--safe-x));
   max-width: 1200px;
   margin-inline: auto;
   @media (width >= 48rem) {
-    width: calc(100% - 64px);
+    width: calc(100% - 64px - 2 * var(--safe-x));
   }
   @media (width >= 64rem) {
-    width: calc(100% - 112px);
+    width: calc(100% - 112px - 2 * var(--safe-x));
   }
 }
 

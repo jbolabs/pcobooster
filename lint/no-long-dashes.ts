@@ -31,11 +31,17 @@ export const findLongDashes = (
 const trackedPaths = (): string[] => {
   const output = execFileSync("git", ["ls-files", "--cached", "-z"]);
   // Symlinks (such as .claude/skills) point at tracked files that are checked under their own path.
-  return decoder
-    .decode(output)
-    .split("\0")
-    .filter(Boolean)
-    .filter((path) => !lstatSync(path).isSymbolicLink());
+  return (
+    decoder
+      .decode(output)
+      .split("\0")
+      .filter(Boolean)
+      // Dependency patches must preserve upstream context and removed lines byte for byte.
+      .filter(
+        (path) => !path.startsWith("patches/") || !path.endsWith(".patch")
+      )
+      .filter((path) => !lstatSync(path).isSymbolicLink())
+  );
 };
 
 export const checkTrackedFiles = async (): Promise<DashViolation[]> => {
