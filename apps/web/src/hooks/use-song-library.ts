@@ -6,7 +6,7 @@ import type { QueryFunctionContext } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { productClient } from "@/product-client";
 
-/** The API caches the catalog for an hour, so a refetch sooner rarely finds anything new. */
+/** Creation invalidates this query and advances the API catalog revision across Workers. */
 const SONG_LIBRARY_STALE_TIME_MS = 10 * 60 * 1000;
 
 export const songLibraryQueryOptions = {

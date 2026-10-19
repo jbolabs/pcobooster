@@ -12,12 +12,9 @@ import type { PCResource } from "@pcobooster/planning-center-models/types";
 import { Effect } from "effect";
 
 const log = moduleLog("planning-center/songs");
-/** Songs change rarely; this app writes only arrangement chord charts. */
+/** Catalog keys include the durable revision advanced whenever the app creates a song. */
 const DEFAULT_CATALOG_TTL_MS = 60 * 60 * 1000;
 export const DEFAULT_CATALOG_MAX_PAGES = 15;
-const SONG_DETAILS_CACHE_TTL_MS = 5 * 60 * 1000;
-/** Schedules change as plans are built, but not while someone reads one song's history. */
-const SONG_SCHEDULES_CACHE_TTL_MS = 10 * 60 * 1000;
 /** A year of weekly services, twice over, fits in one page. */
 const SONG_SCHEDULES_PAGES = 1;
 
@@ -46,17 +43,11 @@ const buildArrangementPayload = (attributes: JsonObject, id?: string) => ({
 
 export interface PlanningCenterSongsServiceCaches {
   readonly catalogs: PlanningCenterReadCache<PCResource[]>;
-  readonly songs: PlanningCenterReadCache<PCResource>;
-  readonly arrangements: PlanningCenterReadCache<SongArrangementsResponse>;
-  readonly schedules: PlanningCenterReadCache<PCResource[]>;
 }
 
 export const createPlanningCenterSongsServiceCaches =
   (): PlanningCenterSongsServiceCaches => ({
     catalogs: new PlanningCenterReadCache<PCResource[]>(),
-    songs: new PlanningCenterReadCache<PCResource>(),
-    arrangements: new PlanningCenterReadCache<SongArrangementsResponse>(),
-    schedules: new PlanningCenterReadCache<PCResource[]>(),
   });
 
 export class PlanningCenterSongsService {
@@ -103,36 +94,20 @@ export class PlanningCenterSongsService {
   }
 
   getSong(songId: string): Effect.Effect<PCResource, PlanningCenterError> {
-    return cachedRead(
-      this.caches.songs,
-      this.buildSongCacheKey("song", songId),
-      SONG_DETAILS_CACHE_TTL_MS,
-      () =>
-        Effect.map(
-          this.core.fetch(`/services/v2/songs/${songId}`),
-          (response) => response.data
-        )
-    ).pipe(Effect.map((resource) => structuredClone(resource)));
+    return Effect.map(
+      this.core.fetch(`/services/v2/songs/${songId}`),
+      (response) => response.data
+    );
   }
 
+  /** Mutable arrangement choices must be current even when the last write hit another isolate. */
   getSongArrangementsWithKeys(
     songId: string
   ): Effect.Effect<SongArrangementsResponse, PlanningCenterError> {
-    return cachedRead(
-      this.caches.arrangements,
-      this.buildSongCacheKey("arrangements", songId),
-      SONG_DETAILS_CACHE_TTL_MS,
-      () =>
-        this.core.fetchAllWithIncluded(
-          `/services/v2/songs/${songId}/arrangements`,
-          { include: "keys" },
-          5
-        )
-    ).pipe(
-      Effect.map((response) => ({
-        data: structuredClone(response.data),
-        included: structuredClone(response.included),
-      }))
+    return this.core.fetchAllWithIncluded(
+      `/services/v2/songs/${songId}/arrangements`,
+      { include: "keys" },
+      5
     );
   }
 
@@ -178,10 +153,10 @@ export class PlanningCenterSongsService {
         }
       )
       .pipe(
-        Effect.map((response) => {
-          this.invalidateArrangementsCache(songId);
-          return { data: response.data, included: response.included ?? [] };
-        })
+        Effect.map((response) => ({
+          data: response.data,
+          included: response.included ?? [],
+        }))
       );
   }
 
@@ -195,14 +170,14 @@ export class PlanningCenterSongsService {
         body: buildArrangementPayload(attributes),
       })
       .pipe(
-        Effect.map((response) => {
-          this.invalidateArrangementsCache(songId);
-          return { data: response.data, included: response.included ?? [] };
-        })
+        Effect.map((response) => ({
+          data: response.data,
+          included: response.included ?? [],
+        }))
       );
   }
 
-  /** The catalog cache is shared across isolates, so a new song reaches search when it expires. */
+  /** The application advances the durable catalog revision after this write succeeds. */
   createSong(
     attributes: JsonObject
   ): Effect.Effect<PCResource, PlanningCenterError> {
@@ -260,19 +235,13 @@ export class PlanningCenterSongsService {
     songId: string,
     afterDayKey: string
   ): Effect.Effect<PCResource[], PlanningCenterError> {
-    return cachedRead(
-      this.caches.schedules,
-      this.buildSongCacheKey("schedules", songId, afterDayKey),
-      SONG_SCHEDULES_CACHE_TTL_MS,
-      () =>
-        this.core
-          .fetchFirstPages(
-            `/services/v2/songs/${songId}/song_schedules`,
-            { filter: "after", after: afterDayKey, order: "-plan_sort_date" },
-            SONG_SCHEDULES_PAGES
-          )
-          .pipe(Effect.map(({ data }) => data))
-    ).pipe(Effect.map((schedules) => structuredClone(schedules)));
+    return this.core
+      .fetchFirstPages(
+        `/services/v2/songs/${songId}/song_schedules`,
+        { filter: "after", after: afterDayKey, order: "-plan_sort_date" },
+        SONG_SCHEDULES_PAGES
+      )
+      .pipe(Effect.map(({ data }) => data));
   }
 
   /** A song never scheduled for the service type has no last item. */
@@ -299,15 +268,7 @@ export class PlanningCenterSongsService {
       );
   }
 
-  private invalidateArrangementsCache(songId: string) {
-    const cacheKey = this.buildSongCacheKey("arrangements", songId);
-    this.caches.arrangements.deleteWhere((key) => key === cacheKey);
-  }
-
-  private buildSongCacheKey(
-    kind: "catalog" | "song" | "arrangements" | "schedules",
-    ...parts: string[]
-  ): string {
+  private buildSongCacheKey(kind: "catalog", ...parts: string[]): string {
     return [
       this.core.getCacheScope(),
       "songs",

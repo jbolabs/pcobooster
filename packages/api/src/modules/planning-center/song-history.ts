@@ -71,7 +71,7 @@ export interface SongHistoryDependencies {
 
 /**
  * Where and when the song was sung across every service type over the past year, and
- * where it is already planned: one Planning Center request, cached.
+ * where it is already planned: one fresh Planning Center request.
  */
 export const getSongHistory = (
   songId: string,
