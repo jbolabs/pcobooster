@@ -1,6 +1,6 @@
 # Cloudflare Builds PR validation
 
-`alchemy.builds.ts` owns the webhook, controller, native Builds triggers, credentials, R2 ledgers, cache and cleanup schedule. The initial rollout accepts only `codex/cloudflare-builds-trial`. Production dispatch is disabled and existing Actions remain authoritative.
+`alchemy.builds.ts` owns the webhook, controller, native Builds triggers, credentials, R2 ledgers, cache and cleanup schedule. The initial rollout accepts only `codex/cloudflare-builds-trial` and `codex/cloudflare-actions-cutover`. Production dispatch is disabled and existing Actions remain authoritative.
 
 Apply the control plane with `bun scripts/secrets/infra.ts bun alchemy deploy alchemy.builds.ts --stage builds-control --profile admin --no-input --yes`. The GitHub Cloudflare application must already be installed on this repository. The previous benchmark trigger is retired through `alchemy.builds-trial.ts` so it does not duplicate PR builds.
 

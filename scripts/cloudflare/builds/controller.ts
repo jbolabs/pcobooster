@@ -29,6 +29,9 @@ interface Environment {
 }
 const eventSchema = Schema.Struct({
   action: Schema.optional(Schema.String),
+  changes: Schema.optional(
+    Schema.Struct({ base: Schema.optional(Schema.Unknown) })
+  ),
   repository: Schema.Struct({ full_name: Schema.String }),
   pull_request: Schema.optional(pullRequestSchema),
   ref: Schema.optional(Schema.String),
@@ -125,6 +128,16 @@ const handleEvent = async (
   delivery: string
 ): Promise<Response> => {
   const pr = event.pull_request;
+  if (event.action === "edited" && event.changes?.base === undefined) {
+    return new Response("No validation change");
+  }
+  if (
+    pr !== undefined &&
+    env.BOOTSTRAP_BRANCH !== "" &&
+    !env.BOOTSTRAP_BRANCH.split(",").includes(pr.head.ref)
+  ) {
+    return new Response("Bootstrap branches only");
+  }
   if (
     pr !== undefined &&
     [
@@ -135,9 +148,6 @@ const handleEvent = async (
       "edited",
     ].includes(event.action ?? "")
   ) {
-    if (env.BOOTSTRAP_BRANCH !== "" && pr.head.ref !== env.BOOTSTRAP_BRANCH) {
-      return new Response("Bootstrap branch only");
-    }
     const current = await currentPullRequest(pr.number);
     if (!eligiblePullRequest(current, pr.head.sha)) {
       return new Response("Ignored stale or fork PR");

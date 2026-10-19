@@ -195,7 +195,8 @@ export default Alchemy.Stack(
         BUILDS_CONTROL_URL:
           "https://pcobooster-builds-controller.jakebodea.workers.dev",
         BUILDS_TRUSTED_BRANCH: trustedBranch,
-        BOOTSTRAP_BRANCH: "codex/cloudflare-builds-trial",
+        BOOTSTRAP_BRANCH:
+          "codex/cloudflare-builds-trial,codex/cloudflare-actions-cutover",
         BUN_VERSION: "1.4.2",
         NODE_VERSION: "24.11.1",
         LEFTHOOK: "0",
@@ -218,7 +219,8 @@ export default Alchemy.Stack(
         RELEASE_TRIGGER: "disabled",
         RELEASE_ENABLED: "false",
         TRUSTED_BRANCH: trustedBranch,
-        BOOTSTRAP_BRANCH: "codex/cloudflare-builds-trial",
+        BOOTSTRAP_BRANCH:
+          "codex/cloudflare-builds-trial,codex/cloudflare-actions-cutover",
       },
     });
     const hook = yield* GitHub.Webhook("Webhook", {
