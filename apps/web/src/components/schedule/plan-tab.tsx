@@ -50,6 +50,7 @@ import {
 } from "@/hooks/use-plan-tab-controller";
 import type { AddedPlanItemKind } from "@/hooks/use-plan-tab-controller";
 import { useRevealOnLoad } from "@/hooks/use-reveal-on-load";
+import { currentDate } from "@/lib/clock";
 import { songItemsOf } from "@/lib/plan-file-dialog";
 import {
   restrictToVerticalAxis,
@@ -539,7 +540,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
   };
 
   const detailItem = detailItemOf(detailsOpen, selectedItem);
-  const serviceDate = planDate ?? new Date();
+  const serviceDate = planDate ?? currentDate();
   const pane =
     detailItem === null ? null : (
       <PlanItemPane

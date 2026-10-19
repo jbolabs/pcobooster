@@ -74,6 +74,7 @@ import {
 } from "@/hooks/use-song-attachments";
 import type { SongAttachment } from "@/hooks/use-song-attachments";
 import { useSongHistory } from "@/hooks/use-song-history";
+import { currentDate } from "@/lib/clock";
 import { rememberRecentSong } from "@/lib/recent-songs";
 
 /** Plans ahead shown before "Show all". */
@@ -987,7 +988,7 @@ export const SongPage = ({
     search
   );
   // One "now" per visit, so "last" and "next" don't move under the reader.
-  const now = useMemo(() => new Date(), []);
+  const now = useMemo(() => currentDate(), []);
 
   useEffect(() => {
     if (chart.data !== undefined) {

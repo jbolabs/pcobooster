@@ -196,41 +196,41 @@ describe("update manifests", () => {
   });
 });
 
-describe(checkLiveUpdate, () => {
-  /** The API Worker's router serving one published update and its files from memory. */
-  const serving = (bundle: string) => {
-    const { manifest, uploads } = manifestFor(bundle);
-    const published = publishedUpdate(manifest, KEY.sign);
-    const files = new Map(
-      uploads.map((upload, index) => [upload.hash, index === 0 ? bundle : ""])
-    );
-    const app = serveHttpForTest({
-      server: testServer(),
-      updates: {
-        readText: (key) =>
-          Effect.succeed(
-            key === `ios/${RUNTIME}/current.json` && published._tag === "Update"
-              ? JSON.stringify(published)
-              : null
-          ),
-        readAsset: (key) => {
-          const body = files.get(key.replace("assets/", ""));
-          return Effect.succeed(
-            body === undefined
-              ? null
-              : {
-                  bytes: new TextEncoder().encode(body),
-                  contentType: "application/octet-stream",
-                }
-          );
-        },
+/** The API Worker's router serving one published update and its files from memory. */
+const serving = (bundle: string) => {
+  const { manifest, uploads } = manifestFor(bundle);
+  const published = publishedUpdate(manifest, KEY.sign);
+  const files = new Map(
+    uploads.map((upload, index) => [upload.hash, index === 0 ? bundle : ""])
+  );
+  const app = serveHttpForTest({
+    server: testServer(),
+    updates: {
+      readText: (key) =>
+        Effect.succeed(
+          key === `ios/${RUNTIME}/current.json` && published._tag === "Update"
+            ? JSON.stringify(published)
+            : null
+        ),
+      readAsset: (key) => {
+        const body = files.get(key.replace("assets/", ""));
+        return Effect.succeed(
+          body === undefined
+            ? null
+            : {
+                bytes: new TextEncoder().encode(body),
+                contentType: "application/octet-stream",
+              }
+        );
       },
-    });
-    const fetchThroughRouter: typeof fetch = async (input, init) =>
-      await app.fetch(new Request(input, init));
-    return { published, fetchThroughRouter };
-  };
+    },
+  });
+  const fetchThroughRouter: typeof fetch = async (input, init) =>
+    await app.fetch(new Request(input, init));
+  return { published, fetchThroughRouter };
+};
 
+describe(checkLiveUpdate, () => {
   it("accepts what the API Worker serves for a published update, signatures and asset hashes included", async () => {
     const { published, fetchThroughRouter } = serving("abc");
     if (published._tag !== "Update") {

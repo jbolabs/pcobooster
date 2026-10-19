@@ -71,7 +71,7 @@ export const PersonSignalIcon = ({
 export const PersonSignalBadge = ({ signal }: { signal: PersonSignal }) => {
   const { label, detail } = describePersonSignal(signal);
   return (
-    <HoverLabel label={detail} render={<Badge variant="outline" />}>
+    <HoverLabel label={detail} trigger={<Badge variant="outline" />}>
       <PersonSignalIcon signal={signal} />
       {label}
     </HoverLabel>

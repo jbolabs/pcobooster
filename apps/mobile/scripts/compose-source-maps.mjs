@@ -44,7 +44,7 @@ mkdirSync(path.dirname(copy), { recursive: true });
 copyFileSync(packagerMap, copy);
 
 const reactNativeCompose = createRequire(import.meta.url).resolve(
-  "react-native/scripts/compose-source-maps.js"
+  "react-native/scripts/compose-source-maps"
 );
 execFileSync(process.execPath, [reactNativeCompose, ...args], {
   stdio: "inherit",

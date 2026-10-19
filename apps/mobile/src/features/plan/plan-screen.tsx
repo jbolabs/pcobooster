@@ -3,6 +3,7 @@ import { controlSize, pickerStyle, tag } from "@expo/ui/swift-ui/modifiers";
 import { useRouter } from "expo-router";
 import { useRef } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
+import type { ScrollViewInstance } from "react-native";
 
 import { EmptyState } from "../../components/empty-state";
 import { PillButton } from "../../components/pill-button";
@@ -82,7 +83,7 @@ const PlanContent = ({
 
 export const PlanScreen = () => {
   const shell = usePlanShell();
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<ScrollViewInstance>(null);
   const inset = useRef(0);
   const offsets = useRef<Partial<Record<PlanSegment, number>>>({});
   const onSegment = (next: PlanSegment) => {

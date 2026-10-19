@@ -280,6 +280,25 @@ describe(getPeopleDashboardRoster, () => {
   });
 });
 
+const heavySchedules = (serviceTypeId: string) => ({
+  data: Array.from({ length: 150 }, (_, index) =>
+    schedule(`${serviceTypeId}-${index}`, "2026-05-17T17:00:00.000Z", {
+      serviceTypeId,
+      timeIds: [`rehearsal-${serviceTypeId}`],
+    })
+  ),
+});
+
+const heavyMixedSchedules = (types: readonly string[]) => ({
+  data: Array.from({ length: 150 }, (_, index) => {
+    const serviceTypeId = types[index % types.length] ?? "st-0";
+    return schedule(`${serviceTypeId}-${index}`, "2026-05-17T17:00:00.000Z", {
+      serviceTypeId,
+      timeIds: [`rehearsal-${serviceTypeId}`],
+    });
+  }),
+});
+
 describe(getPeopleDashboardActivity, () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -572,14 +591,6 @@ describe(getPeopleDashboardActivity, () => {
     );
     // Every person fills two schedule pages (1 + 32 requests), which leaves
     // room for one plan-range read; the other service types have to wait.
-    const heavySchedules = (serviceTypeId: string) => ({
-      data: Array.from({ length: 150 }, (_, index) =>
-        schedule(`${serviceTypeId}-${index}`, "2026-05-17T17:00:00.000Z", {
-          serviceTypeId,
-          timeIds: [`rehearsal-${serviceTypeId}`],
-        })
-      ),
-    });
     const { dependencies, getPlansWithIncludedInDateRange } =
       activityDependencies({
         schedulesByPerson: {
@@ -617,26 +628,13 @@ describe(getPeopleDashboardActivity, () => {
       (_, index) => `person-${index}`
     );
     const serviceTypes = ["st-0", "st-1", "st-2", "st-3", "st-4"];
-    const heavySchedules = (types: readonly string[]) => ({
-      data: Array.from({ length: 150 }, (_, index) => {
-        const serviceTypeId = types[index % types.length] ?? "st-0";
-        return schedule(
-          `${serviceTypeId}-${index}`,
-          "2026-05-17T17:00:00.000Z",
-          {
-            serviceTypeId,
-            timeIds: [`rehearsal-${serviceTypeId}`],
-          }
-        );
-      }),
-    });
     const { dependencies, getPlansWithIncludedInDateRange } =
       activityDependencies({
         schedulesByPerson: {
           ...Object.fromEntries(
-            personIds.map((id) => [id, heavySchedules(["st-9"])])
+            personIds.map((id) => [id, heavyMixedSchedules(["st-9"])])
           ),
-          "person-0": heavySchedules(serviceTypes),
+          "person-0": heavyMixedSchedules(serviceTypes),
         },
       });
 

@@ -4,8 +4,8 @@ import path from "node:path";
 import process from "node:process";
 
 import type { ExpoConfig } from "expo/config";
-import type { ConfigPlugin } from "expo/config-plugins.js";
-import { withDangerousMod } from "expo/config-plugins.js";
+import type { ConfigPlugin } from "expo/config-plugins";
+import { withDangerousMod } from "expo/config-plugins";
 
 import { iosBuildNumber } from "./scripts/build-number.ts";
 

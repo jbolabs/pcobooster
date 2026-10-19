@@ -72,13 +72,13 @@ export const withOldRouteParser = (endpointSource: string): string => {
   return endpointSource.replace(CURRENT_PARAM_NAMES, OLD_PARAM_NAMES);
 };
 
-const VERSION_LINE = /^HERMES_V1_VERSION_NAME=(?<version>\S+)$/mu;
+const VERSION_LINE = /^HERMES_VERSION_NAME=(?<version>\S+)$/mu;
 
-/** The Hermes V1 version React Native's podspec installs (`sdks/hermes-engine/version.properties`). */
+/** The Hermes version React Native's podspec installs (`sdks/hermes-engine/version.properties`). */
 export const hermesVersionFromProperties = (properties: string): string => {
   const version = VERSION_LINE.exec(properties)?.groups?.version;
   if (version === undefined) {
-    throw new Error("version.properties has no HERMES_V1_VERSION_NAME");
+    throw new Error("version.properties has no HERMES_VERSION_NAME");
   }
   return version;
 };

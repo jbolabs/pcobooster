@@ -9,7 +9,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { Schema } from "effect";
-import { getDefaultConfig } from "expo/metro-config.js";
+import { getDefaultConfig } from "expo/metro-config";
 
 const [original, replacement] = Schema.decodeUnknownSync(Schema.String)(
   process.env.PCOB_HERMES_GATE_SUBSTITUTE ?? ""

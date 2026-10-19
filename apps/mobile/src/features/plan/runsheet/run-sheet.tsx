@@ -166,6 +166,10 @@ export const PlanRunSheet = ({
             </NativeLabel>
           </HStack>
           <List.ForEach
+            data={items}
+            keyExtractor={(item) => item.id}
+            // Every row renders, as before recycling: rows hold their own swipe and menu state.
+            recycling={false}
             onMove={
               access.canEdit
                 ? (indices, destination) => {
@@ -187,9 +191,8 @@ export const PlanRunSheet = ({
                 : undefined
             }
           >
-            {items.map((item, index) => (
+            {({ item, index }) => (
               <CachedRow
-                key={item.id}
                 ids={ids}
                 item={item}
                 index={index}
@@ -205,7 +208,7 @@ export const PlanRunSheet = ({
                 transition={insights.transitions.get(item.id)}
                 actions={actions}
               />
-            ))}
+            )}
           </List.ForEach>
         </List>
       </Host>

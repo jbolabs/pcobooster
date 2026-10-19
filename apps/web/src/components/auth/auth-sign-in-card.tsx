@@ -129,7 +129,6 @@ const DeviceAccountRow = ({
     <li className="group/account relative">
       <Item
         size="sm"
-        className="pr-12"
         render={
           <button
             type="button"
@@ -150,7 +149,7 @@ const DeviceAccountRow = ({
             <AvatarFallback>{accountInitials(account)}</AvatarFallback>
           </Avatar>
         </ItemMedia>
-        <ItemContent className="min-w-0">
+        <ItemContent className="mr-8.5 min-w-0">
           <div className="flex w-full min-w-0 flex-col gap-0.5">
             <ItemTitle>{displayName}</ItemTitle>
             <p className="text-muted-foreground flex w-full min-w-0 items-center gap-1.5 text-xs">

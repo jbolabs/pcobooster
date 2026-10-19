@@ -21,7 +21,7 @@ export const UnsentNotificationMark = ({
 }) => (
   <HoverLabel
     label={`${NOT_NOTIFIED_LABEL}. ${SEND_IN_PLANNING_CENTER_HINT}.`}
-    render={
+    trigger={
       <span
         className={cn(
           "text-muted-foreground inline-flex shrink-0 items-center",

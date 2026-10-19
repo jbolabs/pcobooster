@@ -134,7 +134,7 @@ const PlanningCenterLink = ({ href }: { href: string }) => (
     side="bottom"
     align="end"
     sideOffset={8}
-    render={
+    trigger={
       <a
         href={href}
         target="_blank"
@@ -325,7 +325,6 @@ const PlanNeighborList = ({
           <Item
             key={plan.id}
             size="row"
-            className="flex-col items-start justify-center gap-0"
             render={
               <Link
                 to="/services/$serviceTypeId/plans/$planId/$view"
@@ -340,14 +339,16 @@ const PlanNeighborList = ({
               />
             }
           >
-            <span className="text-sm font-medium tabular-nums">
-              {formatHeaderPlanDate(plan.sortDate, orgTimeZone)}
-            </span>
-            {isNonEmptyString(subtitle) ? (
-              <span className="text-muted-foreground w-full truncate text-xs">
-                {subtitle}
+            <span className="flex w-full min-w-0 flex-col items-start">
+              <span className="text-sm font-medium tabular-nums">
+                {formatHeaderPlanDate(plan.sortDate, orgTimeZone)}
               </span>
-            ) : null}
+              {isNonEmptyString(subtitle) ? (
+                <span className="text-muted-foreground w-full truncate text-xs">
+                  {subtitle}
+                </span>
+              ) : null}
+            </span>
           </Item>
         );
       })}

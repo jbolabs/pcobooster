@@ -189,15 +189,14 @@ describe("the shipped engine", () => {
     ).toHaveLength(2);
   });
 
-  it("reads the Hermes V1 version React Native's podspec installs", () => {
+  it("reads the Hermes version React Native's podspec installs", () => {
+    // React Native 0.88's sdks/hermes-engine/version.properties.
     expect(
-      hermesVersionFromProperties(
-        "HERMES_VERSION_NAME=0.17.0\nHERMES_V1_VERSION_NAME=250829098.0.17\n"
-      )
-    ).toBe("250829098.0.17");
+      hermesVersionFromProperties("HERMES_VERSION_NAME=260318099.0.4\n")
+    ).toBe("260318099.0.4");
     expect(() =>
-      hermesVersionFromProperties("HERMES_VERSION_NAME=0.17.0\n")
-    ).toThrow("HERMES_V1_VERSION_NAME");
+      hermesVersionFromProperties("HERMES_V1_VERSION_NAME=250829098.0.17\n")
+    ).toThrow("HERMES_VERSION_NAME");
   });
 
   it("reads hermesc's release and bytecode versions", () => {

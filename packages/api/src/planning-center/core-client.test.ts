@@ -177,6 +177,14 @@ const settle = Effect.promise(async () => {
   await delay(20);
 });
 
+const pageWithNext = (offset: number) =>
+  jsonResponse({
+    data: [{ ...person, id: String(offset) }],
+    links: {
+      next: `https://api.planningcenteronline.com/services/v2/people?offset=${offset + 100}`,
+    },
+  });
+
 describe(PlanningCenterCoreClient, () => {
   it("binds bearer requests and cache scope to the constructor credential", async () => {
     const fetch = fetchMock().mockResolvedValue(jsonResponse({ data: person }));
@@ -671,13 +679,6 @@ describe(PlanningCenterCoreClient, () => {
   });
 
   it("fails rather than return part of a collection longer than its page limit", async () => {
-    const pageWithNext = (offset: number) =>
-      jsonResponse({
-        data: [{ ...person, id: String(offset) }],
-        links: {
-          next: `https://api.planningcenteronline.com/services/v2/people?offset=${offset + 100}`,
-        },
-      });
     const fetch = fetchMock()
       .mockResolvedValueOnce(pageWithNext(0))
       .mockResolvedValueOnce(pageWithNext(100));

@@ -21,6 +21,7 @@ import {
   usePeopleDashboardPerson,
   usePersonDashboardContext,
 } from "@/hooks/use-people-dashboard-person";
+import { currentDate } from "@/lib/clock";
 import { ReplayMask } from "@/lib/replay-mask";
 import { personSignals } from "@/lib/team-health";
 
@@ -56,7 +57,7 @@ const PlanningCenterPersonLink = ({
     side="bottom"
     align="end"
     sideOffset={8}
-    render={
+    trigger={
       <a
         href={planningCenterPersonUrl(personId)}
         target="_blank"
@@ -160,7 +161,7 @@ export const PersonDetailPage = ({
     usePeopleDashboardPerson(personId, month);
   const { rosterPerson, teamPace } = usePersonDashboardContext(personId);
   const orgTimeZone = useOrganizationTimeZone();
-  const todayKey = formatCalendarDayInTimeZone(new Date(), orgTimeZone);
+  const todayKey = formatCalendarDayInTimeZone(currentDate(), orgTimeZone);
   const person = data?.person ?? null;
   const rhythm = person?.rhythm ?? null;
   const signals = useMemo(

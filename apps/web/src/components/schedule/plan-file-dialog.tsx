@@ -84,7 +84,7 @@ const StepButton = ({
     <HoverLabel
       side="top"
       label={<HotkeyChord id={shortcut.id} binding={shortcut.binding} />}
-      render={
+      trigger={
         <Button
           type="button"
           variant="outline"

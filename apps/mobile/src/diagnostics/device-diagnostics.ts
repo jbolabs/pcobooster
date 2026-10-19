@@ -43,7 +43,7 @@ const textFile = (name: string): SyncTextFile => {
       if (!file.exists) {
         file.create();
       }
-      file.write(text);
+      file.writeSync(text);
     },
     remove: () => {
       if (file.exists) {

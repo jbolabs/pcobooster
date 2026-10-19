@@ -358,7 +358,7 @@ const TransportControls = ({
     <div className="flex shrink-0 items-center sm:order-4">
       <HoverLabel
         label={back}
-        render={
+        trigger={
           <Button
             variant="ghost"
             size="icon-sm"
@@ -374,7 +374,7 @@ const TransportControls = ({
       </HoverLabel>
       <HoverLabel
         label={forward}
-        render={
+        trigger={
           <Button
             variant="ghost"
             size="icon-sm"
@@ -390,7 +390,7 @@ const TransportControls = ({
       </HoverLabel>
       <HoverLabel
         label={loopLabel(loop)}
-        render={
+        trigger={
           <Button
             variant={loop === null ? "ghost" : "secondary"}
             size="icon-sm"

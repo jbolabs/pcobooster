@@ -280,6 +280,20 @@ const planSortedAt = (sortDate: string | null): PCResource => ({
   attributes: { sort_date: sortDate },
 });
 
+const rosterWith = (status: string) => ({
+  data: [
+    planMemberEntry({
+      id: "pp-target",
+      personId: "p1",
+      planId: "plan-target",
+      teamId: "team-1",
+      status,
+      teamPositionName: "Band - Vocals",
+    }),
+  ],
+  included: [person("p1", "Pat", "Person"), team("team-1", "Band")],
+});
+
 describe("position candidate list", () => {
   let mocks: ReturnType<typeof createFixture>["mocks"];
   let dependencies: ReturnType<typeof createFixture>["dependencies"];
@@ -1473,19 +1487,6 @@ describe("position candidate list", () => {
         included: [],
       })
     );
-    const rosterWith = (status: string) => ({
-      data: [
-        planMemberEntry({
-          id: "pp-target",
-          personId: "p1",
-          planId: "plan-target",
-          teamId: "team-1",
-          status,
-          teamPositionName: "Band - Vocals",
-        }),
-      ],
-      included: [person("p1", "Pat", "Person"), team("team-1", "Band")],
-    });
     mocks.getPersonBlockouts.mockReturnValue(Effect.succeed([]));
     mocks.getPlanTeamMembers.mockReturnValue(Effect.succeed(rosterWith("U")));
 

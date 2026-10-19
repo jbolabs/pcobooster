@@ -38,6 +38,7 @@ import type { GetIntentPrefetchProps } from "@/hooks/use-intent-prefetch";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useOrganizationTimeZone } from "@/hooks/use-organization-timezone";
 import { useSongLibrary } from "@/hooks/use-song-library";
+import { currentDate } from "@/lib/clock";
 import { isQueryFresh } from "@/lib/intent-prefetch";
 import {
   RECENT_SONGS_STORAGE_KEY,
@@ -192,7 +193,7 @@ const SongRow = ({
       {showPlanningCenterLink ? (
         <HoverLabel
           label="Open in Planning Center"
-          render={
+          trigger={
             <a
               href={planningCenterSongUrl(row.id)}
               target="_blank"
@@ -370,7 +371,7 @@ export const SongsPage = ({
   const { getIntentProps } = useSongIntentPrefetch();
   const recentSongs = useRecentSongs();
   // One "now" per visit keeps the list from reshuffling as the clock moves.
-  const now = useMemo(() => new Date(), []);
+  const now = useMemo(() => currentDate(), []);
 
   const listed = useMemo(
     () =>

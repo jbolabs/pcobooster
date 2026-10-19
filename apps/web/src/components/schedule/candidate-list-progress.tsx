@@ -46,7 +46,7 @@ export const CandidateListProgress = ({
             label={description}
             side="bottom"
             align="start"
-            render={
+            trigger={
               <div className="absolute inset-x-0 -inset-y-1.5 cursor-default" />
             }
           />

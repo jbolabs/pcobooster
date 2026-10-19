@@ -24,6 +24,9 @@ const NAV_LINKS = [
 /** The nav links plus the beta note, which rolls with them. */
 const menuItemCount = NAV_LINKS.length + 1;
 
+/** Reads the clock on each render, so the footer year stays current. */
+const currentYear = (): number => new Date().getFullYear();
+
 /**
  * The page-level call to action. It opens the product by default; `data-analytics-cta` feeds
  * the marketing click analytics. Full document navigation keeps the marketing and product
@@ -245,7 +248,7 @@ export const SiteFooter = () => (
         Planning Center Services are trademarks of Ministry Centered
         Technologies, Inc.
       </p>
-      <span className="shrink-0">© {new Date().getFullYear()} PCOBooster</span>
+      <span className="shrink-0">© {currentYear()} PCOBooster</span>
     </div>
   </footer>
 );

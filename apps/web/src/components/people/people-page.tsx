@@ -35,6 +35,7 @@ import { useIntentPrefetch } from "@/hooks/use-intent-prefetch";
 import { useOrganizationTimeZone } from "@/hooks/use-organization-timezone";
 import { usePeopleDashboard } from "@/hooks/use-people-dashboard";
 import { createPeopleDashboardPersonQueryOptions } from "@/hooks/use-people-dashboard-person";
+import { currentDate } from "@/lib/clock";
 import { isQueryFresh } from "@/lib/intent-prefetch";
 import {
   parsePeopleDashboardScope,
@@ -175,7 +176,7 @@ export const PeoplePage = ({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const orgTimeZone = useOrganizationTimeZone();
-  const todayKey = formatCalendarDayInTimeZone(new Date(), orgTimeZone);
+  const todayKey = formatCalendarDayInTimeZone(currentDate(), orgTimeZone);
   const {
     scope,
     dashboard,

@@ -1143,19 +1143,20 @@ describe("candidate schedule history with more rehearsal times than one call rea
   });
 });
 
-describe("candidate availability over thousands of repeating blockouts", () => {
-  /** 2,000 repeating blockouts that may cover the plan day, none of whose dates do. */
-  const manyParentsOrg = (): FakeOrg => {
-    const parents = Array.from({ length: 2000 }, (_, index) =>
-      dailyRepeating(`parent-${index}`)
-    );
-    return {
-      collections: new Map([
-        ["/services/v2/people/p0/blockouts", { data: parents }],
-      ]),
-      resources: new Map(),
-    };
+/** 2,000 repeating blockouts that may cover the plan day, none of whose dates do. */
+const manyParentsOrg = (): FakeOrg => {
+  const parents = Array.from({ length: 2000 }, (_, index) =>
+    dailyRepeating(`parent-${index}`)
+  );
+  return {
+    collections: new Map([
+      ["/services/v2/people/p0/blockouts", { data: parents }],
+    ]),
+    resources: new Map(),
   };
+};
+
+describe("candidate availability over thousands of repeating blockouts", () => {
   const input: CandidateDetailsInput = {
     personIds: ["p0"],
     planId: SELECTED_PLAN,
@@ -1204,48 +1205,64 @@ describe("candidate availability over thousands of repeating blockouts", () => {
   }, 20_000);
 });
 
+/** Forty September plans of a service type the ranges cannot read, rehearsals on page two. */
+const detailOrg = (): FakeOrg => {
+  const collections = new Map<string, Collection>();
+  const schedules: PCResource[] = [];
+  const included: PCResource[] = [];
+  for (let index = 0; index < 40; index += 1) {
+    const planId = `september-plan-${index}`;
+    const serviceAt = new Date(
+      Date.parse("2026-09-01T17:00:00Z") + (index % 28) * DAY_MS
+    );
+    const times = planTimes(planId, serviceAt, 101, 100);
+    collections.set(`/services/v2/plans/${planId}/plan_times`, {
+      data: times,
+    });
+    schedules.push(scheduleOn("person-1", planId, serviceAt, 100));
+    if (times[0] !== undefined) {
+      included.push(times[0]);
+    }
+  }
+  collections.set("/services/v2/people/person-1/schedules", {
+    data: schedules,
+    included,
+  });
+  return {
+    collections,
+    resources: new Map([
+      [
+        "/services/v2/people/person-1",
+        {
+          type: "Person",
+          id: "person-1",
+          attributes: { first_name: "Alex", last_name: "Rivera" },
+        },
+      ],
+    ]),
+  };
+};
+
+/** September plans each listing 100 rehearsal times that only their own pages hold. */
+const manyTimesDetailOrg = (plans: number): FakeOrg => {
+  const org = manyTimesOrg("person-1", plans);
+  const schedules = org.collections.get(schedulesPath("person-1"));
+  org.collections.set(schedulesPath("person-1"), {
+    data: (schedules?.data ?? []).map((schedule, index) => ({
+      ...schedule,
+      attributes: {
+        ...schedule.attributes,
+        sort_date: atDay("2026-09-01T17:00:00Z", index % 28),
+      },
+    })),
+  });
+  return { ...org, resources: detailOrg().resources };
+};
+
 describe("person detail over paged plan times", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-
-  /** Forty September plans of a service type the ranges cannot read, rehearsals on page two. */
-  const detailOrg = (): FakeOrg => {
-    const collections = new Map<string, Collection>();
-    const schedules: PCResource[] = [];
-    const included: PCResource[] = [];
-    for (let index = 0; index < 40; index += 1) {
-      const planId = `september-plan-${index}`;
-      const serviceAt = new Date(
-        Date.parse("2026-09-01T17:00:00Z") + (index % 28) * DAY_MS
-      );
-      const times = planTimes(planId, serviceAt, 101, 100);
-      collections.set(`/services/v2/plans/${planId}/plan_times`, {
-        data: times,
-      });
-      schedules.push(scheduleOn("person-1", planId, serviceAt, 100));
-      if (times[0] !== undefined) {
-        included.push(times[0]);
-      }
-    }
-    collections.set("/services/v2/people/person-1/schedules", {
-      data: schedules,
-      included,
-    });
-    return {
-      collections,
-      resources: new Map([
-        [
-          "/services/v2/people/person-1",
-          {
-            type: "Person",
-            id: "person-1",
-            attributes: { first_name: "Alex", last_name: "Rivera" },
-          },
-        ],
-      ]),
-    };
-  };
 
   const otherServices = {
     catalogService: {
@@ -1338,21 +1355,6 @@ describe("person detail over paged plan times", () => {
     });
   });
 
-  /** September plans each listing 100 rehearsal times that only their own pages hold. */
-  const manyTimesDetailOrg = (plans: number): FakeOrg => {
-    const org = manyTimesOrg("person-1", plans);
-    const schedules = org.collections.get(schedulesPath("person-1"));
-    org.collections.set(schedulesPath("person-1"), {
-      data: (schedules?.data ?? []).map((schedule, index) => ({
-        ...schedule,
-        attributes: {
-          ...schedule.attributes,
-          sort_date: atDay("2026-09-01T17:00:00Z", index % 28),
-        },
-      })),
-    });
-    return { ...org, resources: detailOrg().resources };
-  };
   const plansAtBound = MAX_PROGRESS_TIMES / PLANNING_CENTER_PAGE_SIZE;
 
   it("keeps every continuation within what the API accepts at the cursor's bound", async () => {
@@ -1736,6 +1738,49 @@ describe("plan window history whose first roster needs the retry headroom", () =
   });
 });
 
+type WindowExit = Exit.Exit<PlanWindowHistoryBatch, unknown>;
+/**
+ * Follows the window call by call with fresh caches, editing the plans after the first call;
+ * stops at the end or at the first failure.
+ */
+const readChangedWindow = async (
+  fetch: typeof globalThis.fetch,
+  afterFirstCall: () => void,
+  continuation?: PlanWindowHistoryInput["continuation"],
+  calls = 0
+): Promise<WindowExit[]> => {
+  if (calls === MAX_CALLS) {
+    throw new Error("Plan window history did not finish");
+  }
+  const exit = await Effect.runPromiseExit(
+    getPlanWindowHistory(
+      { date: PLAN_DATE, continuation },
+      windowServices(fetch)
+    )
+  );
+  if (calls === 0) {
+    afterFirstCall();
+  }
+  const next = Exit.isSuccess(exit) ? nextWindowContinuation(exit.value) : null;
+  return next === null
+    ? [exit]
+    : [
+        exit,
+        ...(await readChangedWindow(fetch, afterFirstCall, next, calls + 1)),
+      ];
+};
+
+/** What a read from the start finds once the plans stopped changing. */
+const readAgain = async (fetch: typeof globalThis.fetch) => {
+  const calls = await continueWindowHistory(() => windowServices(fetch));
+  const rows = Object.values(historyRows(calls)).flat();
+  return {
+    rows: rows.length,
+    everyPlanOnce: rows.length === new Set(rows).size,
+    loaded: calls.reduce((sum, { batch }) => sum + batch.loadedPlanCount, 0),
+  };
+};
+
 describe("plan window history when plans change between calls", () => {
   const sundayPath = "/services/v2/service_types/st-sunday/plans";
   /** A Sunday plan on the selected day with one person on its roster. */
@@ -1778,55 +1823,12 @@ describe("plan window history when plans change between calls", () => {
       ids.map((id) => sameDayPlan(org, id));
     return { org, change, inserted };
   };
-  type WindowExit = Exit.Exit<PlanWindowHistoryBatch, unknown>;
-  /**
-   * Follows the window call by call with fresh caches, editing the plans after the first call;
-   * stops at the end or at the first failure.
-   */
-  const readChangedWindow = async (
-    fetch: typeof globalThis.fetch,
-    afterFirstCall: () => void,
-    continuation?: PlanWindowHistoryInput["continuation"],
-    calls = 0
-  ): Promise<WindowExit[]> => {
-    if (calls === MAX_CALLS) {
-      throw new Error("Plan window history did not finish");
-    }
-    const exit = await Effect.runPromiseExit(
-      getPlanWindowHistory(
-        { date: PLAN_DATE, continuation },
-        windowServices(fetch)
-      )
-    );
-    if (calls === 0) {
-      afterFirstCall();
-    }
-    const next = Exit.isSuccess(exit)
-      ? nextWindowContinuation(exit.value)
-      : null;
-    return next === null
-      ? [exit]
-      : [
-          exit,
-          ...(await readChangedWindow(fetch, afterFirstCall, next, calls + 1)),
-        ];
-  };
   const changed = (pages: number) =>
     new PlanningCenterPaginationError({
       reason: "changed",
       path: sundayPath,
       pages,
     });
-  /** What a read from the start finds once the plans stopped changing. */
-  const readAgain = async (fetch: typeof globalThis.fetch) => {
-    const calls = await continueWindowHistory(() => windowServices(fetch));
-    const rows = Object.values(historyRows(calls)).flat();
-    return {
-      rows: rows.length,
-      everyPlanOnce: rows.length === new Set(rows).size,
-      loaded: calls.reduce((sum, { batch }) => sum + batch.loadedPlanCount, 0),
-    };
-  };
 
   // The first call lists the first page and reads some rosters; a later one resumes the range
   // on the page starting at plan-99, after finding the rest of the first page's plans (deleted:
@@ -1914,40 +1916,41 @@ describe("plan window history when plans change between calls", () => {
   });
 });
 
-describe("plan window history across as many service types as the catalog holds", () => {
-  /** `count` active service types; the first holds 200 window plans, each needing a roster. */
-  const manyServiceTypesOrg = (count: number): FakeOrg => {
-    const serviceTypes = Array.from(
-      { length: count },
-      (_, index): PCResource => ({
-        type: "ServiceType",
-        id: `st-${index}`,
-        attributes: { archived_at: null, name: `Type ${index}` },
-      })
-    );
-    const plans = Array.from({ length: 200 }, (_, index): PCResource => ({
-      type: "Plan",
-      id: `st-0-plan-${index}`,
-      attributes: { sort_date: PLAN_DATE, plan_people_count: 1 },
-    }));
-    return {
-      collections: new Map([
-        ["/services/v2/service_types", { data: serviceTypes }],
-        ["/services/v2/service_types/st-0/plans", { data: plans }],
-      ]),
-      resources: new Map(),
-    };
+/** `count` active service types; the first holds 200 window plans, each needing a roster. */
+const manyServiceTypesOrg = (count: number): FakeOrg => {
+  const serviceTypes = Array.from(
+    { length: count },
+    (_, index): PCResource => ({
+      type: "ServiceType",
+      id: `st-${index}`,
+      attributes: { archived_at: null, name: `Type ${index}` },
+    })
+  );
+  const plans = Array.from({ length: 200 }, (_, index): PCResource => ({
+    type: "Plan",
+    id: `st-0-plan-${index}`,
+    attributes: { sort_date: PLAN_DATE, plan_people_count: 1 },
+  }));
+  return {
+    collections: new Map([
+      ["/services/v2/service_types", { data: serviceTypes }],
+      ["/services/v2/service_types/st-0/plans", { data: plans }],
+    ]),
+    resources: new Map(),
   };
-  const servicesWithCatalog = (fetch: typeof globalThis.fetch) => ({
-    ...windowServices(fetch),
-    catalog: new PlanningCenterCatalogService(
-      createBasicPlanningCenterClient(
-        { applicationId: "test-client", secret: "test-token" },
-        httpClientFor(fetch)
-      )
-    ),
-  });
+};
 
+const servicesWithCatalog = (fetch: typeof globalThis.fetch) => ({
+  ...windowServices(fetch),
+  catalog: new PlanningCenterCatalogService(
+    createBasicPlanningCenterClient(
+      { applicationId: "test-client", secret: "test-token" },
+      httpClientFor(fetch)
+    )
+  ),
+});
+
+describe("plan window history across as many service types as the catalog holds", () => {
   it("hands back cursors the API accepts with every service type the catalog allows", async () => {
     const server = fakePlanningCenter(manyServiceTypesOrg(MAX_SERVICE_TYPES));
     // The first few calls: the whole window would take one per service type.
@@ -2013,33 +2016,34 @@ describe("plan window history across as many service types as the catalog holds"
   });
 });
 
-describe("plan ranges read whole", () => {
-  const rangeOrg = (count: number): FakeOrg => ({
-    collections: new Map([
-      [
-        "/services/v2/service_types/st-1/plans",
-        {
-          data: Array.from({ length: count }, (_, index) => ({
-            type: "Plan",
-            id: `plan-${index}`,
-            attributes: {
-              sort_date: atDay("2026-04-01T17:00:00Z", index / 10),
-            },
-          })),
-        },
-      ],
-    ]),
-    resources: new Map(),
-  });
-  const plansService = (fetch: typeof globalThis.fetch) =>
-    new PlanningCenterPlansService(
-      createBasicPlanningCenterClient(
-        { applicationId: "test-client", secret: "test-token" },
-        httpClientFor(fetch)
-      ),
-      Effect.succeed(ORG_TIME_ZONE)
-    );
+const rangeOrg = (count: number): FakeOrg => ({
+  collections: new Map([
+    [
+      "/services/v2/service_types/st-1/plans",
+      {
+        data: Array.from({ length: count }, (_, index) => ({
+          type: "Plan",
+          id: `plan-${index}`,
+          attributes: {
+            sort_date: atDay("2026-04-01T17:00:00Z", index / 10),
+          },
+        })),
+      },
+    ],
+  ]),
+  resources: new Map(),
+});
 
+const plansService = (fetch: typeof globalThis.fetch) =>
+  new PlanningCenterPlansService(
+    createBasicPlanningCenterClient(
+      { applicationId: "test-client", secret: "test-token" },
+      httpClientFor(fetch)
+    ),
+    Effect.succeed(ORG_TIME_ZONE)
+  );
+
+describe("plan ranges read whole", () => {
   it("stops at the page that passes the range and says when the range went on past its cap", async () => {
     const server = fakePlanningCenter(rangeOrg(1000));
     const service = plansService(server.fetch);

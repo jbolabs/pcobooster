@@ -185,10 +185,10 @@ export const KeyTransitionPopover = ({
                 <HoverLabel
                   label={added ? "In notes" : "Add to notes"}
                   side="left"
-                  render={
+                  trigger={
                     <Item
                       size="xs"
-                      className="-mx-3 w-[calc(100%+1.5rem)] py-2"
+                      className="-mx-3 w-[calc(100%+1.5rem)]"
                       render={
                         <button
                           type="button"

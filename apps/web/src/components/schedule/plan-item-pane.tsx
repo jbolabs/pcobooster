@@ -175,7 +175,7 @@ const PaneHeader = ({
           {item.song ? (
             <HoverLabel
               label="Open in Planning Center"
-              render={
+              trigger={
                 <a
                   href={planningCenterSongUrl(item.song.id)}
                   target="_blank"
@@ -193,7 +193,7 @@ const PaneHeader = ({
           ) : null}
           <HoverLabel
             label="Remove"
-            render={
+            trigger={
               <Button
                 type="button"
                 variant="ghost-destructive"
@@ -209,7 +209,7 @@ const PaneHeader = ({
           </HoverLabel>
           <HoverLabel
             label="Close"
-            render={
+            trigger={
               <Button
                 type="button"
                 variant="ghost"

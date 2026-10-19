@@ -4,7 +4,7 @@
  *
  * Usage: bun run scripts/hermes-gate/gate.ts [--bundle <main.jsbundle>]
  *
- * 1. Resolves the Hermes V1 version React Native's podspec installs, and the matching release
+ * 1. Resolves the Hermes version React Native's podspec installs, and the matching release
  *    tarball from Maven Central (CocoaPods' shared cache first), checked against Maven's SHA-1.
  * 2. Compiles `runner.cpp` against that tarball's macOS hermesvm framework.
  * 3. Bundles `probe.ts` with Expo's `export:embed` (the Release build's bundling command, with

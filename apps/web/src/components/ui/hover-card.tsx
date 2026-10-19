@@ -67,7 +67,7 @@ const HoverCardContent = ({
 
 const HoverLabel = ({
   label,
-  render,
+  trigger,
   children,
   side = "top",
   align = "center",
@@ -75,18 +75,23 @@ const HoverLabel = ({
   alignOffset = 0,
   className,
   ...props
-}: PreviewCardPrimitive.Trigger.Props & {
+}: Omit<PreviewCardPrimitive.Trigger.Props, "render"> & {
   label: React.ReactNode;
+  /**
+   * The element people hover. It keeps its own classes: `className` styles the label, and
+   * the trigger is not this component's root, so it is not a `render` replacement.
+   */
+  trigger?: PreviewCardPrimitive.Trigger.Props["render"];
 } & Pick<
     PreviewCardPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   > &
   Omit<
     React.ComponentProps<typeof HoverCardContent>,
-    "children" | "variant"
+    "children" | "render" | "variant"
   >) => (
   <HoverCard>
-    <HoverCardTrigger render={render}>{children}</HoverCardTrigger>
+    <HoverCardTrigger render={trigger}>{children}</HoverCardTrigger>
     <HoverCardContent
       align={align}
       alignOffset={alignOffset}

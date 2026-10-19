@@ -86,6 +86,16 @@ const accountIdFor = async (person: PlanningCenterProfile): Promise<string> => {
   return row?.id ?? "";
 };
 
+const callAsAccount = async (headers: Record<string, string>) => {
+  const client = app.client({
+    client: "expo",
+    httpHeaders: () => headers,
+  });
+  return await client.run((api) =>
+    api.chordCharts.song({ params: { songId: "song-1" } })
+  );
+};
+
 describe(
   "native sign-in through the API Worker",
   { timeout: LOCAL_WORKER_TEST_TIMEOUT_MS },
@@ -196,15 +206,6 @@ describe(
       const [first, second] = await Promise.all(
         [graceChurch, hopeChapel].map(accountIdFor)
       );
-      const callAsAccount = async (headers: Record<string, string>) => {
-        const client = app.client({
-          client: "expo",
-          httpHeaders: () => headers,
-        });
-        return await client.run((api) =>
-          api.chordCharts.song({ params: { songId: "song-1" } })
-        );
-      };
       featureFlags.evaluations.length = 0;
 
       // The flag is off for everyone, so a signed-in caller gets NotFound after its flag check.

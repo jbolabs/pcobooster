@@ -32,7 +32,7 @@ export const NeededSlotsStepper = ({
       <HoverLabel
         label={hasOpenSlots ? "One fewer open slot" : "No open slots to remove"}
         side="bottom"
-        render={
+        trigger={
           <Button
             type="button"
             variant="ghost"
@@ -60,7 +60,7 @@ export const NeededSlotsStepper = ({
             : "Add the first open slot in Planning Center"
         }
         side="bottom"
-        render={
+        trigger={
           <Button
             type="button"
             variant="ghost"

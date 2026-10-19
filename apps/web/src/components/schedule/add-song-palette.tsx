@@ -37,6 +37,7 @@ import {
 } from "@/hooks/use-song-options";
 import { useSongSearch } from "@/hooks/use-song-search";
 import { useSongSuggestions } from "@/hooks/use-song-suggestions";
+import { currentDate } from "@/lib/clock";
 import { isQueryFresh } from "@/lib/intent-prefetch";
 import { cn } from "@/lib/utils";
 
@@ -323,7 +324,7 @@ export const AddSongPalette = ({
   const deferredQuery = useDeferredValue(query).trim();
   const search = useSongSearch(deferredQuery);
   const suggestions = useSongSuggestions();
-  const serviceDate = planDate ?? new Date();
+  const serviceDate = planDate ?? currentDate();
   const browsing = deferredQuery === "";
   const songs = browsing
     ? [

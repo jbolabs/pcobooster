@@ -190,7 +190,7 @@ const PersonRowContent = ({
         <HoverLabel
           label={describeOtherAssignments(otherAssignments)}
           side="bottom"
-          render={<span className="inline-flex shrink-0 rounded-full" />}
+          trigger={<span className="inline-flex shrink-0 rounded-full" />}
         >
           <AvatarStatus status={status} alsoScheduled>
             {avatar}
@@ -480,7 +480,7 @@ const AddPositionRow = ({
           render={
             <Item
               size="row"
-              className="text-muted-foreground min-h-9"
+              className="min-h-9"
               render={
                 <button
                   type="button"
@@ -490,8 +490,8 @@ const AddPositionRow = ({
             />
           }
         >
-          <Plus className="size-4" aria-hidden />
-          <span className="text-xs">Add position</span>
+          <Plus className="text-muted-foreground size-4" aria-hidden />
+          <span className="text-muted-foreground text-xs">Add position</span>
         </ResponsivePopoverTrigger>
         <ResponsivePopoverContent
           title="Add position"
@@ -608,7 +608,7 @@ const TeamPanel = ({
               <HoverLabel
                 label={`${unsentCount} not notified yet. Send the emails in Planning Center.`}
                 side="bottom"
-                render={
+                trigger={
                   <Badge
                     variant="outline"
                     aria-label={`${unsentCount} not notified`}

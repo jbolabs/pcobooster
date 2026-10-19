@@ -14,14 +14,14 @@
     "@pcobooster/config": "workspace:*",
     "@pcobooster/contracts": "workspace:*",
     "alchemy": "2.0.0-beta.83",
-    "better-auth": "1.7.7",
-    "effect": "4.0.4"
+    "better-auth": "1.7.10",
+    "effect": "4.0.5"
   },
   "devDependencies": {
     "@pcobooster/client": "workspace:*",
-    "@types/bun": "^1.4.2",
+    "@types/bun": "^1.4.3",
     "@types/k6": "^2.3.0",
-    "rolldown": "1.2.13",
+    "rolldown": "1.2.14",
     "typescript": "^7.0.2"
   }
 }
