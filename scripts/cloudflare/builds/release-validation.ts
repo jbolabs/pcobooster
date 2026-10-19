@@ -33,7 +33,11 @@ export const validateRelease = (): void => {
     ["turbo", "run", "test", "//#test:root", "--concurrency=1", "--force"],
     validation
   );
-  run(["run", "build:cloudflare", "--cache=local:rw", "--force"], secretless);
+  run(["run", "build:cloudflare"], {
+    ...secretless,
+    TURBO_FORCE: "true",
+    TURBO_CACHE: "local:rw",
+  });
 };
 if (import.meta.main) {
   validateRelease();
