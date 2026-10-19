@@ -14,6 +14,7 @@ export class PlanningCenterApiError extends Data.TaggedError(
 )<{
   readonly message: string;
   readonly status: number;
+  readonly method?: string;
   readonly cause?: unknown;
   readonly code?: string;
   readonly details?: JsonValue;

@@ -90,9 +90,12 @@ export const procedureOutcome = (
   return unexpectedOutcome(cause);
 };
 
-/** Only 5xx is reported to error tracking; 4xx and 499 are ordinary outcomes. */
+/** Provider-confirmed write rejections alert independently of the client's BAD_REQUEST. */
 export const isReportable = (outcome: ProcedureOutcome): boolean =>
-  outcome.status >= 500;
+  outcome.status >= 500 ||
+  (outcome.kind === "fault" &&
+    outcome.fault._tag === "InvalidInput" &&
+    outcome.fault.providerRejection !== undefined);
 
 /** Who called and how; everything in the outcome line besides the outcome itself. */
 export interface ProcedureCall {
@@ -190,7 +193,7 @@ export const logProcedureOutcome = (
     : rpcLog.info(PROCEDURE_LOG_MESSAGE, fields);
 };
 
-/** What error tracking receives for a 5xx procedure; never fails. */
+/** What error tracking receives for a reportable procedure; never fails. */
 export type ReportProcedureFailure = (report: {
   readonly fields: ProcedureLogFields;
   readonly error: Error;

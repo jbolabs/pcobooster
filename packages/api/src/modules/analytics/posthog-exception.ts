@@ -1,5 +1,6 @@
 import { createPostHogCaptureSender } from "@pcobooster/api/modules/analytics/posthog-capture";
 import type { PostHogCaptureBody } from "@pcobooster/api/modules/analytics/posthog-capture";
+import { InvalidInput } from "@pcobooster/contracts/faults/invalid-input";
 
 const EXCEPTION_MESSAGE_MAX_LENGTH = 500;
 const STACK_FRAME =
@@ -8,8 +9,7 @@ const STACK_FRAME =
 const SERVER_DISTINCT_ID = "pcobooster-api";
 
 /**
- * One 5xx procedure failure. The product API reports only those; expected faults (auth,
- * validation, conflicts, rate limits) are ordinary outcomes and stay in the logs.
+ * A 5xx procedure failure or provider-confirmed validation rejection of a write.
  */
 export interface ReportedRequestError {
   readonly error: Error;
@@ -19,6 +19,7 @@ export interface ReportedRequestError {
   readonly path: string;
   readonly method: string;
   readonly requestId: string;
+  readonly procedure: string | null;
 }
 
 interface ExceptionFrame {
@@ -67,6 +68,12 @@ interface ExceptionEntry {
   stacktrace?: { readonly type: "raw"; readonly frames: ExceptionFrame[] };
 }
 
+interface ProviderExceptionProperties {
+  provider?: "planning-center";
+  provider_status?: 422;
+  provider_errors?: NonNullable<InvalidInput["providerRejection"]>["errors"];
+}
+
 const toExceptionEntry = (cause: Error): ExceptionEntry => {
   const entry: ExceptionEntry = {
     type: cause.name,
@@ -85,24 +92,46 @@ export const toPostHogExceptionCapture = (
   reported: ReportedRequestError,
   now: Date
 ): PostHogCaptureBody => {
-  const { code } = reported;
+  const rejection =
+    reported.error instanceof InvalidInput
+      ? reported.error.providerRejection
+      : undefined;
+  const code = rejection === undefined ? reported.code : "PROVIDER_REJECTED";
+  const exception =
+    rejection === undefined
+      ? toExceptionEntry(rootCause(reported.error))
+      : {
+          type: "ProviderRejected",
+          value: "Planning Center rejected a write",
+          mechanism: { handled: true, synthetic: false, type: "rpc" },
+        };
+  const providerProperties: ProviderExceptionProperties = {};
+  if (rejection !== undefined) {
+    providerProperties.provider = "planning-center";
+    providerProperties.provider_status = 422;
+    providerProperties.provider_errors = rejection.errors;
+  }
+  const properties = {
+    ...providerProperties,
+    source: "server",
+    $process_person_profile: false,
+    $exception_level: "error",
+    $exception_list: [exception],
+    // One issue per procedure and failure kind, so varying messages don't split it.
+    $exception_fingerprint: `api:${reported.path}:${code}`,
+    error_code: code,
+    path: reported.path,
+    method: reported.method,
+    request_id: reported.requestId,
+    procedure: reported.procedure,
+    operation: reported.procedure,
+  };
   return {
     api_key: apiKey,
     event: "$exception",
     distinct_id: SERVER_DISTINCT_ID,
     timestamp: now.toISOString(),
-    properties: {
-      source: "server",
-      $process_person_profile: false,
-      $exception_level: "error",
-      $exception_list: [toExceptionEntry(rootCause(reported.error))],
-      // One issue per procedure and failure kind, so varying messages don't split it.
-      $exception_fingerprint: `api:${reported.path}:${code}`,
-      error_code: code,
-      path: reported.path,
-      method: reported.method,
-      request_id: reported.requestId,
-    },
+    properties,
   };
 };
 

@@ -6,6 +6,7 @@ import { PlanningCenterAccounting } from "@pcobooster/api/planning-center/accoun
 import {
   PlanningCenterCoreClient,
   createBasicPlanningCenterClient,
+  listedValidationErrors,
 } from "@pcobooster/api/planning-center/core-client";
 import type { PlanningCenterError } from "@pcobooster/api/planning-center/core-client";
 import { PlanningCenterPacing } from "@pcobooster/api/planning-center/pacing";
@@ -28,6 +29,43 @@ const jsonResponse = (body: JsonValue, init?: ResponseInit): Response =>
 const person = { id: "1", type: "Person", attributes: { name: "Alex" } };
 
 const fetchMock = (): FetchMock => vi.fn<typeof globalThis.fetch>();
+
+describe(listedValidationErrors, () => {
+  it("keeps only validation sources and details, with a safe missing-detail fallback", () => {
+    expect(
+      listedValidationErrors({
+        errors: [
+          {
+            source: { parameter: "length" },
+            detail: "must be a number",
+            title: "ignored",
+            meta: { value: "private" },
+          },
+          {
+            source: { pointer: "/data/attributes/title" },
+            title: "private title",
+            value: "private",
+          },
+        ],
+      })
+    ).toStrictEqual([
+      { attribute: "length", detail: "must be a number" },
+      { attribute: "title", detail: "Validation failed" },
+    ]);
+  });
+
+  it("bounds diagnostic count and text before reporting", () => {
+    const diagnostics = listedValidationErrors({
+      errors: Array.from({ length: 12 }, () => ({
+        source: { parameter: "a".repeat(150) },
+        detail: "b".repeat(600),
+      })),
+    });
+    expect(diagnostics).toHaveLength(10);
+    expect(diagnostics[0]?.attribute).toHaveLength(100);
+    expect(diagnostics[0]?.detail).toHaveLength(500);
+  });
+});
 
 const songsPageUrl = (offset: number) =>
   `https://api.planningcenteronline.com/services/v2/songs?offset=${offset}&per_page=100`;

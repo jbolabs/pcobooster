@@ -407,6 +407,17 @@ export const listedErrorDetails = (body: JsonValue | undefined): string[] =>
       }),
   });
 
+/** Only provider validation diagnostics, never the sent attributes or raw response body. */
+export const listedValidationErrors = (body: JsonValue | undefined) =>
+  Option.match(decodeListedErrors(body), {
+    onNone: () => [],
+    onSome: ({ errors }) =>
+      errors.slice(0, 10).map(({ detail, source }) => ({
+        attribute: rejectedAttribute(source)?.slice(0, 100),
+        detail: (detail ?? "Validation failed").slice(0, 500),
+      })),
+  });
+
 const isJsonObject = (value: JsonValue | undefined): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -459,7 +470,8 @@ const parseErrorBody = (responseBody: string): ErrorBody | null =>
 const buildApiError = (
   status: number,
   responseBody: string,
-  headers: ResponseHeaders
+  headers: ResponseHeaders,
+  method: string
 ): PlanningCenterApiError => {
   let code: string | undefined;
   let details: JsonValue | undefined;
@@ -481,6 +493,7 @@ const buildApiError = (
   return new PlanningCenterApiError({
     message,
     status,
+    method,
     code,
     details,
     responseBody,
@@ -827,7 +840,8 @@ export class PlanningCenterCoreClient {
       const error = buildApiError(
         response.status,
         responseBody,
-        response.headers
+        response.headers,
+        method
       );
       if (error.status === 429) {
         accounting?.recordRateLimited();
