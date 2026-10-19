@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { trialStage } from "../builds-trial/settings";
-import { pullRequestSchema, readGitHub } from "./github";
+import { pullRequestSchema, readGitHub, runnerGitHubAccess } from "./github";
 import { run } from "./validate";
 
 const required = (key: string): string => {
@@ -45,7 +45,8 @@ const clean = async (build: typeof buildSchema.Type): Promise<void> => {
   }
   const prs = await readGitHub(
     `commits/${build.build_trigger_metadata.commit_hash}/pulls`,
-    Schema.Array(pullRequestSchema)
+    Schema.Array(pullRequestSchema),
+    runnerGitHubAccess(process.env)
   );
   const current = prs.some(
     (pr) =>

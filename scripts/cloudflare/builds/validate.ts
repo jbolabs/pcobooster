@@ -38,6 +38,7 @@ export const validate = (baseRef: string, cache: boolean): void => {
       key.startsWith("PCOBOOSTER_ADMIN_") ||
       key.startsWith("STAGING_ACCESS_") ||
       key.startsWith("GITHUB_TOKEN") ||
+      key.startsWith("BUILDS_") ||
       key.startsWith("POSTHOG_ANNOTATION")
     ) {
       Reflect.deleteProperty(validationEnv, key);

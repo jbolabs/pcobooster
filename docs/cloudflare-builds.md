@@ -17,3 +17,9 @@ Stateful maintenance has one conditional R2 lock. A definitive API rejection per
 ## Acceptance and rollback
 
 Before replacing merge requirements, prove API-dispatched native GitHub checks for both success and deliberate failure at the exact head SHA, preview access and cleanup/reopen behavior. Local CI alone does not prove those integrations. Keep Actions until the separate cutover PR passes these gates. Roll back this parallel rollout by reverting the control-plane change and applying Alchemy; production and existing Actions remain independent.
+
+### Repository reads
+
+GitHub anonymous API reads returned 403 from the controller's shared egress. The private `PCOBooster Cloudflare CI` GitHub App (5385188, installation 173133738) is installed only on `jbolabs/pcobooster`, with read-only Contents, Pull Requests and mandatory Metadata permissions. Its declarative registration specification is `scripts/cloudflare/builds/github-app-manifest.json`; GitHub registration and installation are a one-time administrator step.
+
+Store the downloaded signing key as PKCS8 PEM in the `builds-control` Keychain scope under `BUILDS_GITHUB_APP_PRIVATE_KEY`. `scripts/secrets/infra.ts` supplies it to the Alchemy stack; Alchemy owns the encrypted controller binding and the separate random repository-reader credential. The signing key stays in the controller. Runners call its authenticated `/github/` read proxy, restricted to PR details, commit-to-PR lookup and the current main commit. Neither the signing key nor the GitHub installation token is returned to build jobs. Validation subprocesses remove the reader credential together with deployment credentials.

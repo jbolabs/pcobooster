@@ -9,15 +9,17 @@ import {
   currentPullRequest,
   eligiblePullRequest,
   pullRequestForCommit,
+  runnerGitHubAccess,
 } from "./github";
 import { run, validate } from "./validate";
 
 const git = (...args: string[]) =>
   execFileSync("git", args, { encoding: "utf-8" }).trim();
 const { sha, stage } = buildContext(process.env, git("rev-parse", "HEAD"));
-const pr = await pullRequestForCommit(sha);
+const github = runnerGitHubAccess(process.env);
+const pr = await pullRequestForCommit(sha, github);
 const currentRevision = async (): Promise<boolean> => {
-  const current = await currentPullRequest(pr.number);
+  const current = await currentPullRequest(pr.number, github);
   return eligiblePullRequest(current, sha) && current.base.sha === pr.base.sha;
 };
 const [mode] = process.argv.slice(2);

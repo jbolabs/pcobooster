@@ -80,6 +80,10 @@ export default Alchemy.Stack(
         clientSecretVersion: 1,
       }
     );
+    const repositoryReadSecret = yield* Alchemy.Random(
+      "RepositoryReadSecret",
+      {}
+    );
     const cacheSecret = yield* Alchemy.Random("CacheSecret", {});
     const webhookSecret = yield* Alchemy.Random("WebhookSecret", {});
     const controlSecret = yield* Alchemy.Random("ControlSecret", {});
@@ -122,6 +126,7 @@ export default Alchemy.Stack(
       buildCommand: "bun scripts/cloudflare/builds/pr.ts check",
       deployCommand: "bun scripts/cloudflare/builds/pr.ts deploy",
       variables: {
+        BUILDS_REPOSITORY_READ_TOKEN: repositoryReadSecret.text,
         CLOUDFLARE_ACCOUNT_ID: accountId,
         CLOUDFLARE_API_TOKEN: token.value,
         PCOBOOSTER_ADMIN_EMAILS: yield* Config.String(
@@ -187,6 +192,7 @@ export default Alchemy.Stack(
       buildCommand: "bun scripts/cloudflare/builds/maintenance.ts",
       deployCommand: "true",
       variables: {
+        BUILDS_REPOSITORY_READ_TOKEN: repositoryReadSecret.text,
         CLOUDFLARE_ACCOUNT_ID: accountId,
         CLOUDFLARE_API_TOKEN: maintenanceToken.value,
         BUILDS_CI_TOKEN: dispatch.value,
@@ -209,6 +215,12 @@ export default Alchemy.Stack(
       workersDev: true,
       compatibility: { date: "2026-09-01" },
       env: {
+        GITHUB_APP_ID: "5385188",
+        GITHUB_INSTALLATION_ID: "173133738",
+        GITHUB_APP_PRIVATE_KEY: yield* Config.Redacted(
+          "BUILDS_GITHUB_APP_PRIVATE_KEY"
+        ),
+        REPOSITORY_READ_TOKEN: repositoryReadSecret.text,
         RECORDS: records,
         WEBHOOK_SECRET: webhookSecret.text,
         CONTROL_TOKEN: controlSecret.text,

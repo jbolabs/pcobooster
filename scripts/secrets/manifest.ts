@@ -10,6 +10,7 @@ export const secretScopeSchema = Schema.Literals([
   "mobile-updates",
   "posthog",
   "recovery",
+  "builds-control",
 ]);
 export type SecretScope = typeof secretScopeSchema.Type;
 
@@ -60,6 +61,7 @@ const inheritedCredentialKeys = [
 
 /** Only these keys may be injected into commands in each trust boundary. */
 export const scopeKeys: Record<SecretScope, readonly string[]> = {
+  "builds-control": ["BUILDS_GITHUB_APP_PRIVATE_KEY"],
   local: localKeys,
   sandbox: ["PLANNING_CENTER_CLIENT", "PLANNING_CENTER_PAT"],
   cloud: [
@@ -83,6 +85,7 @@ export const scopeKeys: Record<SecretScope, readonly string[]> = {
 };
 
 export const requiredScopeKeys: Record<SecretScope, readonly string[]> = {
+  "builds-control": scopeKeys["builds-control"],
   local: localKeys.slice(0, 3),
   sandbox: scopeKeys.sandbox,
   cloud: scopeKeys.cloud,

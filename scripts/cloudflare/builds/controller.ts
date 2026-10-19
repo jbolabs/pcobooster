@@ -8,13 +8,16 @@ import {
   pullRequestSchema,
   repository,
 } from "./github";
+import { allowedGitHubPath, installationToken } from "./github-app";
+import type { GitHubAppCredentials } from "./github-app";
 import {
   DispatchRejectedError,
   reconcileBuild,
   serializedBuild,
 } from "./serialized";
 
-interface Environment {
+interface Environment extends GitHubAppCredentials {
+  REPOSITORY_READ_TOKEN: string;
   RECORDS: R2Bucket;
   WEBHOOK_SECRET: string;
   CONTROL_TOKEN: string;
@@ -27,6 +30,11 @@ interface Environment {
   TRUSTED_BRANCH: string;
   BOOTSTRAP_BRANCH: string;
 }
+const githubAccess = async (env: Environment) => ({
+  baseUrl: `https://api.github.com/repos/${repository}/`,
+  token: await installationToken(env),
+});
+
 const eventSchema = Schema.Struct({
   action: Schema.optional(Schema.String),
   changes: Schema.optional(
@@ -148,7 +156,10 @@ const handleEvent = async (
       "edited",
     ].includes(event.action ?? "")
   ) {
-    const current = await currentPullRequest(pr.number);
+    const current = await currentPullRequest(
+      pr.number,
+      await githubAccess(env)
+    );
     if (!eligiblePullRequest(current, pr.head.sha)) {
       return new Response("Ignored stale or fork PR");
     }
@@ -198,7 +209,7 @@ const previewResponse = async (
   number: number,
   env: Environment
 ): Promise<Response> => {
-  const pr = await currentPullRequest(number);
+  const pr = await currentPullRequest(number, await githubAccess(env));
   if (pr.state !== "open") {
     return new Response("Preview closed", { status: 404 });
   }
@@ -349,6 +360,34 @@ const recordsResponse = async (
 export default {
   async fetch(request: Request, env: Environment): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/github/")) {
+      if (
+        request.headers.get("Authorization") !==
+        `Bearer ${env.REPOSITORY_READ_TOKEN}`
+      ) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      const path = url.pathname.slice("/github/".length);
+      if (request.method !== "GET" || url.search || !allowedGitHubPath(path)) {
+        return new Response("Unsupported repository read", { status: 403 });
+      }
+      const access = await githubAccess(env);
+      const response = await fetch(`${access.baseUrl}${path}`, {
+        headers: {
+          Authorization: `Bearer ${access.token}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "pcobooster-cloudflare-builds",
+        },
+        redirect: "error",
+      });
+      return new Response(response.body, {
+        status: response.status,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
+      });
+    }
     const preview = /^\/preview\/(?<number>[1-9]\d*)$/u.exec(url.pathname)
       ?.groups?.number;
     if (preview !== undefined && request.method === "GET") {
