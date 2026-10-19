@@ -277,6 +277,7 @@ export const ArrangementNav = ({
   onShow: (search: SongPageSearch) => void;
 }) => (
   <Panel
+    variant="quiet"
     render={<nav aria-label="Arrangements" />}
     className={arrangements.length < 2 ? "max-md:hidden" : undefined}
   >

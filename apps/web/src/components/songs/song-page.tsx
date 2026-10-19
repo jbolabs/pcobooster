@@ -462,13 +462,13 @@ const PlanningCenterLink = ({
 
 /** A panel's quiet one line, for a section with nothing to list. */
 const PanelMessage = ({ children }: { children: ReactNode }) => (
-  <Panel render={<div />}>
+  <Panel variant="quiet" render={<div />}>
     <PanelEmpty>{children}</PanelEmpty>
   </Panel>
 );
 
 const FilesSkeleton = () => (
-  <Panel render={<div aria-busy aria-label="Loading files" />}>
+  <Panel variant="quiet" render={<div aria-busy aria-label="Loading files" />}>
     <PanelHeader>
       <Skeleton variant="text" className="mx-1.5 h-3.5 w-24" />
     </PanelHeader>
@@ -504,7 +504,7 @@ const FilesSection = ({
   if (files.data === undefined) {
     if (files.isError) {
       body = (
-        <Panel render={<div />}>
+        <Panel variant="quiet" render={<div />}>
           <PanelRows>
             <SectionRetry
               message="Files didn’t load."
@@ -537,7 +537,11 @@ const FilesSection = ({
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-1 items-start gap-3 @3xl:grid-cols-2">
             {groups.map((group) => (
-              <Panel key={group.id} aria-label={`${group.label} files`}>
+              <Panel
+                variant="quiet"
+                key={group.id}
+                aria-label={`${group.label} files`}
+              >
                 <PanelHeader>
                   <PanelTitle>{group.label}</PanelTitle>
                   <PanelMeta>
@@ -667,6 +671,7 @@ const NotesSection = ({
           {notes.map((note) => (
             // Keyed by the text too, so new text is measured afresh.
             <Panel
+              variant="quiet"
               key={`${note.source}-${note.text}`}
               aria-label={`${note.source} notes`}
             >
@@ -795,7 +800,7 @@ const ScheduleList = ({
   }
   const shown = showAll ? entries : entries.slice(0, previewRows);
   return (
-    <Panel aria-label={label}>
+    <Panel variant="quiet" aria-label={label}>
       <PanelHeader>
         <PanelTitle>{label}</PanelTitle>
         <PanelMeta>{entries.length}</PanelMeta>

@@ -6,11 +6,14 @@ import { cn } from "cn";
 import type * as React from "react";
 
 const panelVariants = cva(
-  "text-foreground ring-foreground/5 dark:ring-foreground/10 flex min-w-0 flex-col overflow-hidden rounded-xl ring-1",
+  "group/panel text-foreground ring-foreground/5 dark:ring-foreground/10 flex min-w-0 flex-col overflow-hidden rounded-xl ring-1",
   {
     variants: {
       variant: {
+        /** Dense working panels, such as the lineup's teams. */
         default: "bg-background shadow-xs",
+        /** Reading pages, such as a song's: no shadow, an untinted header, fainter rules. */
+        quiet: "bg-card/30",
         /** Picked up and following the pointer, such as a team being dragged. */
         lifted: "bg-muted/80 shadow-2xl",
       },
@@ -33,19 +36,21 @@ const Panel = ({
   useRender({
     defaultTagName: "section",
     props: mergeProps<"section">(
-      { className: cn(panelVariants({ variant, className })) },
+      {
+        className: cn(panelVariants({ variant, className })),
+      },
       props
     ),
     render,
     state: { slot: "panel", variant },
   });
 
-/** The panel's tinted top row: a title, or a trigger row that holds one. */
+/** The panel's top row (tinted unless quiet): a title, or a trigger row that holds one. */
 const PanelHeader = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
     data-slot="panel-header"
     className={cn(
-      "bg-muted/40 flex min-h-12 items-center gap-0.5 px-1.5 py-1.5",
+      "bg-muted/40 flex min-h-12 items-center gap-0.5 px-1.5 py-1.5 group-data-[variant=quiet]/panel:min-h-10 group-data-[variant=quiet]/panel:bg-transparent group-data-[variant=quiet]/panel:py-1",
       className
     )}
     {...props}
@@ -60,7 +65,7 @@ const PanelTitle = ({
   <h3
     data-slot="panel-title"
     className={cn(
-      "min-w-0 flex-1 truncate px-1.5 text-sm font-semibold tracking-tight",
+      "min-w-0 flex-1 truncate px-1.5 text-sm font-semibold tracking-tight group-data-[variant=quiet]/panel:font-medium",
       className
     )}
     {...props}
@@ -92,7 +97,7 @@ const PanelBody = ({
     props: mergeProps<"div">(
       {
         className: cn(
-          "border-border/60 divide-border/60 flex flex-col divide-y border-t",
+          "border-border/60 divide-border/60 group-data-[variant=quiet]/panel:border-border/40 group-data-[variant=quiet]/panel:divide-border/40 flex flex-col divide-y border-t",
           className
         ),
       },
