@@ -160,7 +160,7 @@ export const PracticeChart = ({
         key={key}
         ref={sectionRef(position)}
         data-highlighted={highlighted === position}
-        className="data-[highlighted=true]:bg-muted -mx-2 mb-5 scroll-mt-4 break-inside-avoid overflow-x-auto rounded-lg px-2 py-1"
+        className="data-[highlighted=true]:bg-muted -mx-2 mb-5 scroll-mt-4 break-inside-avoid overflow-x-auto overscroll-x-contain rounded-lg px-2 py-1"
       >
         {section.heading === null ? null : (
           <h3
