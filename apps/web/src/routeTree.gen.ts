@@ -26,7 +26,9 @@ import { Route as AppPeopleIndexRouteImport } from './routes/_app/people/index'
 import { Route as AppPeoplePersonIdRouteImport } from './routes/_app/people/$personId'
 import { Route as AppServicesIndexRouteImport } from './routes/_app/services/index'
 import { Route as AppSongsIndexRouteImport } from './routes/_app/songs/index'
-import { Route as AppSongsSongIdRouteImport } from './routes/_app/songs/$songId'
+import { Route as AppSongsSongIdRouteRouteImport } from './routes/_app/songs/$songId/route'
+import { Route as AppSongsSongIdIndexRouteImport } from './routes/_app/songs/$songId/index'
+import { Route as AppSongsSongIdChartRouteImport } from './routes/_app/songs/$songId/chart'
 import { Route as AppServicesServiceTypeIdPlansPlanIdRouteRouteImport } from './routes/_app/services/$serviceTypeId/plans/$planId/route'
 import { Route as AppServicesServiceTypeIdPlansPlanIdIndexRouteImport } from './routes/_app/services/$serviceTypeId/plans/$planId/index'
 import { Route as AppServicesServiceTypeIdPlansPlanIdViewRouteImport } from './routes/_app/services/$serviceTypeId/plans/$planId/$view'
@@ -115,10 +117,20 @@ const AppSongsIndexRoute = AppSongsIndexRouteImport.update({
   path: '/songs/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppSongsSongIdRoute = AppSongsSongIdRouteImport.update({
+const AppSongsSongIdRouteRoute = AppSongsSongIdRouteRouteImport.update({
   id: '/songs/$songId',
   path: '/songs/$songId',
   getParentRoute: () => AppRoute,
+} as any)
+const AppSongsSongIdIndexRoute = AppSongsSongIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppSongsSongIdRouteRoute,
+} as any)
+const AppSongsSongIdChartRoute = AppSongsSongIdChartRouteImport.update({
+  id: '/chart',
+  path: '/chart',
+  getParentRoute: () => AppSongsSongIdRouteRoute,
 } as any)
 const AppServicesServiceTypeIdPlansPlanIdRouteRoute =
   AppServicesServiceTypeIdPlansPlanIdRouteRouteImport.update({
@@ -152,11 +164,13 @@ export interface FileRoutesByFullPath {
   '/api/$': typeof ApiSplatRoute
   '/demo/$key': typeof DemoKeyRoute
   '/key-transitions/$slug': typeof KeyTransitionsSlugRoute
+  '/songs/$songId': typeof AppSongsSongIdRouteRouteWithChildren
   '/people/$personId': typeof AppPeoplePersonIdRoute
-  '/songs/$songId': typeof AppSongsSongIdRoute
   '/people/': typeof AppPeopleIndexRoute
   '/services/': typeof AppServicesIndexRoute
   '/songs/': typeof AppSongsIndexRoute
+  '/songs/$songId/chart': typeof AppSongsSongIdChartRoute
+  '/songs/$songId/': typeof AppSongsSongIdIndexRoute
   '/services/$serviceTypeId/plans/$planId': typeof AppServicesServiceTypeIdPlansPlanIdRouteRouteWithChildren
   '/services/$serviceTypeId/plans/$planId/$view': typeof AppServicesServiceTypeIdPlansPlanIdViewRoute
   '/services/$serviceTypeId/plans/$planId/': typeof AppServicesServiceTypeIdPlansPlanIdIndexRoute
@@ -175,10 +189,11 @@ export interface FileRoutesByTo {
   '/demo/$key': typeof DemoKeyRoute
   '/key-transitions/$slug': typeof KeyTransitionsSlugRoute
   '/people/$personId': typeof AppPeoplePersonIdRoute
-  '/songs/$songId': typeof AppSongsSongIdRoute
   '/people': typeof AppPeopleIndexRoute
   '/services': typeof AppServicesIndexRoute
   '/songs': typeof AppSongsIndexRoute
+  '/songs/$songId/chart': typeof AppSongsSongIdChartRoute
+  '/songs/$songId': typeof AppSongsSongIdIndexRoute
   '/services/$serviceTypeId/plans/$planId/$view': typeof AppServicesServiceTypeIdPlansPlanIdViewRoute
   '/services/$serviceTypeId/plans/$planId': typeof AppServicesServiceTypeIdPlansPlanIdIndexRoute
 }
@@ -197,11 +212,13 @@ export interface FileRoutesById {
   '/api/$': typeof ApiSplatRoute
   '/demo/$key': typeof DemoKeyRoute
   '/key-transitions_/$slug': typeof KeyTransitionsSlugRoute
+  '/_app/songs/$songId': typeof AppSongsSongIdRouteRouteWithChildren
   '/_app/people/$personId': typeof AppPeoplePersonIdRoute
-  '/_app/songs/$songId': typeof AppSongsSongIdRoute
   '/_app/people/': typeof AppPeopleIndexRoute
   '/_app/services/': typeof AppServicesIndexRoute
   '/_app/songs/': typeof AppSongsIndexRoute
+  '/_app/songs/$songId/chart': typeof AppSongsSongIdChartRoute
+  '/_app/songs/$songId/': typeof AppSongsSongIdIndexRoute
   '/_app/services/$serviceTypeId/plans/$planId': typeof AppServicesServiceTypeIdPlansPlanIdRouteRouteWithChildren
   '/_app/services/$serviceTypeId/plans/$planId/$view': typeof AppServicesServiceTypeIdPlansPlanIdViewRoute
   '/_app/services/$serviceTypeId/plans/$planId/': typeof AppServicesServiceTypeIdPlansPlanIdIndexRoute
@@ -221,11 +238,13 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/demo/$key'
     | '/key-transitions/$slug'
-    | '/people/$personId'
     | '/songs/$songId'
+    | '/people/$personId'
     | '/people/'
     | '/services/'
     | '/songs/'
+    | '/songs/$songId/chart'
+    | '/songs/$songId/'
     | '/services/$serviceTypeId/plans/$planId'
     | '/services/$serviceTypeId/plans/$planId/$view'
     | '/services/$serviceTypeId/plans/$planId/'
@@ -244,10 +263,11 @@ export interface FileRouteTypes {
     | '/demo/$key'
     | '/key-transitions/$slug'
     | '/people/$personId'
-    | '/songs/$songId'
     | '/people'
     | '/services'
     | '/songs'
+    | '/songs/$songId/chart'
+    | '/songs/$songId'
     | '/services/$serviceTypeId/plans/$planId/$view'
     | '/services/$serviceTypeId/plans/$planId'
   id:
@@ -265,11 +285,13 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/demo/$key'
     | '/key-transitions_/$slug'
-    | '/_app/people/$personId'
     | '/_app/songs/$songId'
+    | '/_app/people/$personId'
     | '/_app/people/'
     | '/_app/services/'
     | '/_app/songs/'
+    | '/_app/songs/$songId/chart'
+    | '/_app/songs/$songId/'
     | '/_app/services/$serviceTypeId/plans/$planId'
     | '/_app/services/$serviceTypeId/plans/$planId/$view'
     | '/_app/services/$serviceTypeId/plans/$planId/'
@@ -416,8 +438,22 @@ declare module '@tanstack/react-router' {
       id: '/_app/songs/$songId'
       path: '/songs/$songId'
       fullPath: '/songs/$songId'
-      preLoaderRoute: typeof AppSongsSongIdRouteImport
+      preLoaderRoute: typeof AppSongsSongIdRouteRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/songs/$songId/': {
+      id: '/_app/songs/$songId/'
+      path: '/'
+      fullPath: '/songs/$songId/'
+      preLoaderRoute: typeof AppSongsSongIdIndexRouteImport
+      parentRoute: typeof AppSongsSongIdRouteRoute
+    }
+    '/_app/songs/$songId/chart': {
+      id: '/_app/songs/$songId/chart'
+      path: '/chart'
+      fullPath: '/songs/$songId/chart'
+      preLoaderRoute: typeof AppSongsSongIdChartRouteImport
+      parentRoute: typeof AppSongsSongIdRouteRoute
     }
     '/_app/services/$serviceTypeId/plans/$planId': {
       id: '/_app/services/$serviceTypeId/plans/$planId'
@@ -443,6 +479,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppSongsSongIdRouteRouteChildren {
+  AppSongsSongIdChartRoute: typeof AppSongsSongIdChartRoute
+  AppSongsSongIdIndexRoute: typeof AppSongsSongIdIndexRoute
+}
+
+const AppSongsSongIdRouteRouteChildren: AppSongsSongIdRouteRouteChildren = {
+  AppSongsSongIdChartRoute: AppSongsSongIdChartRoute,
+  AppSongsSongIdIndexRoute: AppSongsSongIdIndexRoute,
+}
+
+const AppSongsSongIdRouteRouteWithChildren =
+  AppSongsSongIdRouteRoute._addFileChildren(AppSongsSongIdRouteRouteChildren)
+
 interface AppServicesServiceTypeIdPlansPlanIdRouteRouteChildren {
   AppServicesServiceTypeIdPlansPlanIdViewRoute: typeof AppServicesServiceTypeIdPlansPlanIdViewRoute
   AppServicesServiceTypeIdPlansPlanIdIndexRoute: typeof AppServicesServiceTypeIdPlansPlanIdIndexRoute
@@ -462,8 +511,8 @@ const AppServicesServiceTypeIdPlansPlanIdRouteRouteWithChildren =
   )
 
 interface AppRouteChildren {
+  AppSongsSongIdRouteRoute: typeof AppSongsSongIdRouteRouteWithChildren
   AppPeoplePersonIdRoute: typeof AppPeoplePersonIdRoute
-  AppSongsSongIdRoute: typeof AppSongsSongIdRoute
   AppPeopleIndexRoute: typeof AppPeopleIndexRoute
   AppServicesIndexRoute: typeof AppServicesIndexRoute
   AppSongsIndexRoute: typeof AppSongsIndexRoute
@@ -471,8 +520,8 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppSongsSongIdRouteRoute: AppSongsSongIdRouteRouteWithChildren,
   AppPeoplePersonIdRoute: AppPeoplePersonIdRoute,
-  AppSongsSongIdRoute: AppSongsSongIdRoute,
   AppPeopleIndexRoute: AppPeopleIndexRoute,
   AppServicesIndexRoute: AppServicesIndexRoute,
   AppSongsIndexRoute: AppSongsIndexRoute,

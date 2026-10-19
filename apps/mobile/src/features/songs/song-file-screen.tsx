@@ -1,3 +1,4 @@
+import { planningCenterArrangementUrl } from "@pcobooster/planning-center-models/song-detail";
 import { hashKey, useQueryClient } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams } from "expo-router";
@@ -36,11 +37,7 @@ import {
   attachmentUnavailableMessage,
 } from "./attachments";
 import type { AttachmentPreview, SongAttachment } from "./attachments";
-import {
-  planningCenterArrangementUrl,
-  songLoadFailure,
-  songLoadFailureCopy,
-} from "./detail";
+import { songLoadFailure, songLoadFailureCopy } from "./detail";
 import { hasNativePreview } from "./native-preview";
 import type { PdfPreviewHandle } from "./native-preview";
 import { printPreviewFile, sharePreviewFile } from "./preview-actions";

@@ -5,13 +5,14 @@ import {
 import { createRequestScheduler } from "@pcobooster/client/request-scheduler";
 import { Forbidden } from "@pcobooster/contracts/faults/forbidden";
 import { NotFound } from "@pcobooster/contracts/faults/not-found";
+import { arrangementRows } from "@pcobooster/planning-center-models/song-detail";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
 import libraryFixture from "../../harness/fixtures/songs.library.json";
 import { makeControlledFixture } from "../../harness/testing/controlled-fixture";
 import { chartTargets, hasChart, readChart } from "./chart";
-import { arrangementRows, songLoadFailure } from "./detail";
+import { songLoadFailure } from "./detail";
 import { songLibraryListing, songLibrarySummary } from "./library";
 import {
   prefetchSong,

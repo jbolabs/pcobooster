@@ -1,11 +1,11 @@
 import { formatCalendarDateLabel } from "@pcobooster/planning-center-models/calendar";
+import { compactDate } from "@pcobooster/planning-center-models/song-detail";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 
 import { AppText } from "../../design/app-text";
 import { colors } from "../../design/colors";
 import { Spacing } from "../../design/metrics";
 import { useOrgTimeZone } from "../../lib/environment";
-import { compactDate } from "./detail";
 import { neverScheduled } from "./library";
 import type { SongRowData } from "./library";
 

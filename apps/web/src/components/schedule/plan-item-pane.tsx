@@ -10,6 +10,7 @@ import {
 import type { DraftState } from "@pcobooster/planning-center-models/plan-item-draft";
 import { keyOptionLabelOf } from "@pcobooster/planning-center-models/plan-overview";
 import type { KeyTransition } from "@pcobooster/planning-center-models/plan-set-insights";
+import { planningCenterSongUrl } from "@pcobooster/planning-center-models/song-detail";
 import {
   describeKeyChange,
   tempoLabel,
@@ -57,7 +58,6 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useSongOptions } from "@/hooks/use-song-options";
-import { planningCenterSongUrl } from "@/lib/songs-index";
 import { cn } from "@/lib/utils";
 
 /** History rows shown before "Show all" once the section is open. */

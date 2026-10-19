@@ -19,6 +19,7 @@
     "./schedule-constants": "./src/schedule-constants.ts",
     "./scheduling-preferences": "./src/scheduling-preferences.ts",
     "./service-plans": "./src/service-plans.ts",
+    "./song-detail": "./src/song-detail.ts",
     "./song-library": "./src/song-library.ts",
     "./song-search": "./src/song-search.ts",
     "./types": "./src/types.ts",
