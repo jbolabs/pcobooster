@@ -9,8 +9,9 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import type { PlanView } from "@pcobooster/planning-center-models/plan-overview";
 import { StarField } from "@pcobooster/ui/star-field";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { BrandRocketLogo } from "@/components/brand-rocket-logo";
 import { HotkeyChord } from "@/components/hotkey-chord";
@@ -28,8 +29,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SHORTCUTS_PALETTE_HOTKEY } from "@/lib/app-hotkeys";
-import { getPlanViewLabel } from "@/lib/app-routes";
+import { getPlanViewLabel, planViewEnabled } from "@/lib/app-routes";
 import { ROCKET_ANIMATION } from "@/lib/brand-rocket-animation";
+import { featuresQueryOptions } from "@/lib/features";
 import { cn } from "@/lib/utils";
 
 interface Area {
@@ -98,11 +100,23 @@ const songsArea: Area = {
   icon: MusicNote03Icon,
 };
 
-const nextPlanView = (current: PlanView): PlanView => {
-  const next =
-    (planViewGuide.findIndex((entry) => entry.view === current) + 1) %
-    planViewGuide.length;
-  return planViewGuide[next]?.view ?? current;
+type PlanViewGuide = typeof planViewGuide;
+
+const nextPlanView =
+  (guide: PlanViewGuide) =>
+  (current: PlanView): PlanView => {
+    const next =
+      (guide.findIndex((entry) => entry.view === current) + 1) % guide.length;
+    return guide[next]?.view ?? current;
+  };
+
+/** The guide without views this visitor can't open yet. */
+const useEnabledPlanViewGuide = (): PlanViewGuide => {
+  const { data } = useQuery(featuresQueryOptions);
+  return useMemo(
+    () => planViewGuide.filter((entry) => planViewEnabled(entry.view, data)),
+    [data]
+  );
 };
 
 const prefersReducedMotion = (): boolean =>
@@ -224,19 +238,20 @@ const PlanViewShowcase = () => {
   const vertical = !useIsMobile();
   const [view, setView] = useState<PlanView>("plan");
   const [held, setHeld] = useState(false);
+  const guide = useEnabledPlanViewGuide();
 
   useEffect(() => {
     // Held, or reduced motion: the person steps through the views themselves.
     const autoplay = !held && !prefersReducedMotion();
     const timer = autoplay
       ? window.setInterval(() => {
-          setView(nextPlanView);
+          setView(nextPlanView(guide));
         }, SHOWCASE_STEP_MS)
       : undefined;
     return () => {
       window.clearInterval(timer);
     };
-  }, [held]);
+  }, [held, guide]);
 
   return (
     <Tabs
@@ -263,7 +278,7 @@ const PlanViewShowcase = () => {
       }}
     >
       <TabsList className={vertical ? "w-40 shrink-0" : "w-full"}>
-        {planViewGuide.map((entry) => (
+        {guide.map((entry) => (
           <TabsTrigger key={entry.view} value={entry.view}>
             <SidebarNavIcon icon={planViewIcons[entry.view]} />
             {/* Phones show icons only; the line below names the view. */}
@@ -273,7 +288,7 @@ const PlanViewShowcase = () => {
           </TabsTrigger>
         ))}
       </TabsList>
-      {planViewGuide.map((entry) => (
+      {guide.map((entry) => (
         <TabsContent key={entry.view} value={entry.view}>
           <div className="animate-in fade-in-0 slide-in-from-bottom-1 flex flex-col gap-3 duration-300 motion-reduce:animate-none">
             <p className={cn("text-pretty", vertical ? "pt-1" : "text-center")}>

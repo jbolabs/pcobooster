@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { planViewIcons } from "@/components/plan-view-icons";
 import { SidebarNavIcon } from "@/components/sidebar-nav-icon";
 import { usePlanRoute } from "@/hooks/use-plan-route";
+import { useEnabledPlanViews } from "@/hooks/use-plan-views";
 import {
   getPlanViewLabel,
   phonePlanViews,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
  */
 export const MobilePlanViewTabs = () => {
   const planRoute = usePlanRoute();
+  const views = useEnabledPlanViews(phonePlanViews);
   if (planRoute === null) {
     return null;
   }
@@ -24,9 +26,9 @@ export const MobilePlanViewTabs = () => {
   return (
     <nav
       aria-label="Plan views"
-      className="bg-background border-border/50 grid grid-cols-5 border-b px-2"
+      className="bg-background border-border/50 grid auto-cols-fr grid-flow-col border-b px-2"
     >
-      {phonePlanViews.map((view) => {
+      {views.map((view) => {
         const active = activeTab === view;
         return (
           <Link

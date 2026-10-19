@@ -30,17 +30,23 @@ describe(requireFeature, () => {
     const { fetchFeatures, options, queryClient, guard } = setup({
       people: true,
       chordCharts: false,
+      practice: false,
     });
     await expect(guard()).resolves.toBe("allowed");
     expect(fetchFeatures).toHaveBeenCalledOnce();
     expect(queryClient.getQueryData(options.queryKey)).toStrictEqual({
       people: true,
       chordCharts: false,
+      practice: false,
     });
   });
 
   it("renders not found when the flag is off, whatever the other flags say", async () => {
-    const { guard } = setup({ people: false, chordCharts: true });
+    const { guard } = setup({
+      people: false,
+      chordCharts: true,
+      practice: false,
+    });
     await expect(guard()).resolves.toBe("not-found");
   });
 
@@ -48,10 +54,12 @@ describe(requireFeature, () => {
     const { fetchFeatures, options, queryClient, guard } = setup({
       people: true,
       chordCharts: true,
+      practice: false,
     });
     queryClient.setQueryData(options.queryKey, {
       people: false,
       chordCharts: true,
+      practice: false,
     });
     await expect(guard()).resolves.toBe("not-found");
     expect(fetchFeatures).not.toHaveBeenCalled();
@@ -61,10 +69,11 @@ describe(requireFeature, () => {
     const { fetchFeatures, options, queryClient, guard } = setup({
       people: false,
       chordCharts: false,
+      practice: false,
     });
     queryClient.setQueryData(
       options.queryKey,
-      { people: true, chordCharts: false },
+      { people: true, chordCharts: false, practice: false },
       { updatedAt: Date.now() - 60 * 60 * 1000 }
     );
     await expect(guard()).resolves.toBe("allowed");
@@ -73,6 +82,7 @@ describe(requireFeature, () => {
       expect(queryClient.getQueryData(options.queryKey)).toStrictEqual({
         people: false,
         chordCharts: false,
+        practice: false,
       });
     });
   });

@@ -11,6 +11,7 @@ import { Schema } from "effect";
 export const enabledFeaturesSchema = Schema.Struct({
   people: Schema.Boolean,
   chordCharts: Schema.Boolean,
+  practice: Schema.Boolean,
 } satisfies Record<FeatureFlagName, typeof Schema.Boolean>);
 
 export const features = plainGroup(

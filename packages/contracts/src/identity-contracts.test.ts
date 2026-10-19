@@ -140,8 +140,9 @@ describe("identity contracts", () => {
       Schema.decodeUnknownSync(enabledFeaturesSchema)({
         people: false,
         chordCharts: false,
+        practice: false,
       })
-    ).toStrictEqual({ people: false, chordCharts: false });
+    ).toStrictEqual({ people: false, chordCharts: false, practice: false });
   });
 
   it("requires an answer for every feature flag and drops flags it does not know", () => {
@@ -152,9 +153,10 @@ describe("identity contracts", () => {
       Schema.decodeUnknownSync(enabledFeaturesSchema)({
         people: true,
         chordCharts: true,
+        practice: true,
         cleanup: true,
       })
-    ).toStrictEqual({ people: true, chordCharts: true });
+    ).toStrictEqual({ people: true, chordCharts: true, practice: true });
   });
 
   it("requires a selected local account identifier and successful selection output", () => {

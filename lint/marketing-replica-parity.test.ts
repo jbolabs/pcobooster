@@ -3,7 +3,11 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { planViews as productPlanViews } from "../apps/web/src/lib/app-routes";
+import {
+  planViewFeatures,
+  planViews as productPlanViews,
+} from "../apps/web/src/lib/app-routes";
+import { featureFlags } from "../packages/api/src/config/feature-flags";
 
 const repositoryRoot = join(import.meta.dirname, "..");
 const marketingDemoPath = join(
@@ -24,8 +28,14 @@ const marketingPlanViewIds = (): string[] => {
   return ids;
 };
 
+/** Views everyone sees in production; a view behind a flag that's off there stays unadvertised. */
+const releasedPlanViews = productPlanViews.filter((view) => {
+  const flag = planViewFeatures[view];
+  return flag === undefined || featureFlags[flag].enabled.production;
+});
+
 describe("marketing product replica parity", () => {
-  it("lists the same plan views as the product shell", () => {
-    expect(marketingPlanViewIds()).toEqual([...productPlanViews]);
+  it("lists the plan views the product shows everyone in production", () => {
+    expect(marketingPlanViewIds()).toEqual(releasedPlanViews);
   });
 });
