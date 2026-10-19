@@ -3,7 +3,6 @@ import {
   InformationCircleIcon,
   Alert02Icon,
   MultiplicationSignCircleIcon,
-  Loading03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { CSSProperties } from "react";
@@ -11,6 +10,7 @@ import { Toaster as Sonner } from "sonner";
 import type { ToasterProps } from "sonner";
 
 import { useTheme } from "@/components/theme-provider";
+import { Spinner } from "@/components/ui/spinner";
 
 type SonnerStyle = CSSProperties & Record<`--${string}`, string>;
 
@@ -65,13 +65,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
             className="size-4"
           />
         ),
-        loading: (
-          <HugeiconsIcon
-            icon={Loading03Icon}
-            strokeWidth={2}
-            className="size-4 animate-spin"
-          />
-        ),
+        loading: <Spinner />,
       }}
       style={toasterStyle}
       offset={safeOffset("24px")}

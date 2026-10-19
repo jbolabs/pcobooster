@@ -5,7 +5,7 @@ import type {
   PlanTime,
 } from "@pcobooster/planning-center-models/types";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { startTransition, useState } from "react";
 import { toast } from "sonner";
 
@@ -35,6 +35,7 @@ import {
   SelectionPickerShell,
 } from "@/components/ui/selection-picker";
 import { selectionPickerSectionTitleClass } from "@/components/ui/selection-picker-styles";
+import { Spinner } from "@/components/ui/spinner";
 import { useOrganizationTimeZone } from "@/hooks/use-organization-timezone";
 import { invalidateCandidateHistoryQueries } from "@/hooks/use-schedule-cache-optimism";
 import type { ScheduleMutationInvalidateContext } from "@/hooks/use-schedule-cache-optimism";
@@ -358,7 +359,7 @@ const PlanPersonEditDialogBody = ({
             }}
           >
             {isUnscheduling ? (
-              <Loader2 className="size-4 animate-spin" />
+              <Spinner />
             ) : (
               <Trash2 className="size-4" aria-hidden />
             )}
@@ -386,9 +387,7 @@ const PlanPersonEditDialogBody = ({
                 startTransition(handleSave);
               }}
             >
-              {isSaving || isUpdating ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : null}
+              {isSaving || isUpdating ? <Spinner /> : null}
               Save
             </Button>
           </div>

@@ -621,6 +621,172 @@
 }
 
 /*
+ * Rocket loaders (`components/rocket-loader-mark.tsx`). Everything moves inside the logo's
+ * tilted space, where `translateX` follows the nose. Each flute's bar is drawn away from
+ * the hull, so `--rocket-len` sets its length through the dash, and its dot rides the far
+ * end. Registered so keyframes can animate the numbers the bars and dots read.
+ */
+@property --rocket-len {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 21;
+}
+
+@property --rocket-thrust {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --rocket-puff {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --rocket-pop {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+@utility rocket-mark {
+  & [data-rocket-flute] line {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 12;
+    stroke-linecap: round;
+    stroke-dasharray: var(--rocket-len) 400;
+  }
+
+  & [data-rocket-flute] circle {
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: translateX(calc(var(--rocket-len) * -1px));
+  }
+}
+
+/*
+ * The loading indicator: a springy hop forward, and on each hop the three dots puff off
+ * together, drift back and fade, then fresh ones pop in. One engine drives every flute,
+ * so the exhaust always moves as one shape.
+ */
+@utility rocket-puff {
+  & [data-rocket-ship] {
+    animation:
+      rocket-thrust 1s infinite,
+      rocket-puff 1s infinite;
+    transform: translateX(calc(var(--rocket-thrust) * 7px));
+  }
+
+  & [data-rocket-flute] {
+    --rocket-len: calc(21 * (1 + var(--rocket-thrust) * 0.7));
+  }
+
+  & [data-rocket-flute] circle {
+    transform: translateX(
+        calc((var(--rocket-len) + var(--rocket-puff) * 26) * -1px)
+      )
+      scale(calc(var(--rocket-pop) * (1 - var(--rocket-puff) * 0.6)));
+    opacity: calc(1 - var(--rocket-puff));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: fade-in-only 0.8s ease infinite alternate;
+
+    & [data-rocket-ship] {
+      animation: none;
+    }
+  }
+}
+
+@keyframes rocket-thrust {
+  0% {
+    --rocket-thrust: 0;
+    animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1);
+  }
+  14% {
+    --rocket-thrust: 1.2;
+    animation-timing-function: ease-in-out;
+  }
+  24% {
+    --rocket-thrust: 0.85;
+    animation-timing-function: ease-in-out;
+  }
+  33% {
+    --rocket-thrust: 1.04;
+    animation-timing-function: ease-in-out;
+  }
+  42% {
+    --rocket-thrust: 1;
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  100% {
+    --rocket-thrust: 0;
+  }
+}
+
+@keyframes rocket-puff {
+  0%,
+  8% {
+    --rocket-puff: 0;
+    --rocket-pop: 1;
+  }
+  55% {
+    --rocket-puff: 1;
+    --rocket-pop: 1;
+    animation-timing-function: step-end;
+  }
+  56% {
+    --rocket-puff: 0;
+    --rocket-pop: 0;
+    animation-timing-function: cubic-bezier(0.34, 1.8, 0.64, 1);
+  }
+  80%,
+  100% {
+    --rocket-puff: 0;
+    --rocket-pop: 1;
+  }
+}
+
+/*
+ * The first-run overlay's hover while the app loads: one sine, applied to each element
+ * directly. The rocket rises along its nose as the flames lengthen and sinks as they
+ * shorten. The launch itself runs in `launch-overlay.tsx`, from wherever the hover is.
+ */
+@utility rocket-hover {
+  @media (prefers-reduced-motion: no-preference) {
+    & [data-rocket-ship] {
+      animation: rocket-hover 1.4s cubic-bezier(0.37, 0, 0.63, 1) infinite
+        alternate;
+    }
+
+    & [data-rocket-flute] {
+      animation: rocket-hover-flame 1.4s cubic-bezier(0.37, 0, 0.63, 1) infinite
+        alternate;
+    }
+  }
+}
+
+@keyframes rocket-hover {
+  from {
+    transform: translateX(-2px);
+  }
+  to {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes rocket-hover-flame {
+  from {
+    --rocket-len: 17;
+  }
+  to {
+    --rocket-len: 27;
+  }
+}
+
+/*
  * Assign day bars. Each bar grows up from the baseline in a wave that starts at the
  * plan's day (`--day-distance: 0`) and spreads to both ends, so the eye lands on the
  * plan first. The row space behind them opens and closes with the Show history switch.

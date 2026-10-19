@@ -4,7 +4,6 @@ import {
 } from "@pcobooster/planning-center-models/plan-time-edits";
 import type { EditablePlanTime } from "@pcobooster/planning-center-models/plan-time-edits";
 import type { TeamPositionGroup } from "@pcobooster/planning-center-models/types";
-import { Loader2 } from "lucide-react";
 import { useState } from "react";
 
 import { PlanTimeFormFields } from "@/components/schedule/plan-time-form-fields";
@@ -17,6 +16,7 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/ui/responsive-dialog";
+import { Spinner } from "@/components/ui/spinner";
 
 interface PlanTimeCreateDialogProps {
   open: boolean;
@@ -110,7 +110,7 @@ const PlanTimeCreateDialogForm = ({
             void handleSave();
           }}
         >
-          {creating ? <Loader2 className="size-4 animate-spin" /> : null}
+          {creating ? <Spinner /> : null}
           Save
         </Button>
       </ResponsiveDialogFooter>
