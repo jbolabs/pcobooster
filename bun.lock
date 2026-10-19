@@ -388,6 +388,7 @@
   ],
   "patchedDependencies": {
     "better-auth@1.7.7": "patches/better-auth@1.7.7.patch",
+    "alchemy@2.0.0-beta.82": "patches/alchemy@2.0.0-beta.82.patch",
   },
   "packages": {
     "@alchemy.run/cloudflare-runtime": ["@alchemy.run/cloudflare-runtime@2.0.0-beta.82", "", { "dependencies": { "@alchemy.run/node-utils": "2.0.0-beta.82", "@cloudflare/unenv-preset": "^2.16.1", "@puppeteer/browsers": "^3.2.0", "capnp-es": "^0.0.16", "magic-string": "^0.30.21", "mime": "^4.0.7", "sharp": "^0.35.3", "unenv": "^2.0.0-rc.24", "workerd": "1.20261002.1", "yauzl": "^3.4.0" }, "peerDependencies": { "@distilled.cloud/cloudflare": "1.0.0-rc.15", "@effect/platform-bun": "^4.0.0", "@effect/platform-node": "^4.0.0", "effect": "^4.0.0", "rolldown": "1.2.5", "vite": "^7.0.0 || ^8.0.0" }, "optionalPeers": ["@effect/platform-bun", "@effect/platform-node", "rolldown", "vite"] }, "sha512-xm+Lrq0ElXtayY5ZO7Bv4WxVgUtCxQxPGRIFESHHoaSssyeSOMK8bXSR5GJzpBnMVYIAoEJ7UA7kGSPn7SzORQ=="],

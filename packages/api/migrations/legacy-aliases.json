@@ -1,0 +1,10 @@
+{
+  "0000_high_black_tarantula.sql": {
+    "name": "20260923202727_init",
+    "hash": "cc5846ad12f63d1d75089ea69d02158183e04b85a1554fa6f5fc180b1f0e3456"
+  },
+  "0001_feedback.sql": {
+    "name": "20260923233754_feedback",
+    "hash": "04e327ce9012ed7d405128a83a2ca38c59229d698f8c6cd448c7458807e48e3c"
+  }
+}

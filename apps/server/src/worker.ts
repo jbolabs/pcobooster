@@ -143,6 +143,8 @@ export default class Api extends Cloudflare.Worker<Api>()(
       limits: { subrequests: 80 },
       dev: { host: "127.0.0.1", port: apiDevPort, strictPort: true },
       env: {
+        // Props-level dependency: migration reconciliation must finish before the API uploads.
+        DB: yield* Database,
         // CI deploys the checked-out commit; post-deploy verification expects it from health.
         // Alchemy's change detection hashes `env` props but not the `Config` reads made in
         // init, so reading GITHUB_SHA there would leave a web-only deploy serving the old one.

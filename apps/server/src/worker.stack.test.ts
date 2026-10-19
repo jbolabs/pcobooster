@@ -111,6 +111,26 @@ const stack = beforeAll(
   { timeout: 180_000 }
 );
 
+const deploymentInputSchema = Schema.Struct({
+  env: Schema.Struct({
+    DB: Schema.Struct({ Type: Schema.String, FQN: Schema.String }),
+  }),
+});
+
+test(
+  "declares the database in API deployment inputs, before Worker reconciliation",
+  Effect.gen(function* verifyDeploymentDependency() {
+    const compiled = yield* ApiStack;
+    const inputs = Schema.decodeUnknownSync(deploymentInputSchema)(
+      compiled.resources.Api?.Props
+    );
+    assert.deepStrictEqual(inputs.env.DB, {
+      Type: "Cloudflare.D1.Database",
+      FQN: "Database",
+    });
+  })
+);
+
 /**
  * The first request waits for workerd to finish starting (the harness retries until it answers),
  * which takes longer than Vitest's 5-second default on CI runners.

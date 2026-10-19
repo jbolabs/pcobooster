@@ -102,7 +102,8 @@
   },
   "packageManager": "bun@1.4.2",
   "patchedDependencies": {
-    "better-auth@1.7.7": "patches/better-auth@1.7.7.patch"
+    "better-auth@1.7.7": "patches/better-auth@1.7.7.patch",
+    "alchemy@2.0.0-beta.82": "patches/alchemy@2.0.0-beta.82.patch"
   },
   "trustedDependencies": [
     "esbuild",
