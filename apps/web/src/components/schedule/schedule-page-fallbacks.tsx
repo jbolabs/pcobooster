@@ -1,6 +1,7 @@
 import { useParams } from "@tanstack/react-router";
 
 import { PageShell } from "@/components/page-shell";
+import { PracticeTabSkeleton } from "@/components/practice/practice-tab";
 import { LineupTabSkeleton } from "@/components/schedule/lineup-tab";
 import { PlanItemListSkeleton } from "@/components/schedule/plan-item-list";
 import { PlanOverviewSkeleton } from "@/components/schedule/plan-overview-tab";
@@ -73,6 +74,9 @@ const ViewSkeleton = ({
   }
   if (view === "assign") {
     return <AssignSkeleton />;
+  }
+  if (view === "practice") {
+    return <PracticeTabSkeleton />;
   }
   return <PlanOverviewSkeleton plan={plan} />;
 };

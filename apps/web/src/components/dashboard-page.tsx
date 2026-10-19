@@ -13,6 +13,7 @@ import { MobileHeader } from "@/components/mobile-menu";
 import { PageShell } from "@/components/page-shell";
 import { MobilePlanViewTabs } from "@/components/plan-view-tabs";
 import { PlanningCenterServicesIcon } from "@/components/planning-center-services-icon";
+import { PracticeTab } from "@/components/practice/practice-tab";
 import { QueryDataBoundary } from "@/components/query-data-boundary";
 import { LineupTab } from "@/components/schedule/lineup-tab";
 import { PlanOverviewTab } from "@/components/schedule/plan-overview-tab";
@@ -748,6 +749,16 @@ export const DashboardPage = ({
               serviceTypeId={routeServiceTypeId}
               planId={routePlanId}
               seriesId={selectedPlan?.seriesId ?? null}
+            />
+          </TabsContent>
+
+          <TabsContent
+            value="practice"
+            className="mt-0 flex min-h-0 flex-1 flex-col"
+          >
+            <PracticeTab
+              serviceTypeId={routeServiceTypeId}
+              planId={routePlanId}
             />
           </TabsContent>
         </Tabs>

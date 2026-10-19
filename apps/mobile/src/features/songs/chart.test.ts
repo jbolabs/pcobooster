@@ -6,7 +6,6 @@ import {
   chartTargetLabel,
   chartTargets,
   hasChart,
-  parseChartLines,
   readChart,
   resolveChartTarget,
 } from "./chart";
@@ -38,46 +37,6 @@ const arrangement = (
   layout,
   updatedAt: null,
   ...overrides,
-});
-
-describe("chart lines", () => {
-  it("reads headings, chord lines, inline chords, comments, and breaks", () => {
-    expect(
-      parseChartLines(
-        "VERSE 1\r\nG    D/F#   Em\nAmazing grace\n[G]Morning [C]light\n\n\nCOLUMN_BREAK\n{c: Softly}\n<t>CHORUS</t> notes"
-      )
-    ).toStrictEqual([
-      { kind: "heading", text: "VERSE 1" },
-      { kind: "chords", text: "G    D/F#   Em" },
-      { kind: "lyric", segments: [{ chord: null, text: "Amazing grace" }] },
-      {
-        kind: "lyric",
-        segments: [
-          { chord: "G", text: "Morning " },
-          { chord: "C", text: "light" },
-        ],
-      },
-      { kind: "blank" },
-      { kind: "comment", text: "Softly" },
-      {
-        kind: "lyric",
-        segments: [{ chord: null, text: "CHORUS notes" }],
-      },
-    ]);
-  });
-
-  it("keeps text before the first chord and a chord with no lyric after it", () => {
-    expect(parseChartLines("Oh [Em]come [D]")).toStrictEqual([
-      {
-        kind: "lyric",
-        segments: [
-          { chord: null, text: "Oh " },
-          { chord: "Em", text: "come " },
-          { chord: "D", text: "" },
-        ],
-      },
-    ]);
-  });
 });
 
 describe("chart readings", () => {

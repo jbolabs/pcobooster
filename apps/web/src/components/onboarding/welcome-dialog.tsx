@@ -61,6 +61,11 @@ const planViewGuide: readonly {
     description: "Service and rehearsal times, and who’s in each.",
   },
   {
+    view: "practice",
+    description:
+      "Step through the songs with charts in any key and the rehearsal tracks.",
+  },
+  {
     view: "overview",
     description: "What’s still missing before the service.",
   },
@@ -201,6 +206,11 @@ const planViewMocks: Record<
     { label: "Open positions", detail: "2" },
     { label: "Unanswered requests", detail: "3" },
     { label: "Songs without a key", detail: "None", accent: true },
+  ],
+  practice: [
+    { label: "Morning Light", detail: "G · Capo 2", accent: true },
+    { label: "Original mix", detail: "1:24 / 4:10" },
+    { label: "Steady Ground", detail: "Eb" },
   ],
 };
 

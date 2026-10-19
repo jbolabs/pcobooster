@@ -14,7 +14,7 @@ const marketingDemoPath = join(
 const marketingPlanViewIds = (): string[] => {
   const contents = readFileSync(marketingDemoPath, "utf8");
   const ids: string[] = [];
-  const pattern = /\{\s*id:\s*"(overview|assign|lineup|plan|times)"/gu;
+  const pattern = /\{\s*id:\s*"(overview|assign|lineup|plan|times|practice)"/gu;
   for (const match of contents.matchAll(pattern)) {
     const id = match[1];
     if (id !== undefined) {

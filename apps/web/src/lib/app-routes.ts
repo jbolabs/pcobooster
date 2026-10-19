@@ -7,6 +7,7 @@ export const planViews: readonly PlanView[] = [
   "lineup",
   "plan",
   "times",
+  "practice",
 ];
 
 /**
@@ -27,6 +28,7 @@ const planViewLabels: Record<PlanView, string> = {
   lineup: "Lineup",
   plan: "Plan",
   times: "Times",
+  practice: "Practice",
 };
 
 export const getPlanViewLabel = (view: PlanView): string =>

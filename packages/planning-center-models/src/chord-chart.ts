@@ -42,14 +42,17 @@ const SECTION_NAMES = [
 ] as const;
 
 const SECTION_PATTERN = new RegExp(
-  `^(?:${SECTION_NAMES.join("|")})(?:\\s*\\d+[a-z]?)?(?:\\s*[(]?\\s*[x×]\\s*\\d+\\s*[)]?)?(?:\\s*[(][^)]*[)])?\\s*:?$`,
+  `^(?:${SECTION_NAMES.join("|")})(?:\\s*\\d+[a-z]?)?\\s*:?(?:\\s*[(]?\\s*(?:[x×]\\s*\\d+|\\d+\\s*[x×])\\s*[)]?)?(?:\\s*[(][^)]*[)])?\\s*:?$`,
   "iu"
 );
 const BRACKETED_CHORD_PATTERN = /\[(?<chord>[^\]]*)\]/gu;
 const PLAIN_TEXT_TAG_PATTERN = /<t>/iu;
-/** Chord-line tokens that are not chords: bar lines, repeats, and rests. */
+/**
+ * Chord-line tokens that are not chords: bar lines, repeats (`x2`, `(2x)`, `-II-`, `-//-`), and
+ * rests.
+ */
 const CHORD_LINE_SYMBOL_PATTERN =
-  /^(?:\||\|\||\/|-|\u2013|%|\.|:|\(|\)|[x×]\d+|\(?[x×]\d+\)?|N\.?C\.?|\(\S*\))$/iu;
+  /^(?:\||\|\||\/|-|\u2013|%|\.|:|\(|\)|[x×]\d+|\(?[x×]\d+\)?|\(?\d+[x×]\)?|-+[Il|/]+-+|N\.?C\.?|\(\S*\))$/iu;
 const WHITESPACE_TOKEN_PATTERN = /\S+/gu;
 const TRAILING_WHITESPACE_PATTERN = /\s*$/u;
 
@@ -83,7 +86,7 @@ export const isChordLine = (line: string): boolean => {
 const transposeChordLine = (
   line: string,
   semitones: number,
-  to: MusicalKey
+  to: MusicalKey | null
 ): string => {
   let result = "";
   for (const match of line.matchAll(WHITESPACE_TOKEN_PATTERN)) {
@@ -94,13 +97,15 @@ const transposeChordLine = (
   return `${result}${trailing}`;
 };
 
-/** The chart's written key moved to another key: rewrites the chords in the text itself. */
-export const transposeChordChartText = (
+/**
+ * Moves every chord in the chart by `semitones`, spelled for `spellingKey` (or Planning
+ * Center's neutral names when the key is unknown). Chord lines keep their columns.
+ */
+export const transposeChordChartBy = (
   text: string,
-  from: MusicalKey,
-  to: MusicalKey
+  semitones: number,
+  spellingKey: MusicalKey | null
 ): string => {
-  const semitones = semitonesBetween(from, to);
   if (semitones === 0) {
     return text;
   }
@@ -108,13 +113,20 @@ export const transposeChordChartText = (
     .split("\n")
     .map((line) => {
       if (isChordLine(line)) {
-        return transposeChordLine(line, semitones, to);
+        return transposeChordLine(line, semitones, spellingKey);
       }
       return line.replaceAll(
         BRACKETED_CHORD_PATTERN,
         (_match, chord: string) =>
-          `[${transposeChordText(chord, semitones, to)}]`
+          `[${transposeChordText(chord, semitones, spellingKey)}]`
       );
     })
     .join("\n");
 };
+
+/** The chart's written key moved to another key: rewrites the chords in the text itself. */
+export const transposeChordChartText = (
+  text: string,
+  from: MusicalKey,
+  to: MusicalKey
+): string => transposeChordChartBy(text, semitonesBetween(from, to), to);

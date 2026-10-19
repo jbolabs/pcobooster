@@ -2425,3 +2425,128 @@
   height: 6px;
   margin-top: 6px;
 }
+
+/* Practice */
+
+.practice-sheet {
+  display: flex;
+  flex: 1 0 auto;
+  gap: 24px;
+}
+.practice-setlist {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 2px;
+  width: 200px;
+}
+.practice-setlist > button {
+  justify-content: space-between;
+  gap: 8px;
+}
+.practice-setlist > button:disabled {
+  color: var(--muted-foreground);
+}
+.practice-header {
+  margin: 12px 0 4px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.practice-header:first-child {
+  margin-top: 0;
+}
+.practice-key,
+.practice-time {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+.practice-stage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.practice-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.practice-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.practice-head h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.practice-head p {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.practice-head > .practice-time {
+  align-self: center;
+}
+.practice-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.practice-heading {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+.practice-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.practice-track {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.practice-progress {
+  flex: 1;
+  height: 4px;
+  min-width: 60px;
+  overflow: hidden;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: var(--muted);
+}
+.practice-progress::-webkit-progress-bar {
+  background: var(--muted);
+}
+.practice-progress::-webkit-progress-value {
+  background: var(--primary);
+}
+.practice-progress::-moz-progress-bar {
+  background: var(--primary);
+}
+.practice-empty {
+  padding: 24px 0;
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+
+@container (max-width: 760px) {
+  .practice-setlist {
+    display: none;
+  }
+}

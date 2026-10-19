@@ -1,11 +1,10 @@
-import {
-  COLUMN_BREAK,
-  PAGE_BREAK,
-  isChordLine,
-  isSectionHeading,
-  transposeChordChartText,
-} from "@pcobooster/planning-center-models/chord-chart";
+import { transposeChordChartText } from "@pcobooster/planning-center-models/chord-chart";
 import { parseKey } from "@pcobooster/planning-center-models/chord-chart-chords";
+import {
+  lyricsOnly,
+  parseChartLines,
+} from "@pcobooster/planning-center-models/chord-chart-lines";
+import type { ChartLine } from "@pcobooster/planning-center-models/chord-chart-lines";
 
 import { displayKey } from "../../lib/song-keys";
 import { keyOptionLabel } from "./detail";
@@ -62,100 +61,6 @@ export const resolveChartTarget = (
 export const hasChart = (arrangement: ChordChartArrangement): boolean =>
   arrangement.chordChart.trim() !== "";
 
-export interface ChartSegment {
-  readonly chord: string | null;
-  readonly text: string;
-}
-
-export type ChartLine =
-  | { readonly kind: "heading"; readonly text: string }
-  | { readonly kind: "chords"; readonly text: string }
-  | { readonly kind: "lyric"; readonly segments: readonly ChartSegment[] }
-  | { readonly kind: "comment"; readonly text: string }
-  | { readonly kind: "blank" }
-  | { readonly kind: "break" };
-
-const INLINE_CHORD = /\[(?<chord>[^\]]*)\]/gu;
-const PLAIN_TEXT_TAG = /<\/?t>/giu;
-const DIRECTIVE =
-  /^\{\s*(?:c|comment|ci|comment_italic)\s*:\s*(?<text>.*)\}$/iu;
-const OTHER_DIRECTIVE = /^\{[^}]*\}$/u;
-
-/** A lyric line split at its inline chords: each chord sits over the text after it. */
-const lyricSegments = (line: string): ChartSegment[] => {
-  const segments: ChartSegment[] = [];
-  let chord: string | null = null;
-  let start = 0;
-  for (const match of line.matchAll(INLINE_CHORD)) {
-    const text = line.slice(start, match.index);
-    if (chord !== null || text !== "") {
-      segments.push({ chord, text });
-    }
-    chord = match.groups?.chord ?? "";
-    start = match.index + match[0].length;
-  }
-  const rest = line.slice(start);
-  if (chord !== null || rest !== "" || segments.length === 0) {
-    segments.push({ chord, text: rest });
-  }
-  return segments;
-};
-
-/** Reads chart text into lines to draw. Windows line endings and trailing spaces don't matter. */
-export const parseChartLines = (text: string): ChartLine[] =>
-  text
-    .replaceAll("\r\n", "\n")
-    .split("\n")
-    .map((raw): ChartLine => {
-      const line = raw.replaceAll(PLAIN_TEXT_TAG, "").trimEnd();
-      const trimmed = line.trim();
-      if (trimmed === "") {
-        return { kind: "blank" };
-      }
-      if (trimmed === COLUMN_BREAK || trimmed === PAGE_BREAK) {
-        return { kind: "break" };
-      }
-      const directive = DIRECTIVE.exec(trimmed)?.groups?.text;
-      if (directive !== undefined) {
-        return { kind: "comment", text: directive.trim() };
-      }
-      if (OTHER_DIRECTIVE.test(trimmed)) {
-        return { kind: "blank" };
-      }
-      if (isSectionHeading(trimmed)) {
-        return { kind: "heading", text: trimmed };
-      }
-      if (isChordLine(raw)) {
-        return { kind: "chords", text: line };
-      }
-      return { kind: "lyric", segments: lyricSegments(line) };
-    })
-    // Runs of blank lines and breaks read as one gap.
-    .filter(
-      (line, index, lines) =>
-        !(
-          (line.kind === "blank" || line.kind === "break") &&
-          (index === 0 ||
-            lines[index - 1]?.kind === "blank" ||
-            lines[index - 1]?.kind === "break")
-        )
-    );
-
-/** Lyrics only: the chart without its chord lines and inline chords. */
-const stripChords = (lines: readonly ChartLine[]): ChartLine[] =>
-  lines.flatMap((line): ChartLine[] => {
-    if (line.kind === "chords") {
-      return [];
-    }
-    if (line.kind === "lyric") {
-      const text = line.segments.map((segment) => segment.text).join("");
-      return text.trim() === ""
-        ? []
-        : [{ kind: "lyric", segments: [{ chord: null, text }] }];
-    }
-    return [line];
-  });
-
 export interface ChartReading {
   readonly lines: readonly ChartLine[];
   /** The key the chords show in, when they show; null for lyrics or an unknown key. */
@@ -175,7 +80,7 @@ export const readChart = (
 ): ChartReading => {
   if (target.kind === "lyrics") {
     return {
-      lines: stripChords(parseChartLines(arrangement.chordChart)),
+      lines: lyricsOnly(parseChartLines(arrangement.chordChart)),
       key: null,
       note: null,
     };

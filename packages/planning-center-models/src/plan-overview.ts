@@ -7,7 +7,13 @@ import type {
 
 import { collectUnnotifiedPeople } from "./scheduling-notifications";
 
-export type PlanView = "overview" | "lineup" | "plan" | "times" | "assign";
+export type PlanView =
+  | "overview"
+  | "lineup"
+  | "plan"
+  | "times"
+  | "assign"
+  | "practice";
 
 /** A position that still needs people, as a link target into Assign. */
 export interface OpenPosition {

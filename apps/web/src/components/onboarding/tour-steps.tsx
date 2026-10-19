@@ -75,6 +75,12 @@ export const planTourSteps: readonly TourStep[] = [
     side: "bottom",
   },
   {
+    target: "plan-view-practice",
+    title: "Practice",
+    body: "Step through the songs to rehearse: the chart in any key or with a capo, the lyrics, and the plan’s recordings.",
+    side: "bottom",
+  },
+  {
     target: "plan-view-overview",
     title: "Overview",
     body: "A readiness checklist: open positions, unanswered requests, songs without a key, and missing times.",

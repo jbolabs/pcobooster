@@ -221,8 +221,12 @@ export interface ChordChartPdfTarget {
 }
 
 /** Planning Center's own PDF of the saved chart; a save changes the key and renders again. */
-export const useChordChartPdf = (target: ChordChartPdfTarget) =>
+export const useChordChartPdf = (
+  target: ChordChartPdfTarget,
+  { enabled = true }: { readonly enabled?: boolean } = {}
+) =>
   useQuery<ChordChartPdf>({
+    enabled,
     queryKey: queryKeys.chordChartPdf(
       target.arrangementId,
       target.keyId,

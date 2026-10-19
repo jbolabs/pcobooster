@@ -24,7 +24,7 @@ export const MobilePlanViewTabs = () => {
   return (
     <nav
       aria-label="Plan views"
-      className="bg-background border-border/50 grid grid-cols-4 border-b px-2"
+      className="bg-background border-border/50 grid grid-cols-5 border-b px-2"
     >
       {phonePlanViews.map((view) => {
         const active = activeTab === view;
