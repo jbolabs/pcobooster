@@ -140,8 +140,15 @@ export default Alchemy.Stack(
     ),
   },
   Effect.gen(function* infrastructure() {
-    const { stage, production, local, publicOrigin, webDevPort, adminDevPort } =
-      yield* currentStageSettings;
+    const {
+      stage,
+      production,
+      local,
+      publicOrigin,
+      webDevPort,
+      adminDevPort,
+      workerNames,
+    } = yield* currentStageSettings;
     if (stage === "test") {
       return yield* Effect.die(
         new Error(
@@ -178,7 +185,7 @@ export default Alchemy.Stack(
     // TanStack Start, full stack: its server functions read D1 directly. Its Vite `base` (and
     // router basepath) come from ADMIN_BASE_PATH above.
     const admin = yield* Cloudflare.Website.Vite("Admin", {
-      name: `pcobooster-${stage}-admin`,
+      name: workerNames.admin,
       rootDir: path.join(import.meta.dirname, "apps/admin"),
       workersDev: production,
       domain: attachDomains
@@ -197,7 +204,7 @@ export default Alchemy.Stack(
     });
     // TanStack Start. Its build stages the marketing site into `public/marketing` first.
     const web = yield* Cloudflare.Website.Vite("Web", {
-      name: `pcobooster-${stage}-web`,
+      name: workerNames.web,
       rootDir: path.join(import.meta.dirname, "apps/web"),
       domain: attachDomains
         ? { name: "pcobooster.com", aliases: ["www.pcobooster.com"], zone }
