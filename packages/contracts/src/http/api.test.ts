@@ -150,6 +150,7 @@ const addedSinceCutover = [
   { tag: "planFiles.open", kind: "read", feature: null },
   { tag: "songs.attachmentLink", kind: "read", feature: "chordCharts" },
   { tag: "songs.attachments", kind: "read", feature: "chordCharts" },
+  { tag: "songs.schedule", kind: "read", feature: null },
 ] as const;
 const addedTags = new Set<string>(addedSinceCutover.map(({ tag }) => tag));
 
@@ -203,6 +204,7 @@ describe(matchRoute, () => {
     ["GET", "/api/v1/service-types/st-1/plan-window", "catalog.planWindow"],
     ["GET", "/api/v1/songs/suggestions", "songs.suggestions"],
     ["GET", "/api/v1/songs/song-1/history", "songs.history"],
+    ["GET", "/api/v1/songs/song-1/schedule", "songs.schedule"],
   ])("finds %s %s as %s", (method, path, tag) => {
     const match = matchRoute(procedureRoutes, method, path);
 

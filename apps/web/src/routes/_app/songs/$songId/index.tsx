@@ -4,8 +4,8 @@ import { SongPage, SongPageSkeleton } from "@/components/songs/song-page";
 
 const SongRoute = () => {
   const { songId } = Route.useParams();
-  const { arrangement } = Route.useSearch();
-  return <SongPage songId={songId} arrangementId={arrangement ?? null} />;
+  const search = Route.useSearch();
+  return <SongPage songId={songId} search={search} />;
 };
 
 export const Route = createFileRoute("/_app/songs/$songId/")({

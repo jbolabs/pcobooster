@@ -99,7 +99,7 @@ export class PlanContentWriter {
       onSuccess,
       reconciler,
       [
-        { queryKey: [scope, "songs.history"] },
+        { queryKey: [scope, "songs.schedule"] },
         { queryKey: [scope, "songs.options"] },
       ]
     );

@@ -105,8 +105,29 @@ describe(toSongAttachment, () => {
     });
   });
 
-  it("leaves out Planning Center's chart renders", () => {
-    expect(toSongAttachment(rendered, "550112")).toBeNull();
+  it("lists Planning Center's chord chart and lyrics renders as PDFs it names", () => {
+    const lyrics = file("lyric_chart-24342738", {
+      filename: "Build Your Kingdom Here - lyrics.pdf",
+      display_name: "Lyrics",
+      content_type: null,
+      file_size: 0,
+      pco_type: "AttachmentChart::Lyric",
+      downloadable: true,
+    });
+    expect(
+      [
+        toSongAttachment(rendered, "550112"),
+        toSongAttachment(lyrics, null),
+      ].map((attachment) => [
+        attachment?.kind,
+        attachment?.chart,
+        attachment?.fileSize,
+        attachment?.name,
+      ])
+    ).toStrictEqual([
+      ["pdf", "chord", null, "Morning Light.pdf"],
+      ["pdf", "lyrics", null, "Lyrics"],
+    ]);
   });
 
   it("passes on a link's https address only", () => {
@@ -151,7 +172,7 @@ describe(toSongAttachment, () => {
 });
 
 describe(getSongAttachments, () => {
-  it("reads the arrangement's files and its own keys' files, without chart renders", async () => {
+  it("reads the arrangement's files and its own keys' files, chart renders included", async () => {
     const songs = createSongs();
     const result = await Effect.runPromise(
       getSongAttachments({ songId: "5501", arrangementId: "55011" }, songs)
@@ -167,6 +188,7 @@ describe(getSongAttachments, () => {
     ).toStrictEqual([
       { id: "901", keyId: null, kind: "audio" },
       { id: "902", keyId: "550111", kind: "pdf" },
+      { id: "chord_chart-550112--", keyId: "550111", kind: "pdf" },
     ]);
     expect(result.truncated).toBeFalsy();
   });

@@ -95,14 +95,14 @@ const setup = async (
 const PLACEHOLDER_IN_BODY = /"(?:optimistic|pending)-/u;
 
 describe("run sheet and time writes", () => {
-  it("refreshes warm song history and options after a run-sheet edit", async () => {
+  it("refreshes a warm song schedule and options after a run-sheet edit", async () => {
     const timer = makeManualTimer();
     const { writer, items, cache, context } = await setup(
       undefined,
       timer.timer
     );
     let saved = "C";
-    const observers = ["songs.history", "songs.options"].map(
+    const observers = ["songs.schedule", "songs.options"].map(
       (name) =>
         new QueryObserver(cache, {
           queryKey: [context.scope, name, "song-1"],

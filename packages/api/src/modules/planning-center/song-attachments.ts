@@ -45,8 +45,9 @@ const notFound = () =>
     resource: "attachment",
   });
 
-/** Planning Center's own chart renders; the chart PDF view shows them. */
+/** Planning Center's own chart renders: `AttachmentChart::Chord` per key, `::Lyric` per arrangement. */
 const CHART_TYPE_PREFIX = "AttachmentChart";
+const LYRICS_CHART_TYPE = "AttachmentChart::Lyric";
 /** Files that live on another site. */
 const LINK_TYPES = new Set([
   "AttachmentLink",
@@ -147,16 +148,21 @@ const secureLink = (value: string | null): string | null => {
   return secure ? url.href : null;
 };
 
-/** A Planning Center attachment as the app lists it; null for chart renders and broken rows. */
+/**
+ * A Planning Center attachment as the app lists it; null for broken rows. Chart renders are
+ * listed too, since Planning Center shows them among an arrangement's files; often they are the
+ * only ones.
+ */
 export const toSongAttachment = (
   resource: PCResource,
   keyId: string | null
 ): SongAttachment | null => {
   const { attributes } = resource;
   const pcoType = text(attributes.pco_type) ?? "";
-  if (pcoType.startsWith(CHART_TYPE_PREFIX) || !validId(resource.id)) {
+  if (!validId(resource.id)) {
     return null;
   }
+  const isChart = pcoType.startsWith(CHART_TYPE_PREFIX);
   const filename = text(attributes.filename) ?? "";
   const name = text(attributes.display_name) ?? (filename || "Untitled file");
   const contentType = text(attributes.content_type);
@@ -167,19 +173,31 @@ export const toSongAttachment = (
   const linkUrl = isLink
     ? secureLink(text(attributes.linked_url) ?? text(attributes.remote_link))
     : null;
-  return {
+  const base = {
     id: resource.id,
     keyId,
     name,
     filename,
-    kind: isLink ? "link" : storedFileKind(contentType, filename),
     contentType,
-    fileSize:
-      isNumber(size) && Number.isSafeInteger(size) && size >= 0 ? size : null,
     linkUrl,
     // Planning Center omits these on some types; a missing flag allows a download attempt.
     downloadable: attributes.downloadable !== false,
     streamable: attributes.streamable === true,
+  };
+  if (isChart) {
+    // Renders report a size of 0 until rendered, so it isn't known.
+    return {
+      ...base,
+      kind: "pdf",
+      fileSize: null,
+      chart: pcoType === LYRICS_CHART_TYPE ? "lyrics" : "chord",
+    };
+  }
+  return {
+    ...base,
+    kind: isLink ? "link" : storedFileKind(contentType, filename),
+    fileSize:
+      isNumber(size) && Number.isSafeInteger(size) && size >= 0 ? size : null,
   };
 };
 
@@ -208,8 +226,8 @@ const arrangementKeyIds = (
 
 /**
  * An arrangement's files and its keys' files, read only: the arrangement's own collection, then
- * up to `MAX_ATTACHMENT_KEYS` keys' collections, one page each. Planning Center's chart renders
- * are left out; the chart PDF view reads those. `truncated` says some were not read.
+ * up to `MAX_ATTACHMENT_KEYS` keys' collections, one page each, Planning Center's chart renders
+ * included. `truncated` says some were not read.
  */
 export const getSongAttachments = (
   input: SongAttachmentsInput,

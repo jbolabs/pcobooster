@@ -79,6 +79,43 @@ describe(PlanningCenterSongsService, () => {
   });
 });
 
+describe("PlanningCenterSongsService.getSongSchedules", () => {
+  const schedule = {
+    id: "schedule-1",
+    type: "SongSchedule",
+    attributes: { plan_sort_date: "2026-09-27T17:00:00Z" },
+  };
+
+  it("says the schedules were cut off when Planning Center links a next page", async () => {
+    const { core } = createCoreClientMock();
+    vi.spyOn(core, "fetchFirstPages")
+      .mockReturnValueOnce(
+        Effect.succeed({
+          data: [schedule],
+          included: [],
+          next: "https://api.planningcenteronline.com/services/v2/songs/song-1/song_schedules?offset=100",
+        })
+      )
+      .mockReturnValueOnce(
+        Effect.succeed({ data: [schedule], included: [], next: null })
+      );
+    const service = new PlanningCenterSongsService(core);
+
+    const cutOff = await Effect.runPromise(
+      service.getSongSchedules("song-1", "2025-09-28")
+    );
+    const complete = await Effect.runPromise(
+      service.getSongSchedules("song-2", "2025-09-28")
+    );
+
+    expect([
+      cutOff.truncated,
+      cutOff.data.map(({ id }) => id),
+      complete.truncated,
+    ]).toStrictEqual([true, ["schedule-1"], false]);
+  });
+});
+
 describe("PlanningCenterSongsService.getSongLastScheduledItem", () => {
   it("returns null for 404 responses only", async () => {
     const { core, fetchMock } = createCoreClientMock();

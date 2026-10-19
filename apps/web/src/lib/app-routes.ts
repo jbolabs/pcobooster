@@ -117,6 +117,11 @@ const appSectionLabels: Record<AppSection, string> = {
 export const getAppSectionLabel = (section: AppSection): string =>
   appSectionLabels[section];
 
+export interface SongSubpage {
+  readonly songId: string;
+  readonly label: "Chart";
+}
+
 export interface DetailRoute {
   parentHref: "/people" | "/songs";
   parentLabel: string;
@@ -126,10 +131,12 @@ export interface DetailRoute {
   personId: string | null;
   /** The song a Songs detail page shows, so the breadcrumb can name it. */
   songId: string | null;
+  /** A page under a song's page (its chart): one more breadcrumb segment, back to the song. */
+  songSubpage: SongSubpage | null;
 }
 
 const personDetailPattern = /^\/people\/(?<personId>[^/]+)/u;
-const songDetailPattern = /^\/songs\/(?<songId>[^/]+)/u;
+const songDetailPattern = /^\/songs\/(?<songId>[^/]+)(?<chart>\/chart)?\/?$/u;
 
 /** Detail pages that sit one level under a top-level section. */
 export const parseDetailRoute = (pathname: string): DetailRoute | null => {
@@ -142,16 +149,23 @@ export const parseDetailRoute = (pathname: string): DetailRoute | null => {
       label: "Person",
       personId: decodeSegment(encodedPersonId),
       songId: null,
+      songSubpage: null,
     };
   }
-  const encodedSongId = songDetailPattern.exec(pathname)?.groups?.songId;
+  const songGroups = songDetailPattern.exec(pathname)?.groups;
+  const encodedSongId = songGroups?.songId;
   if (encodedSongId !== undefined) {
+    const songId = decodeSegment(encodedSongId);
     return {
       parentHref: "/songs",
       parentLabel: "Songs",
       label: "Song",
       personId: null,
-      songId: decodeSegment(encodedSongId),
+      songId,
+      songSubpage:
+        songGroups?.chart === undefined || songId === null
+          ? null
+          : { songId, label: "Chart" },
     };
   }
   return null;

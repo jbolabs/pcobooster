@@ -36,10 +36,19 @@ const buttonVariants = cva(
         "icon-sm": "size-8",
         "icon-lg": "size-10",
       },
+      /**
+       * `target` grows the button to a 44px touch target on touch screens, for actions people
+       * reach for with a finger (a phone on a music stand), without changing it for a mouse.
+       */
+      touch: {
+        none: "",
+        target: "pointer-coarse:min-h-11 pointer-coarse:min-w-11",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      touch: "none",
     },
   }
 );

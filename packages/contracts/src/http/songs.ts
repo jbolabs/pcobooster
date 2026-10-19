@@ -52,6 +52,16 @@ export const songHistoryEntrySchema = Schema.Struct({
   arrangementName: Schema.NullOr(Schema.String),
 });
 
+/** A song's past year and upcoming plans, newest first. */
+export const songHistorySchema = Schema.Struct({
+  entries: mutableArray(songHistoryEntrySchema),
+  /**
+   * Planning Center had more plans than the one page read, so the count is a floor. The newest
+   * ones (and every upcoming one) are always read, so last and next stay right.
+   */
+  truncated: Schema.Boolean,
+});
+
 export const songsSuggestionsOutputSchema = Schema.Struct({
   /** Played most recently first. */
   recentlyPlayed: mutableArray(songCatalogEntrySchema),
@@ -75,7 +85,10 @@ export const songAttachmentsInputSchema = Schema.Struct({
   arrangementId: requiredId,
 });
 
-/** A file attached to an arrangement or one of its keys (Planning Center's charts excluded). */
+/** Which of Planning Center's own chart renders a file is: a key's chord chart, or the lyrics sheet. */
+export const SONG_CHART_RENDERS = ["chord", "lyrics"] as const;
+
+/** A file attached to an arrangement or one of its keys, Planning Center's chart renders included. */
 export const songAttachmentSchema = Schema.Struct({
   id: Schema.String,
   /** The key it is attached to; null for the arrangement's own files. */
@@ -91,6 +104,11 @@ export const songAttachmentSchema = Schema.Struct({
   downloadable: Schema.Boolean,
   /** Planning Center streams it (audio and video). */
   streamable: Schema.Boolean,
+  /**
+   * Set on Planning Center's own chart renders (listed as `pdf`, so builds that predate this
+   * field still open them); absent on uploaded files.
+   */
+  chart: Schema.optional(Schema.Literals(SONG_CHART_RENDERS)),
 });
 
 export const songAttachmentsSchema = Schema.Struct({
@@ -130,10 +148,22 @@ export const songs = planningCenterGroup(
     success: songLibrarySchema,
     feature: "chordCharts",
   }),
-  /** Every plan in any service type that scheduled the song over the past year, newest first. */
+  /**
+   * Every plan in any service type that scheduled the song over the past year, newest first.
+   * Superseded by `schedule`, which also says when the list is cut off; delete this once the
+   * iOS update that reads `schedule` instead has shipped.
+   */
   read("history", "/songs/:songId/history", {
     params: songsHistoryInputSchema.fields,
     success: mutableArray(songHistoryEntrySchema),
+  }),
+  /**
+   * The song's plans over the past year and ahead, newest first, and whether Planning Center
+   * had more than the one page read (`truncated`).
+   */
+  read("schedule", "/songs/:songId/schedule", {
+    params: songsHistoryInputSchema.fields,
+    success: songHistorySchema,
   }),
   read("options", "/service-types/:serviceTypeId/songs/:songId/options", {
     params: songsOptionsInputSchema.fields,
@@ -173,3 +203,4 @@ export type SongLibraryEntry = typeof songLibraryEntrySchema.Type;
 export type SongLibrary = typeof songLibrarySchema.Type;
 export type SongsHistoryInput = typeof songsHistoryInputSchema.Type;
 export type SongHistoryEntry = typeof songHistoryEntrySchema.Type;
+export type SongHistory = typeof songHistorySchema.Type;

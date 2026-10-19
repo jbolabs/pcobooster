@@ -98,6 +98,7 @@ describe("app sections", () => {
       label: "Person",
       personId: "99",
       songId: null,
+      songSubpage: null,
     });
     expect(parseDetailRoute("/people")).toBeNull();
     expect(parseDetailRoute("/songs/12")).toStrictEqual({
@@ -106,8 +107,12 @@ describe("app sections", () => {
       label: "Song",
       personId: null,
       songId: "12",
+      songSubpage: null,
     });
-    expect(parseDetailRoute("/songs/12/chart")?.songId).toBe("12");
+    expect(parseDetailRoute("/songs/12/chart")).toMatchObject({
+      songId: "12",
+      songSubpage: { songId: "12", label: "Chart" },
+    });
     expect(parseDetailRoute("/songs")).toBeNull();
   });
 });
