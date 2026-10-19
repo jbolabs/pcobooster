@@ -2,6 +2,8 @@ import { Schema } from "effect";
 
 import { trialStage } from "../builds-trial/settings";
 import { pullRequestSchema, readGitHub, runnerGitHubAccess } from "./github";
+import type { MaintenancePhase } from "./maintenance-phases";
+import { maintenancePhases } from "./maintenance-phases";
 import { run } from "./validate";
 
 const required = (key: string): string => {
@@ -75,25 +77,62 @@ const clean = async (build: typeof buildSchema.Type): Promise<void> => {
   }
 };
 // Enumerate Cloudflare's authoritative Builds history, including dispatches whose R2 ledger write failed.
-for (let pageNumber = 1; ; pageNumber += 1) {
-  // oxlint-disable-next-line no-await-in-loop -- Traverse provider pagination in order.
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${required("CLOUDFLARE_ACCOUNT_ID")}/builds/workers/${required("BUILDS_PR_WORKER_TAG")}/builds?page=${pageNumber}&per_page=100`,
-    { headers: { Authorization: `Bearer ${required("BUILDS_CI_TOKEN")}` } }
+const cleanupBuilds = async (): Promise<void> => {
+  for (let pageNumber = 1; ; pageNumber += 1) {
+    // oxlint-disable-next-line no-await-in-loop -- Traverse provider pagination in order.
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${required("CLOUDFLARE_ACCOUNT_ID")}/builds/workers/${required("BUILDS_PR_WORKER_TAG")}/builds?page=${pageNumber}&per_page=100`,
+      { headers: { Authorization: `Bearer ${required("BUILDS_CI_TOKEN")}` } }
+    );
+    if (!response.ok) {
+      throw new Error(`Build listing failed: ${response.status}`);
+    }
+    // oxlint-disable-next-line no-await-in-loop -- Decode this page before requesting the next.
+    const page = Schema.decodeUnknownSync(pageSchema)(await response.json());
+    if (!page.success) {
+      throw new Error("Build listing rejected");
+    }
+    for (const build of page.result) {
+      // oxlint-disable-next-line no-await-in-loop -- Alchemy cleanup operations must be serialized.
+      await clean(build);
+    }
+    if (pageNumber >= page.result_info.total_pages) {
+      break;
+    }
+  }
+};
+const phases: MaintenancePhase[] = [
+  { name: "Builds preview cleanup", run: cleanupBuilds },
+  {
+    name: "Legacy preview cleanup",
+    run: () => {
+      run(["scripts/cloudflare/sweep-previews.ts"]);
+    },
+  },
+];
+if (process.env.BUILDS_DRIFT_ENABLED === "true") {
+  const staging: NodeJS.ProcessEnv = {
+    ...process.env,
+    PCOBOOSTER_ADMIN_EMAILS: required("BUILDS_PREVIEW_ADMIN_EMAILS"),
+  };
+  delete staging.CLOUDFLARE_CUSTOM_DOMAINS;
+  phases.push(
+    {
+      name: "Staging drift",
+      run: () => {
+        run(["scripts/cloudflare/check-drift.ts", "staging"], staging);
+      },
+    },
+    {
+      name: "Production drift",
+      run: () => {
+        run(["scripts/cloudflare/check-drift.ts", "prod"], {
+          ...process.env,
+          PCOBOOSTER_ADMIN_EMAILS: required("BUILDS_PRODUCTION_ADMIN_EMAILS"),
+          CLOUDFLARE_CUSTOM_DOMAINS: "1",
+        });
+      },
+    }
   );
-  if (!response.ok) {
-    throw new Error(`Build listing failed: ${response.status}`);
-  }
-  // oxlint-disable-next-line no-await-in-loop -- Decode this page before requesting the next.
-  const page = Schema.decodeUnknownSync(pageSchema)(await response.json());
-  if (!page.success) {
-    throw new Error("Build listing rejected");
-  }
-  for (const build of page.result) {
-    // oxlint-disable-next-line no-await-in-loop -- Alchemy cleanup operations must be serialized.
-    await clean(build);
-  }
-  if (pageNumber >= page.result_info.total_pages) {
-    break;
-  }
 }
+await maintenancePhases(phases);

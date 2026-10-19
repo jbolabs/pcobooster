@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-interface LaneStore {
+export interface LaneStore {
   get: (
     key: string
   ) => Promise<{ etag: string; text: () => Promise<string> } | null>;

@@ -13,6 +13,7 @@ import { spawnSync } from "node:child_process";
 import { isoDateTimeWithOffset } from "@pcobooster/contracts/http/schema";
 import { Schema } from "effect";
 
+import { currentPullRequest, runnerGitHubAccess } from "./builds/github";
 import type { CloudflareResource } from "./stages";
 import { previewStages, sweepDecision } from "./stages";
 
@@ -30,7 +31,7 @@ const required = (name: string): string => {
 
 const cloudflareToken = required("CLOUDFLARE_API_TOKEN");
 const accountId = required("CLOUDFLARE_ACCOUNT_ID");
-const githubToken = required("GITHUB_TOKEN");
+const githubToken = process.env.GITHUB_TOKEN;
 const repository = required("GITHUB_REPOSITORY");
 
 const decodeCloudflareResponse = Schema.decodeUnknownSync(
@@ -96,14 +97,26 @@ const decodePullRequestState = Schema.decodeUnknownSync(
 );
 
 const isOpen = async (pullRequest: number): Promise<boolean> => {
+  if (process.env.BUILDS_REPOSITORY_READ_TOKEN !== undefined) {
+    if (repository !== "jbolabs/pcobooster") {
+      throw new Error("Unexpected repository");
+    }
+    const pr = await currentPullRequest(
+      pullRequest,
+      runnerGitHubAccess(process.env)
+    );
+    return pr.state === "open";
+  }
+  const headers = new Headers({
+    accept: "application/vnd.github+json",
+    "User-Agent": "pcobooster-builds-cleanup",
+  });
+  if (githubToken !== undefined) {
+    headers.set("Authorization", `Bearer ${githubToken}`);
+  }
   const response = await fetch(
     `https://api.github.com/repos/${repository}/pulls/${pullRequest}`,
-    {
-      headers: {
-        accept: "application/vnd.github+json",
-        authorization: `Bearer ${githubToken}`,
-      },
-    }
+    { headers }
   );
   if (response.status === 404) {
     return false;

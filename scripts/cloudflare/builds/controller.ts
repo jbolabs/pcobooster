@@ -11,11 +11,8 @@ import {
 import { allowedGitHubPath, installationToken } from "./github-app";
 import type { GitHubAppCredentials } from "./github-app";
 import { githubReadRequest, repositoryReadResult } from "./github-request";
-import {
-  DispatchRejectedError,
-  reconcileBuild,
-  serializedBuild,
-} from "./serialized";
+import { drainBuilds, enqueueBuild } from "./queue";
+import { DispatchRejectedError, reconcileBuild } from "./serialized";
 
 interface Environment extends GitHubAppCredentials {
   REPOSITORY_READ_TOKEN: string;
@@ -115,20 +112,37 @@ const start = async (
   }
   return result.result.build_uuid;
 };
-const dispatchMaintenance = async (env: Environment) => {
-  if (env.MAINTENANCE_TRIGGER === "disabled") {
-    return;
-  }
-  await serializedBuild(
+const drain = async (env: Environment) => {
+  await drainBuilds(
     env.RECORDS,
     async (build) =>
       await fetch(
         `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/builds/builds/${build}`,
         { headers: { Authorization: `Bearer ${env.CI_TOKEN}` } }
       ),
-    async () => await start(env, env.MAINTENANCE_TRIGGER, env.TRUSTED_BRANCH),
-    { trigger: env.MAINTENANCE_TRIGGER, branch: env.TRUSTED_BRANCH }
+    async (request) =>
+      await start(env, request.trigger, request.branch, request.sha)
   );
+};
+const dispatchMaintenance = async (env: Environment) => {
+  if (env.MAINTENANCE_TRIGGER === "disabled") {
+    return;
+  }
+  await enqueueBuild(env.RECORDS, "maintenance", {
+    trigger: env.MAINTENANCE_TRIGGER,
+    branch: env.TRUSTED_BRANCH,
+  });
+  await drain(env);
+};
+const dispatchRelease = async (env: Environment) => {
+  if (env.RELEASE_ENABLED !== "true") {
+    throw new Error("Release dispatch disabled");
+  }
+  await enqueueBuild(env.RECORDS, "release", {
+    trigger: env.RELEASE_TRIGGER,
+    branch: "main",
+  });
+  await drain(env);
 };
 
 const handleEvent = async (
@@ -200,8 +214,7 @@ const handleEvent = async (
     await dispatchMaintenance(env);
   }
   if (event.ref === "refs/heads/main" && env.RELEASE_ENABLED === "true") {
-    // Release runner serializes state changes and refuses superseded revisions.
-    await start(env, env.RELEASE_TRIGGER, "main", event.after);
+    await dispatchRelease(env);
   }
   return new Response("Accepted");
 };
@@ -358,30 +371,45 @@ const recordsResponse = async (
   return undefined;
 };
 
+const repositoryReadResponse = async (
+  request: Request,
+  url: URL,
+  env: Environment
+): Promise<Response> => {
+  if (
+    request.headers.get("Authorization") !==
+    `Bearer ${env.REPOSITORY_READ_TOKEN}`
+  ) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  const path = url.pathname.slice("/github/".length);
+  if (request.method !== "GET" || url.search || !allowedGitHubPath(path)) {
+    return new Response("Unsupported repository read", { status: 403 });
+  }
+  const access = await githubAccess(env);
+  const response = await fetch(
+    githubReadRequest(`${access.baseUrl}${path}`, access.token)
+  );
+  return repositoryReadResult(response);
+};
 export default {
   async fetch(request: Request, env: Environment): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/github/")) {
-      if (
-        request.headers.get("Authorization") !==
-        `Bearer ${env.REPOSITORY_READ_TOKEN}`
-      ) {
-        return new Response("Unauthorized", { status: 401 });
-      }
-      const path = url.pathname.slice("/github/".length);
-      if (request.method !== "GET" || url.search || !allowedGitHubPath(path)) {
-        return new Response("Unsupported repository read", { status: 403 });
-      }
-      const access = await githubAccess(env);
-      const response = await fetch(
-        githubReadRequest(`${access.baseUrl}${path}`, access.token)
-      );
-      return repositoryReadResult(response);
+      return await repositoryReadResponse(request, url, env);
     }
     const preview = /^\/preview\/(?<number>[1-9]\d*)$/u.exec(url.pathname)
       ?.groups?.number;
     if (preview !== undefined && request.method === "GET") {
       return await previewResponse(Number(preview), env);
+    }
+    if (
+      url.pathname === "/release" &&
+      request.method === "POST" &&
+      request.headers.get("Authorization") === `Bearer ${env.CONTROL_TOKEN}`
+    ) {
+      await dispatchRelease(env);
+      return new Response("Queued", { status: 202 });
     }
     const recordResponse = await recordsResponse(request, url, env);
     if (recordResponse !== undefined) {
@@ -415,10 +443,7 @@ export default {
     }
     return new Response("Not found", { status: 404 });
   },
-  async scheduled(
-    _event: ScheduledController,
-    env: Environment
-  ): Promise<void> {
-    await dispatchMaintenance(env);
+  async scheduled(event: ScheduledController, env: Environment): Promise<void> {
+    await (event.cron === "17 9 * * *" ? dispatchMaintenance(env) : drain(env));
   },
 };
