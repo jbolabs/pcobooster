@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { describe, expect, it, onTestFinished } from "vitest";
 
 import { createIsolatedMiniflare } from "../../testing/miniflare";
+import { drainBuilds, enqueueBuild } from "./queue";
 import {
   DispatchRejectedError,
   reconcileBuild,
@@ -137,5 +138,36 @@ describe("stateful Builds serialization", () => {
         identity
       )
     ).resolves.toBeTruthy();
+  });
+});
+
+describe("pending stateful builds", () => {
+  it("keeps a new release queued while the previous deployment is running", async () => {
+    const bucket = await setup();
+    await enqueueBuild(bucket, "release", identity);
+    await drainBuilds(
+      bucket,
+      active,
+      async () => await Promise.resolve("first-release")
+    );
+    await enqueueBuild(bucket, "release", identity);
+    await drainBuilds(
+      bucket,
+      active,
+      async () => await Promise.resolve("overlap")
+    );
+    const first = await bucket.get("stateful-build");
+    await expect(first?.json()).resolves.toMatchObject({
+      build: "first-release",
+    });
+    await drainBuilds(
+      bucket,
+      stopped,
+      async () => await Promise.resolve("next-release")
+    );
+    const next = await bucket.get("stateful-build");
+    await expect(next?.json()).resolves.toMatchObject({
+      build: "next-release",
+    });
   });
 });

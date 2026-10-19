@@ -1,101 +1,20 @@
-# CI/CD
+# CI and deployment
 
-The Cloudflare workflow separates secretless validation from deployment: labeled pull requests deploy previews, and merges to `main` deploy staging and then production. `ci` runs dependency review, strict linting, typechecks, and tests. `cloudflare-build` runs the product's and the admin app's Vite Worker builds (with the prerendered marketing site staged into the product) without credentials. Both run for pull requests and again on the merged commit on `main`, where they gate the staging and production deploys.
+Cloudflare Workers Builds validates same-repository pull requests and deploys isolated previews. The Alchemy-managed controller dispatches exact revisions, checks their current base, and manages cleanup. See [Cloudflare Builds](cloudflare-builds.md) for credentials, lifecycle and recovery.
 
-Run the local gates before opening a pull request:
+Run `bun run ci` and `bun run build` before a PR. During development use `bun run ci:affected --base origin/main`; stacked work uses its preceding branch. Final proof still requires full local gates. PR validation uses a separate expiring remote Turbo cache. Production runs full fresh validation, then deploys staging, verifies its revision, checks freshness again, deploys production and verifies both revision and domain routing. PostHog annotation remains part of the release.
 
-```sh
-bun run ci
-bun run build
-bun run build:cloudflare
-```
+A single conditional R2 lane serializes production, cleanup and drift checks. New release requests remain queued while a build runs. A two-minute Cron drains pending requests; daily maintenance scans provider build history, sweeps legacy `pr-*` stages and checks staging/production drift without repairing it. Unknown dispatch outcomes block the lane until reconciled; they are never unlocked by a timer.
 
-Use Node 24 and the pinned Bun version. Actions are pinned to immutable commits and installs use the frozen Bun lockfile. CI has no Turborepo remote-cache credential.
-
-During development, use `bun run ci:affected --base origin/main` for lint, affected typechecks and tests, and repository guards. `--dry-run` shows the selected tasks without executing checks. The base is resolved to its merge base with `HEAD`; committed, staged, unstaged, and untracked changes are included. For a stacked PR, use its preceding branch. An unavailable base fails instead of narrowing validation. Shared toolchain, TypeScript, test-fixture, workflow, or scope-selection changes run all packages. Final PR proof still requires the full local gates above.
-
-PR validation restores `.turbo/cache` through GitHub Actions' cache service, partitioned by job, OS, architecture, toolchain/configuration, and revision. The cache action runs only in the secretless `ci` and `cloudflare-build` jobs; deployments build from source. GitHub's branch/ref cache boundaries keep PR-written entries out of `main`. On `main` and manual runs, `TURBO_FORCE` bypasses restored results so every gate executes afresh before deployment and seeds the next PR's cache.
-
-Root tests and typechecks hash all repository inputs: these gates inspect and import files across workspace boundaries. Root scripts, shared TypeScript configuration, and toolchain configuration participate in every task hash, since packages import script types and fixtures; package tests also hash Vitest configuration. Mobile declares its build-time design-token dependency so token edits select and invalidate its checks. `test:install` checks the installed dependency patches outside Turbo on every `bun run test`, since a source cache key cannot establish the state of `node_modules`.
-
-Shared steps live in composite actions:
-
-- `.github/actions/setup` pins Node and Bun, restores the Bun package cache, and installs. Change toolchain versions there only.
-- `.github/actions/turbo-cache` restores and saves content-addressed validation results. Bump its cache namespace when changing the cache trust policy; rollback is to remove its two workflow uses, leaving all validation commands and merge gates in place.
-- Deployment jobs receive encrypted secrets from their declared GitHub environment; app secret values stay in Cloudflare.
-
-The `ci` job also runs checksum-verified `actionlint`. Run it locally when you edit workflows.
-
-Concurrency is set per job. A new push to a pull request cancels that PR's older `ci` and `cloudflare-build` jobs. Deploy and cleanup jobs share a per-stage group that never cancels, so an Alchemy state update is never interrupted.
-
-`scripts/check-patches.test.ts` runs in `bun run test`. It fails if any installed copy of a patched dependency is missing a line the patch adds, for example after a stale Bun cache.
-
-## Alchemy beta.82 rollout
-
-The root and API Worker pin `alchemy@2.0.0-beta.83` (its only breaking change, to Cloudflare Containers, does not affect these stacks); all workspace Effect dependencies and the platform/test peers use `4.0.4`, satisfying Alchemy's `^4.0.0` peers. The lockfile aligns Alchemy's runtime, node utilities, and floci at the same beta (the optional frontend-frameworks peer is unused by Cloudflare Vite). The CLI script runs the published `bin/cli.js` launcher with Bun. CI and developers use Bun 1.4.2; Node users need at least 24.11.1, also pinned in `.node-version`.
-
-[Beta.82's release notes](https://alchemy.run/blog/2026-10-12-beta-82/) describe a one-way Durable Object migration from `migrations` to declarative `exports`. Upgrade every developer and CI deploy, cleanup, drift, and control-plane path together before the first cloud-backed operation: these stacks share `Cloudflare.state()`, whose state Worker and Durable Object are part of this boundary. Even a plan/dry-run or state read can bootstrap or update the shared state backend. Use secretless CI, standalone Vite builds, and the in-memory/local workerd test harness for upgrade validation; do not run cloud-backed Alchemy commands as an offline check.
-
-The first deployment of each affected Worker must use 100% traffic (omit `version.traffic`, as these stacks currently do). Once exports are deployed, do not deploy an older Alchemy release, including from an older checkout or CI run. Application rollback must retain beta.82 or later and compatible Effect peers. Bundles now default to `.alchemy/bundles`; changed sourcemap paths cause a one-time Worker redeploy. Pre-merge validation performs no state migration or deployment; merging to `main` starts staging and production deployment through CI.
-
-Workers Issues is enabled for API, product, and admin through the shared observability helpers. Invocation logs remain enabled, and existing trace sampling and API telemetry remain in place. Cloudflare Access, classic KV, and the custom PostHog and Infisical providers keep their existing declarations.
-
-## Preview lifecycle
-
-Previews deploy only on request. Add the `preview` label to a same-repository pull request; adding the label, and every later push while it is present, requests a deployment once validation passes. The label is the approval: while it is present, every push to the PR deploys without further review, so only label a PR whose incoming commits you trust. Pull requests without the label get checks only, with no waiting deployment. Adding the label reruns nothing: the `labeled` run skips `ci` and `cloudflare-build` and its `preview-gate` job waits for those checks to pass on the current head. Opening a PR with the label already on it (`gh pr create --label preview`) sends `opened` and `labeled` together, and both runs would deploy the same head. So the gate (`scripts/cloudflare/preview-gate.ts`) leaves the deploy to another run whose `preview` job for this head appeared after the `labeled` run started. Earlier preview jobs don't count, so labeling again still recreates a preview the nightly sweep removed, and re-running a skipped `preview` job always deploys.
-
-Deploys build from source: Alchemy runs each Vite app's build itself and skips an app whose inputs are unchanged, so `cloudflare-build` outputs are validation only. Feature flags are evaluated at runtime, so every stage builds the same product bundle. Fork PRs receive secretless checks only. A labeled revision gets preview app secrets and an account-scoped Cloudflare token, so review workflow/dependency changes before they land on a labeled PR.
-
-A preview job receives its environment's Cloudflare deployment token, checks the PR is still open at the expected head, and runs `bun alchemy deploy --stage pr-<number>`. Alchemy owns a separate D1 database, Planning Center cache KV namespace, iOS update bucket, API/web/admin Workers, and Cloudflare Access application for each PR, so opening a preview asks for the same one-time-code sign-in as staging (see [Staging](#staging)). The preview URL is exposed in GitHub's deployment environment. Production data is never copied into these databases.
-
-Every deploy then runs `scripts/cloudflare/verify-deployment.ts`. Both the web and API Workers carry the deployed `GITHUB_SHA` as a `PCOBOOSTER_VERSION` env prop, so every commit redeploys both even when only one app changed. The script polls the web Worker's `GET /version` and the API's `health` procedure (through the web Worker, with `makeProductClient` as the `deploy` client at `GET /api/v1/health`, so the whole API answers) until both report the commit, then checks that `/` returns 200. A deploy that finishes without the new code live in either Worker, or with a broken web → API binding, fails the job.
-
-Every stage verifies through its product Worker's `workers.dev` origin, production included (`https://pcobooster-prod-web.jakebodea.workers.dev`), never through pcobooster.com. The zone's Bot Fight Mode ([`protectZoneEdge`](../scripts/cloudflare/zones.ts)) answers scripted clients on datacenter networks with a managed challenge, and the Free plan cannot exempt them with a WAF skip rule. It began challenging every GitHub runner request on 2026-10-13, with no change to the zone or the check: Cloudflare's detection changed, so the check must not depend on it. A challenged check fails at once (Cloudflare marks challenge pages `cf-mitigated: challenge`) instead of polling until its deadline. A custom domain routes to the Worker script rather than a version, so the workers.dev check covers the code pcobooster.com serves. Production then runs `scripts/cloudflare/verify-custom-domains.ts`, which reads the Worker custom domains from the Cloudflare API (no edge challenge) with the deploy token and fails unless `pcobooster.com` and `www.pcobooster.com` are enabled custom domains of `pcobooster-prod-web`. That catches the domain coming detached, for example if `CLOUDFLARE_CUSTOM_DOMAINS` stops being `1`.
-
-Pass a value a Worker must redeploy for as an `env` prop, not a `Config` read inside an Effect-native Worker's init (`apps/server/src/worker.ts`): Alchemy's change detection hashes `env` props and file inputs but not init-time `Config` reads, so changing only such a value (including rotating a secret) plans as a noop. Force a redeploy with `bun alchemy deploy --force` after rotating one.
-
-Teardown uses `alchemy.cleanup.ts`. It has the application stack's name and state but declares no resources. That lets `alchemy destroy alchemy.cleanup.ts --stage pr-<number>` remove everything a stage recorded, without app secrets, a build, or configuration that `main` added after the PR opened. It refuses any stage that isn't `pr-<number>`.
-
-Cleanup runs in the `cloudflare-preview-cleanup` environment. That environment is restricted to `main` and needs no approval, because it only ever runs trusted `main` code:
-
-- Closing a same-repository PR triggers `pull_request_target`, which checks out `main` (never PR code), confirms the PR is still closed, and destroys its stage.
-- A nightly sweep (`scripts/cloudflare/sweep-previews.ts`, also available through `workflow_dispatch`) lists `pcobooster-pr-*` Workers and D1 databases, then destroys every stage whose PR is no longer open. It also destroys an open PR's stage once it has gone 3 days without a deploy, measured by the newest Worker upload; the next push to a labeled PR recreates it. Previews therefore expire even when a PR stays open. Use `--dry-run` locally to see what it would destroy.
-
-Deployment and cleanup share a per-stage concurrency group. Reopening the PR creates a fresh deployment request.
-
-## Staging
-
-`staging` is a persistent pre-production stage at <https://pcobooster-staging-web.jakebodea.workers.dev>. Every push to `main` (and a manual run with `deploy_production`) deploys it first, in the `cloudflare-staging` environment (`main` only, no reviewers); production waits for it, so a failing deploy or migration stops before production. Its D1 database is retained and its data persists across deploys. It runs the preview tier: preview secrets from the `pcobooster-secrets` stack’s `preview` stage, preview feature flag values, host-only cookies, admin at `/admin`, and Planning Center sign-in through production's OAuth proxy (its origin matches the preview pattern). Deploy it yourself with `bun run deploy:staging`.
-
-Cloudflare Access protects it, and every pull request preview the same way. `alchemy.run.ts` gives each non-production stage's product Worker a dedicated Access application (the Worker's `access` prop) whose policies admit `PCOBOOSTER_ADMIN_EMAILS`, plus the deploy-check service token. It covers the `workers.dev` URL and version preview URLs; the API and admin Workers have no public URL outside production. Since the admin app has no check of its own ([admin](admin.md#access)), this is what keeps staging's and previews' `/admin` private. Access needs a Zero Trust organization on the account, with the One-time PIN login method (or another identity provider) enabled.
-
-`alchemy.ci.ts` owns the service token (`pcobooster-staging-deploy-check`) and writes `STAGING_ACCESS_SERVICE_TOKEN_ID` as a GitHub environment variable and `CLOUDFLARE_ACCESS_CLIENT_ID` and `CLOUDFLARE_ACCESS_CLIENT_SECRET` as encrypted secrets in the preview and staging GitHub environments. Staging and preview deploys read the id to admit the token; `verify-deployment.ts` sends the client credentials. The preview identity can already overwrite staging's Workers, so the token adds no reach. Both deploy tokens carry the account-level **Access: Apps and Policies Write** (`ACCESS_APPS_WRITE` in `alchemy.ci.ts`, referenced by id because a zone-level group shares its name and Alchemy resolves names to the first match): the preview token so staging and preview deploys (and preview cleanup) can manage their Access applications, and the production token for the admin Worker's. `alchemy.cleanup.ts` and the preview sweep never touch `staging`.
-
-## Production
-
-Merge equals deploy. A push to `main` deploys production after `ci`, `cloudflare-build`, and the `staging` deploy pass. So does a manual CI run on `main` with `deploy_production`. `cloudflare-production` accepts only the `main` branch and has no approval gate. When newer `main` has superseded the revision, the job ends green without reading production secrets or deploying; the newer revision's own run deploys it. Staging and labeled previews skip superseded (or closed) revisions the same way. Post-deploy verification then fails the run unless production's Workers serve the merged commit and pcobooster.com routes to them ([deploy verification](#preview-lifecycle)). The required checks on the pull request, then the same checks on the merged commit, are the only gates before production, so keep them strict.
-
-After verification, the job marks the release on PostHog charts. It skips with a warning when `POSTHOG_ANNOTATION_API_KEY` is absent; see [analytics](analytics.md#deploy-annotations). PostHog dashboards are applied separately with `bun run posthog:deploy`, never by CI.
-
-The production GitHub environment accepts only `main` and supplies its own Cloudflare token. Runtime app secrets live in the account store, referenced from the production secrets stack; local PATs and migration-only `DATABASE_URL` are never injected.
-
-`CLOUDFLARE_CUSTOM_DOMAINS=1` in the production GitHub environment attaches pcobooster.com, www, and admin to the production Workers. The admin Worker always sits behind Cloudflare Access; see [admin](admin.md#access).
-
-A nightly `Cloudflare drift` workflow (also available through `workflow_dispatch`) runs `scripts/cloudflare/check-drift.ts` for `staging` and `prod`, each in its own GitHub environment. It compares every resource Alchemy manages in that stage with its live Cloudflare state and fails, listing them in the job summary, when any were changed outside a deploy, such as a Flagship flag, DNS record, or Access policy edited in the dashboard. It only reads. The next deploy would overwrite those edits, so either copy the change into code or restore it with `bun alchemy drift --stage <stage> --repair`. Each check shares its stage's deploy concurrency group, so it never observes a half-applied deploy.
-
-The repository check compares equivalent provider representations before deciding whether to fail. For Alchemy beta.79, a Worker read reconstructs serving hostnames without the deployment-only `domain.zone` selector; an absent D1 replication declaration means `disabled`. The check also excludes the Flagship app's `updatedAt` and the zone's `activatedOn`/`modifiedOn` timestamps. These rules are scoped to their resource types; domain attachments, replication mode changes, zone `status`, and other configuration still fail, as do missing resources and unclassified drift. This changes only the read-only check, not Alchemy state, resource configuration, or the upstream CLI's drift comparison. A zone status change still requires review even when its only other differences are timestamps.
-
-To roll back, revert the change on `main`; the revert deploys like any other merge. Schema changes follow [database migrations](database.md#migrations-must-keep-the-running-app-online), so the previous code stays compatible with the migrated database.
-
-A deploy you run yourself (`bun run deploy:production`, `bun run infra:deploy`) is still a manual production change: confirm it with Jake first.
+Fork previews are excluded because Cloudflare deployment credentials are account-scoped. Only repository writers may run preview code. The Cloudflare native check is the required merge gate after cutover, pinned to app 85455 and requiring an up-to-date branch. Missing checks block merging.
 
 ## iOS releases (TestFlight)
 
-Until the CI executor below is enabled, TestFlight builds ship from a person's Mac with `ios:testflight`, the one supported local upload path. `ios:release` on its own still only prepares archives or exports signed IPAs, and `release-ios.sh --upload` stays refused.
+TestFlight builds ship from a person's Mac with `ios:testflight`, the one supported local upload path. `ios:release` on its own still only prepares archives or exports signed IPAs, and `release-ios.sh --upload` stays refused.
 
 ### Local TestFlight release
 
-From the main checkout (or any worktree) at `origin/main` with no changes, signed into Xcode with an account on team `6C46GY4Z38`, with the `pcob-release-smoke` simulator and Maestro installed (see [Release smoke check](#release-smoke-check)):
+From the main checkout (or any worktree) at `origin/main` with no changes, signed into Xcode with an account on team `6C46GY4Z38`, with a shared `agent-sim-*` simulator and Maestro installed (see [Release smoke check](#release-smoke-check)):
 
 ```bash
 bun run secrets:run apple -- bun run --cwd apps/mobile ios:testflight
@@ -150,49 +69,13 @@ bun run ios:release --no-upload
 
 `ASC_KEY_ID`, `ASC_ISSUER_ID`, and one of `ASC_KEY_P8_BASE64` or `ASC_KEY_PATH` supply the key. Credentials are removed from native generation/compilation; decoded temporary keys use private permissions and are deleted on exit. `PCOB_RELEASE_SIGNING=xcode-account` explicitly uses the local Xcode account, optionally with the key for reads. Any truthy CI/provider marker refuses this fallback. API-key cloud signing remains **unproven**: the current key reads ASC but export failed with a permission/certificate error. An Admin team key and cloud-managed distribution certificate access require an actual successful export before being called supported.
 
-### CI release executor: blocked until enablement
+### Local release safety
 
-`.github/workflows/ios-release.yml` is the intended long-term upload path, triggered only by `workflow_dispatch` on `main`. Until it is enabled, uploads go through the [local TestFlight release](#local-testflight-release). Its app-wide `ios-release-com.pcobooster.ios` concurrency group covers every job with `cancel-in-progress: false`; that group, not a lock, serializes releases. The secretless `prepare` job runs the release boundary tests and the matching host Hermes gate. The `release` job (requested with `request_upload`, environment `ios-release-upload`) is implemented, but its **first step fails BLOCKED** before checkout, credentials, ledger writes, signing, or upload. Separately, `RELEASE_ENABLEMENT` in `apps/mobile/scripts/release/ci-release.ts` is `"blocked"`, so `ci-cli.ts release` and `availability` refuse before reading any credential, whatever CI variables are set, and the job grants no `id-token` or write permission. Local `release-ios.sh --upload` stays refused, even with spoofed CI markers. The existing `testflight` environment has no reviewer gate and shares broad production credentials, so the executor does not use it.
-
-After the block, the job checks out exactly `github.sha`, refuses any `GITHUB_RUN_ATTEMPT` other than 1, selects the approved Xcode, runs `bun run ci`, installs checksummed Maestro and `posthog-cli`, runs the Release simulator smoke at this revision, will receive isolated credentials only after its separate enablement change, then runs `bun run --cwd apps/mobile scripts/release/ci-cli.ts release` once and the bounded `availability` report. Artifacts (manifest, IPA, maps, dSYMs, uploader output, Hermes and smoke evidence) are retained for 90 days; they are review material, not the ledger.
-
-`ci-cli.ts release` (`runRelease` in `ci-release.ts`, with every external step injected for tests) runs, in order:
-
-1. Refuse a rerun attempt; check the checkout is the clean dispatched revision and the sealed smoke evidence matches it. Nothing is claimed yet.
-2. Read the durable ledger and App Store Connect. The build number is one above every ASC build, every in-flight ASC upload, every ledger claim, and floor 292. A missing, corrupt, or foreign ledger, or a failed ASC read, fails here.
-3. Persist `claimed` before any archive work. If the write fails, stop; the next run rereads the ledger, so a write that landed still burns its number.
-4. `release-ios.sh --prepare` (clean prebuild, unsigned archive, Hermes gates, maps), then `--no-upload --skip-build` with API-key signing. Verify the signed export (below), upload source maps through `source-maps.ts upload` and check the cloned map, and persist `verified` with every artifact hash. Any failure persists `abandoned`; the number stays burned. Archive and export never see the PostHog key or ledger token, and the source-map upload never sees the Apple key or ledger token.
-5. Recheck the IPA and manifest hashes and that ASC has nothing at or above this number, then persist `upload_started`. The export's own `AWAITING_UPLOAD` record for this number would fail this recheck as written; the executor must exclude it as the local release does (`takenBuildNumbers(..., ownExport)`) before enablement. If that write fails, the uploader is never called.
-6. One `xcrun altool --upload-package` of the verified IPA, with the app's numeric `--apple-id` and the build's bundle ID, version, and build number, and the key in an owner-only temporary file removed afterwards. A failure, an interruption, or an error printed with exit 0 leaves `upload_started`: the outcome is unknown, so nothing retries it and the number is never reused.
-7. Persist `upload_accepted`. If that write fails, the run reports the upload as unknown; reconciliation shows it.
-
-`ci-cli.ts availability` polls ASC at most 30 minutes (once a minute) and records `processed` only for a `VALID`, unexpired build with this exact build number and version `0.1.0`. A timeout or an unlisted build is reported as unknown, never as proof that retrying is safe. Tester-group access, release metadata, and physical-device acceptance stay separate human checks.
-
-`bun run --cwd apps/mobile scripts/release/ci-cli.ts reconcile` (ledger read token and ASC read key in the environment) is read-only. It lists each ledger record with ASC's view: an `upload_started` build ASC lacks is **unknown**, not failed; ASC builds above the first claim that the ledger never claimed were uploaded by something else. Nothing reconciles automatically, and nothing ever reuses a number.
-
-#### Durable ledger
-
-The ledger lives on the dedicated `ios-release-ledger` branch: `ledger.json` (version, bundle ID, repository) and `events.jsonl`, one event per line. Each build follows `claimed -> verified -> upload_started -> upload_accepted -> processed`, or `claimed | verified -> abandoned`, all from the run that claimed it; one claim per run, claims only increase, and an upload of unknown outcome can never become `abandoned`. Every transition reads the branch head, creates a child commit through the Git data API, moves the ref with `force: false`, and rereads the branch to confirm exactly that event landed. A moved head is refused (`LedgerConflictError`) and never retried. Blobs are checked against their Git object IDs. A missing branch is an error, never an empty ledger. Caches and expiring Actions artifacts are never authoritative. `release-state.ts` remains local preparation bookkeeping only.
+The Actions release workflow is removed. Use `ios:testflight` above; its local checkout, build-number claim, exact revision, Hermes, signed-export and interactive upload checks remain intact. The dormant CI executor remains blocked and receives no credentials. Removing the workflow does not enable it. `ios:release --upload` remains refused.
 
 #### Signed export gate
 
-`signed-export.ts` unpacks the one exported IPA into a private temporary folder (always removed) and requires: bundle ID, version, and build in `Info.plist`; `main.jsbundle` byte-identical to the stamped archive; `codesign --verify --deep --strict`; an Apple Distribution authority chained to Apple Root CA for team `6C46GY4Z38` and identifier `com.pcobooster.ios`; distribution entitlements (`application-identifier`, team, no `get-task-allow`); an App Store provisioning profile (no device list); every executable's LC_UUID present in the archive's dSYMs and in the IPA's `Symbols/`, with no framework exempt until a real export is reviewed; source maps that `source-maps.ts` ties to this bytecode; Hermes evidence that passed for this revision and bundle hash; and the sealed smoke capture. It writes `release-manifest.json` and returns hashes of the IPA, maps, dSYMs, evidence, and manifest for the ledger. A successful symbol upload, or `uploadSymbols`, is not proof that a real crash symbolicates.
-
-#### Enablement approvals (none granted)
-
-Each item needs explicit approval and proof before the block is removed. None follows from code review or from an uploader exit code.
-
-- `ios-release-upload` environment: `main` only, a required reviewer other than the dispatcher, no self-approval or admin bypass. Confirm the repository supports those rules.
-- The `ios-release-ledger` branch, initialized with the header above and an empty `events.jsonl`, protected against deletion and force pushes, writable only by the executor's identity. If `GITHUB_TOKEN` with `contents: write` cannot be limited to that branch, approve a scoped GitHub App token instead of broadening the job.
-- An isolated, protected `ios-release-upload` GitHub environment, limited to `main`, holding only ASC read/signing credentials and a separately approved PostHog symbol-upload credential. The workflow must explicitly inject only those keys, validate that boundary, and gain approval in its separate enablement change. Production application and deployment credentials are excluded.
-- Apple: a key role and distribution certificate/profile access that make `xcodebuild -exportArchive` with `-allowProvisioningUpdates` and the API key succeed for this app and team. The current read-capable key failed with a cloud-signing permission/certificate error; an actual successful export must replace that.
-- The runner's Xcode (`IOS_RELEASE_DEVELOPER_DIR`), its simulator runtime for `iPhone 17 Pro`, and its `altool --upload-package` options, proven on the runner image. A local upload (build 373) proved `--apple-id`, `--bundle-id`, `--bundle-version`, `--bundle-short-version-string`, and `--p8-file-path` with this key on a developer Mac only.
-- Checksummed tool releases: `IOS_RELEASE_MAESTRO_URL`/`_SHA256` and `IOS_RELEASE_POSTHOG_CLI_URL`/`_SHA256` (`posthog-cli` 0.18.9).
-- A reviewed list of any embedded framework that ships without a dSYM, from a real export. Build 373's export had dSYMs and `Symbols/` entries for the app and every Expo framework, and none for React Native's prebuilt `React.framework`, `ReactNativeDependencies.framework`, and `hermesvm.framework`. The local release exempts exactly those (`PREBUILT_FRAMEWORKS_WITHOUT_DSYMS`); the executor still passes an empty list until this item is approved.
-- PostHog: authorization for source-map upload, and a synthetic internal event that symbolicates against the exact release maps.
-- The enablement change itself: remove the block step, set `RELEASE_ENABLEMENT` to `"approved"`, and grant `id-token: write` plus the approved ledger writer, in one reviewed commit. Then a separately confirmed dispatch of that exact revision. Apple processing, build/version, tester-group access, metadata, and device acceptance are verified separately afterwards.
-
-dSYMs stay in the archive and the IPA carries `Symbols/`; the source-map workstream (#298) owns JavaScript symbolication beyond these gates.
+The local TestFlight command checks the exported IPA before uploading. It retains the existing signing, bundle identity, version, symbol and artifact checks. Do not bypass these gates to reuse a failed upload's build number.
 
 ### Release Hermes gate
 
@@ -278,28 +161,15 @@ The key was generated with `npx expo-updates codesigning:generate` (RSA 2048, ce
 
 Publishing runs from a person's Mac, like TestFlight uploads. A CI executor would need the signing key in a protected GitHub environment with a required reviewer, and its own approval.
 
-## Deployment credentials and token scope
+## Control plane and credentials
 
-`alchemy.ci.ts` provisions scoped Cloudflare account API tokens and writes their values as encrypted `GitHub.Secret` resources. This follows [Alchemy's Cloudflare CI pattern](https://alchemy.run/cloudflare/tutorial/part-5/). Unlike the former Infisical flow, this stores the deployment token in GitHub rather than obtaining it through an OIDC exchange.
+`alchemy.builds.ts` owns the Builds credentials, triggers, webhook, controller and caches. Preview, release and maintenance use separate credentials. Release and maintenance run only trusted `main`; their tokens include the existing production zone permissions. PR credentials do not include zone permissions, but their account-level Workers and Secrets Store grants still require trusted repository writers.
 
-- Preview token: `cloudflare-preview`, `cloudflare-preview-cleanup`, and `cloudflare-staging` environments.
-- Production token: only `cloudflare-production`, restricted to `main`.
-- Access check credentials: only preview and staging environments. Their service-token ID is a variable.
-- Optional PostHog annotation key: only production. Signing/release credentials are separate and the release executor stays blocked.
-
-The preview token permits account-level Workers Scripts, KV, D1, R2, Secrets Store, Flagship, and Access writes. Production adds the existing zone-specific DNS, redirects, WAF, and bot permissions; neither can administer tokens. These grants can affect other resources in the same account. Namespaces and GitHub environments do not enforce per-secret Cloudflare isolation: a preview deployer with Workers and Secrets Store Edit can bind another account secret to code it controls. Keep preview approval strict. Separate Cloudflare accounts are required if previews must be unable to consume production secrets under the current account-level permission model.
-
-## Control plane as code
-
-The retained `pcobooster-ci/ci` stack owns repository merge settings, the existing main ruleset, deployment environments, variables, Cloudflare tokens, encrypted GitHub environment credentials, and staging's Access service token. Existing generated token values are reused without rotation during migration. Token rotation is still performed by bumping `deployTokens.generation` and its expiry; all environment secrets are updated before the previous generation is revoked.
-
-Local `infra:plan` and `infra:deploy` obtain GitHub authentication through `gh auth token`, configuration from the Keychain preview/production scopes, and Cloudflare authentication from the saved Alchemy OAuth profile. Secret values are captured internally and never printed. Without token-admin permission the plan trusts recorded token state; reading or changing deploy tokens requires it: provide a short-lived `CLOUDFLARE_TOKEN_ADMIN_API_TOKEN` with Account API Tokens Edit, then delete it after the approved operation.
-
-`bun run infra:plan` is a dry run with drift detection. Review the plan and confirm with Jake before `bun run infra:deploy`. The separate runtime-secret plans (`secrets:plan:preview`, `secrets:plan:production`) must also be reviewed before their deployment commands. [Migration order and acceptance](secrets-migration.md) prevents merging consumer code before its prerequisites exist.
-
-Old Infisical resources and obsolete environment variables are retained externally until cutover acceptance; removing their code declarations does not delete them. Their identities should be revoked only after the replacement deployments, recovery path, and local commands are verified.
+`alchemy.ci.ts` continues owning repository protection and the inactive GitHub environment credentials for rollback. Applying the cutover updates its required check to Cloudflare; do not apply before hosted acceptance. The separate removal PR is the rollback boundary. See [cutover steps](cloudflare-builds.md#cutover-and-rollback).
 
 ## Cloudflare drift
+
+Daily serialized maintenance runs `scripts/cloudflare/check-drift.ts` for staging and production. A drift failure is visible in the native maintenance build and never repairs resources automatically.
 
 ### Refreshing the production zone activation record
 
@@ -315,18 +185,18 @@ Use the saved default Alchemy Cloudflare profile, with stray deployment credenti
 env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID bun scripts/cloudflare/refresh-production-zone-activation.ts
 ```
 
-After reviewing the reported three fields, confirm no local or GitHub production deployment is running or queued in the `cloudflare-prod` concurrency group. Then apply the single record refresh:
+After reviewing the reported three fields, confirm the Cloudflare stateful lane and its queue are idle. Then apply the single record refresh:
 
 ```sh
 env -u CLOUDFLARE_API_TOKEN -u CLOUDFLARE_ACCOUNT_ID bun scripts/cloudflare/refresh-production-zone-activation.ts --apply
 ```
 
-The script requires the hardcoded account, zone ID, and hostname to match both stored and observed attributes, and permits only `pending` to `active`. It refuses configuration changes, missing resources, unstable resource lifecycle states, and a changed record immediately before the write. Alchemy's StateService has no atomic compare-and-set, so keeping deployments idle remains necessary. The script verifies the record after writing; a later invocation returns `already-active` without writing. Finally dispatch the read-only `Cloudflare drift` workflow on `main` and verify both stage reports. Keep status comparisons enabled so future inactive or moved zones remain visible.
+The script requires the hardcoded account, zone ID, and hostname to match both stored and observed attributes, and permits only `pending` to `active`. It refuses configuration changes, missing resources, unstable resource lifecycle states, and a changed record immediately before the write. Alchemy's StateService has no atomic compare-and-set, so keeping deployments idle remains necessary. The script verifies the record after writing; a later invocation returns `already-active` without writing. Finally run the serialized maintenance build and verify both drift reports. Keep status comparisons enabled so future inactive or moved zones remain visible.
 
 The one-time refresh was applied on October 8 after independent review and idle deployment checks, using the saved `admin` Alchemy profile. A subsequent invocation returned `already-active` with no differing fields. Read-only [run 37811619586](https://github.com/bodegalabs/pcobooster/actions/runs/37811619586) then passed on revision `352dd1d442a8444c975d650770371c64a0bfaad4`: all 25 production resources and all 11 staging resources matched. The ordinary drift matcher remained unchanged.
 
 ## Merge gates
 
-The `main` ruleset requires `ci` and `cloudflare-build` and is managed by `alchemy.ci.ts`. Preserve squash-only merging and the absence of bypass actors. There is deliberately no merge queue: merges rarely overlap, and `ci` and `cloudflare-build` rerun on the merged commit before staging, so a conflict between two pull requests fails there instead of deploying. Never remove a gate merely to bypass a red or missing check.
+The desired `main` ruleset requires `Workers Builds: pcobooster-pr-validation` from Cloudflare app 85455 and an up-to-date PR base. It is managed by `alchemy.ci.ts`. Preserve squash-only merges and no bypass actors. Never remove a gate to bypass a red or missing check.
 
 Cloudflare/D1 became the live production system on September 23, 2026; see the [cutover record](cloudflare-cutover.md). Vercel temporarily forwards cached DNS traffic to Cloudflare, and Neon is retained as the source snapshot. Follow [database migration and rollback](database.md): after D1 accepts new writes, routing back to the old PostgreSQL snapshot alone is not a safe rollback.

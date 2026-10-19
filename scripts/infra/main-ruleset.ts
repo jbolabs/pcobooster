@@ -1,11 +1,10 @@
 /**
- * The `main` ruleset exactly as GitHub enforces it today. `main-ruleset.test.ts` compares this
- * with a snapshot of the live ruleset, so adopting it cannot silently loosen protection.
+ * Desired main protection after the Cloudflare Builds cutover. Apply only after hosted acceptance.
  */
 import type { RulesetSpec } from "./github";
 
-/** The GitHub Actions app: only workflow jobs can satisfy the required checks. */
-const gitHubActionsAppId = 15_368;
+/** Verified native Cloudflare Workers and Pages GitHub app. */
+const cloudflareAppId = 85_455;
 
 export const mainRuleset: RulesetSpec = {
   name: "Protect main via pull requests",
@@ -35,11 +34,13 @@ export const mainRuleset: RulesetSpec = {
     {
       type: "required_status_checks",
       parameters: {
-        strict_required_status_checks_policy: false,
+        strict_required_status_checks_policy: true,
         do_not_enforce_on_create: false,
         required_status_checks: [
-          { context: "ci", integration_id: gitHubActionsAppId },
-          { context: "cloudflare-build", integration_id: gitHubActionsAppId },
+          {
+            context: "Workers Builds: pcobooster-pr-validation",
+            integration_id: cloudflareAppId,
+          },
         ],
       },
     },

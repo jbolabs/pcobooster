@@ -27,8 +27,20 @@ const withRules = (rules: readonly RulesetRule[]) => ({
 });
 
 describe(rulesetMatches, () => {
-  it("accepts the live ruleset as-is, so adopting it writes nothing", () => {
-    expect(rulesetMatches(mainRuleset, observedLive)).toBeTruthy();
+  it("requires an explicit migration from the Actions ruleset", () => {
+    expect(rulesetMatches(mainRuleset, observedLive)).toBeFalsy();
+    const rule = mainRuleset.rules.find(
+      (value) => value.type === "required_status_checks"
+    );
+    expect(rule?.parameters).toMatchObject({
+      strict_required_status_checks_policy: true,
+      required_status_checks: [
+        {
+          context: "Workers Builds: pcobooster-pr-validation",
+          integration_id: 85_455,
+        },
+      ],
+    });
   });
 
   it("flags a missing required status check rule", () => {
@@ -128,7 +140,7 @@ describe(convergeRuleset, () => {
   it("adopts the same-named ruleset without writing when it already matches", async () => {
     const { exit, requests } = await run([
       { status: 200, body: summaries },
-      { status: 200, body: liveRuleset },
+      { status: 200, body: asJson({ ...liveRulesetFixture, ...mainRuleset }) },
     ]);
 
     expect(exit._tag).toBe("Success");

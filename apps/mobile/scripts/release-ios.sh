@@ -19,7 +19,7 @@ for argument in "$@"; do
     --prepare) destination=prepare ;;
     --no-upload) destination=export ;;
     --upload)
-      echo "BLOCKED: uploads belong to the explicitly dispatched ios-release workflow. Its uploader is disabled until isolated signing and environment protection are proven. Local commands only prepare or export." >&2
+      echo "BLOCKED: direct uploads remain disabled. Use the guarded local ios:testflight command; ios:release only prepares or exports." >&2
       exit 64 ;;
     --skip-build) skip_build=1 ;;
     --) ;;

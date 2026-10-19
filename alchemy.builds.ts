@@ -1,15 +1,15 @@
-/** Parallel Cloudflare CI control plane. Production dispatch is disabled until cutover. */
+/** Cloudflare CI control plane. Apply only after the cutover acceptance gates pass. */
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as GitHub from "alchemy/GitHub";
 import * as Output from "alchemy/Output";
-import type { Redacted } from "effect";
-import { Config, Effect, Layer } from "effect";
+import { Config, Effect, Layer, Redacted } from "effect";
 
 import {
   TrialBuilds,
   trialBuildsProvider,
 } from "./scripts/cloudflare/builds-trial/resource";
+import { existingZoneId, formerDomain } from "./scripts/cloudflare/zones";
 
 const requireUrl = Output.map((url: string | undefined) => {
   if (url === undefined) {
@@ -150,26 +150,98 @@ export default Alchemy.Stack(
         LEFTHOOK: "0",
       },
     });
+    const zoneIds = [
+      yield* existingZoneId(accountId, "pcobooster.com"),
+      yield* existingZoneId(accountId, formerDomain),
+    ];
+    const releasePolicies: Cloudflare.ApiToken.Policy[] = [
+      {
+        effect: "allow",
+        resources: { [`com.cloudflare.api.account.${accountId}`]: "*" },
+        permissionGroups: [
+          "Workers Scripts Write",
+          "D1 Write",
+          "Workers KV Storage Write",
+          "Workers R2 Storage Write",
+          "Secrets Store Write",
+          { id: "521a41dc78f94eaba5e643528846cb7b" },
+          { id: "1e13c5124ca64b72b1969a67e8829049" },
+        ],
+      },
+      {
+        effect: "allow",
+        resources: Object.fromEntries(
+          zoneIds.map((id) => [`com.cloudflare.api.account.zone.${id}`, "*"])
+        ),
+        permissionGroups: [
+          "Zone Read",
+          "DNS Write",
+          "Dynamic URL Redirects Write",
+          "Zone WAF Write",
+          "Bot Management Write",
+        ],
+      },
+    ];
+    const releaseToken = yield* Cloudflare.ApiToken.UserApiToken(
+      "ReleaseToken",
+      {
+        name: "pcobooster-builds-release",
+        expiresOn: "2027-09-23T23:59:59Z",
+        policies: releasePolicies,
+      }
+    );
+    const releaseRunner = yield* Cloudflare.Workers.Worker("ReleaseRunner", {
+      name: "pcobooster-builds-release",
+      main: "./scripts/cloudflare/builds-trial/runner.ts",
+      workersDev: false,
+      compatibility: { date: "2026-09-01" },
+    });
+    const trustedSettings = {
+      BUILDS_REPOSITORY_READ_TOKEN: repositoryReadSecret.text,
+      BUILDS_PREVIEW_ADMIN_EMAILS: yield* Config.String(
+        "CI_PREVIEW_ADMIN_EMAILS"
+      ),
+      BUILDS_PRODUCTION_ADMIN_EMAILS: yield* Config.String(
+        "CI_PRODUCTION_ADMIN_EMAILS"
+      ),
+      STAGING_ACCESS_SERVICE_TOKEN_ID: access.serviceTokenId,
+      CLOUDFLARE_ACCESS_CLIENT_ID: access.clientId,
+      CLOUDFLARE_ACCESS_CLIENT_SECRET: Output.map(
+        (value: Redacted.Redacted | undefined) => {
+          if (value === undefined) {
+            throw new Error("Access secret missing");
+          }
+          return value;
+        }
+      )(access.clientSecret),
+      BUN_VERSION: "1.4.2",
+      NODE_VERSION: "24.11.1",
+      LEFTHOOK: "0",
+    };
+    const release = yield* TrialBuilds("ReleaseBuilds", {
+      name: "pcobooster-builds-release",
+      branches: ["__webhook_dispatch_only__"],
+      workerTag: releaseRunner.workerId,
+      buildCaching: true,
+      tokenId: releaseToken.tokenId,
+      token: releaseToken.value,
+      buildCommand: "bun scripts/cloudflare/builds/release.ts",
+      deployCommand: "true",
+      variables: {
+        ...trustedSettings,
+        CLOUDFLARE_ACCOUNT_ID: accountId,
+        CLOUDFLARE_API_TOKEN: releaseToken.value,
+        POSTHOG_ANNOTATION_API_KEY: yield* Config.Redacted(
+          "POSTHOG_ANNOTATION_API_KEY"
+        ).pipe(Config.withDefault(Redacted.make(""))),
+      },
+    });
     const maintenanceToken = yield* Cloudflare.ApiToken.UserApiToken(
       "MaintenanceToken",
       {
         name: "pcobooster-builds-maintenance",
         expiresOn: "2027-09-23T23:59:59Z",
-        policies: [
-          {
-            effect: "allow",
-            resources: { [`com.cloudflare.api.account.${accountId}`]: "*" },
-            permissionGroups: [
-              "Workers Scripts Write",
-              "D1 Write",
-              "Workers KV Storage Write",
-              "Workers R2 Storage Write",
-              "Secrets Store Write",
-              { id: "521a41dc78f94eaba5e643528846cb7b" },
-              { id: "1e13c5124ca64b72b1969a67e8829049" },
-            ],
-          },
-        ],
+        policies: releasePolicies,
       }
     );
     const maintenanceRunner = yield* Cloudflare.Workers.Worker(
@@ -181,7 +253,7 @@ export default Alchemy.Stack(
         compatibility: { date: "2026-09-01" },
       }
     );
-    const trustedBranch = "codex/cloudflare-builds-trial";
+    const trustedBranch = "main";
     const maintenance = yield* TrialBuilds("MaintenanceBuilds", {
       name: "pcobooster-builds-maintenance",
       branches: ["__webhook_dispatch_only__"],
@@ -192,17 +264,18 @@ export default Alchemy.Stack(
       buildCommand: "bun scripts/cloudflare/builds/maintenance.ts",
       deployCommand: "true",
       variables: {
-        BUILDS_REPOSITORY_READ_TOKEN: repositoryReadSecret.text,
         CLOUDFLARE_ACCOUNT_ID: accountId,
         CLOUDFLARE_API_TOKEN: maintenanceToken.value,
+        ...trustedSettings,
+        BUILDS_DRIFT_ENABLED: "true",
+        GITHUB_REPOSITORY: "jbolabs/pcobooster",
         BUILDS_CI_TOKEN: dispatch.value,
         BUILDS_PR_WORKER_TAG: runner.workerId,
         BUILDS_CONTROL_TOKEN: controlSecret.text,
         BUILDS_CONTROL_URL:
           "https://pcobooster-builds-controller.jakebodea.workers.dev",
         BUILDS_TRUSTED_BRANCH: trustedBranch,
-        BOOTSTRAP_BRANCH:
-          "codex/cloudflare-builds-trial,codex/cloudflare-actions-cutover",
+        BOOTSTRAP_BRANCH: "",
         BUN_VERSION: "1.4.2",
         NODE_VERSION: "24.11.1",
         LEFTHOOK: "0",
@@ -210,7 +283,7 @@ export default Alchemy.Stack(
     });
     const controller = yield* Cloudflare.Workers.Worker("Controller", {
       name: "pcobooster-builds-controller",
-      crons: ["17 9 * * *"],
+      crons: ["*/2 * * * *", "17 9 * * *"],
       main: "./scripts/cloudflare/builds/controller.ts",
       workersDev: true,
       compatibility: { date: "2026-09-01" },
@@ -228,11 +301,10 @@ export default Alchemy.Stack(
         ACCOUNT_ID: accountId,
         PR_TRIGGER: builds.triggerId,
         MAINTENANCE_TRIGGER: maintenance.triggerId,
-        RELEASE_TRIGGER: "disabled",
-        RELEASE_ENABLED: "false",
+        RELEASE_TRIGGER: release.triggerId,
+        RELEASE_ENABLED: "true",
         TRUSTED_BRANCH: trustedBranch,
-        BOOTSTRAP_BRANCH:
-          "codex/cloudflare-builds-trial,codex/cloudflare-actions-cutover",
+        BOOTSTRAP_BRANCH: "",
       },
     });
     const hook = yield* GitHub.Webhook("Webhook", {

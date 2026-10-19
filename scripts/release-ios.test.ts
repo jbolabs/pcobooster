@@ -95,20 +95,6 @@ const releaseCheckout = () => {
   return { release, state };
 };
 
-const workflow = readFileSync(
-  path.join(import.meta.dirname, "../.github/workflows/ios-release.yml"),
-  "utf-8"
-);
-const releaseJob = () => workflow.slice(workflow.indexOf("\n  release:\n"));
-/** The release job's steps, each starting with its name. */
-const releaseSteps = () => {
-  const job = releaseJob();
-  return job
-    .slice(job.indexOf("    steps:\n"))
-    .split(/^ {6}- name: /mu)
-    .slice(1);
-};
-
 describe("release-ios.sh before it builds", () => {
   it.each([
     {},
@@ -122,62 +108,7 @@ describe("release-ios.sh before it builds", () => {
     const { release } = releaseCheckout();
     const result = release(env, ["--upload"]);
     expect(result.status).toBe(64);
-    expect(result.stderr).toContain("BLOCKED: uploads belong");
-  });
-
-  // oxlint-disable-next-line test-quality/require-subject-call -- source guard on the workflow file text
-  it("the sole workflow is manually dispatched on main and serialized app-wide", () => {
-    for (const expected of [
-      "workflow_dispatch:",
-      "group: ios-release-com.pcobooster.ios",
-      "cancel-in-progress: false",
-      "environment: ios-release-upload",
-      "inputs.request_upload",
-      "github.ref == 'refs/heads/main'",
-    ]) {
-      expect(workflow).toContain(expected);
-    }
-    expect(workflow).not.toMatch(/^ {2}(?:push|pull_request|workflow_run):/mu);
-    expect(workflow).not.toContain("environment: testflight");
-  });
-
-  // oxlint-disable-next-line test-quality/require-subject-call, test-quality/no-weak-only-assertions -- source guard on the workflow file text
-  it("grants no OIDC or write access until the reviewed enablement change", () => {
-    expect(workflow).not.toMatch(/^\s+(?:id-token|contents): write/mu);
-  });
-
-  it("blocks the release job unconditionally before its first real step", () => {
-    const [first = "", ...rest] = releaseSteps();
-    expect(first).toMatch(/^Enablement gate\n/u);
-    expect(first).toContain(
-      "BLOCKED: no uploader or signing credential retrieval is enabled."
-    );
-    expect(first.trimEnd()).toMatch(/exit 1$/u);
-    expect(first).not.toContain("if:");
-    expect(rest.length).toBeGreaterThan(0);
-  });
-
-  it("orders the blocked release steps: exact checkout, rerun refusal, gates, one release", () => {
-    const names = releaseSteps()
-      .slice(1)
-      .map((step) => step.split("\n")[0]);
-    expect(names).toStrictEqual([
-      "Checkout dispatched revision",
-      "Refuse reruns and other revisions",
-      "Select pinned Xcode and Java",
-      "Setup toolchain",
-      "CI gate",
-      "Install pinned release tools",
-      "Release simulator smoke at this revision",
-      "Release one build",
-      "Report App Store Connect processing",
-      "Retain release artifacts",
-    ]);
-    const release = releaseJob();
-    expect(release).toMatch(/ref: \$\{\{ github\.sha \}\}/u);
-    expect(release).toContain("ci-cli.ts release");
-    // Signing and upload happen only inside the executor, never as ad hoc workflow steps.
-    expect(release).not.toMatch(/xcodebuild|altool|ios:release\s/u);
+    expect(result.stderr).toContain("BLOCKED: direct uploads remain disabled");
   });
 
   it("keeps the local release script from ever choosing an upload destination", () => {

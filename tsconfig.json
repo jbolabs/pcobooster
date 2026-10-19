@@ -21,6 +21,7 @@
     "packages/api/src/cloudflare.d.ts",
     "alchemy.builds-trial.ts",
     "alchemy.builds-trial-cleanup.ts",
-    "alchemy.builds.ts"
+    "alchemy.builds.ts",
+    "alchemy.builds-rehearsal.ts"
   ]
 }
