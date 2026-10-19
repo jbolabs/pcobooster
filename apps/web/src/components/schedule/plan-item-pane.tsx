@@ -380,27 +380,31 @@ const SongFields = ({
         <FieldLabel htmlFor={`pane-key-${item.id}`}>
           Key
           {transition === null ? null : (
-            <KeyTransitionPopover
-              transition={transition}
-              serviceTypeId={serviceTypeId}
-              songId={item.song?.id ?? null}
-              notes={item.description}
-              onChangeKey={(arrangement, key) => {
-                onChangeKey(item, arrangement, key);
-              }}
-              onAddNote={(note) => {
-                onSave({
-                  item,
-                  draft: {
-                    ...buildDraft(item),
-                    description: appendNote(item.description, note),
-                  },
-                  length: item.length,
-                  optimisticArrangement: item.arrangement,
-                  optimisticKey: item.key,
-                });
-              }}
-            />
+            // The icon button is taller than the label text; keep it from
+            // pushing this select below the Arrangement one.
+            <span className="-my-1.5 inline-flex">
+              <KeyTransitionPopover
+                transition={transition}
+                serviceTypeId={serviceTypeId}
+                songId={item.song?.id ?? null}
+                notes={item.description}
+                onChangeKey={(arrangement, key) => {
+                  onChangeKey(item, arrangement, key);
+                }}
+                onAddNote={(note) => {
+                  onSave({
+                    item,
+                    draft: {
+                      ...buildDraft(item),
+                      description: appendNote(item.description, note),
+                    },
+                    length: item.length,
+                    optimisticArrangement: item.arrangement,
+                    optimisticKey: item.key,
+                  });
+                }}
+              />
+            </span>
           )}
         </FieldLabel>
         <NativeSelect
