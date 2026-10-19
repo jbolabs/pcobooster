@@ -825,7 +825,7 @@ describe("run sheet and time writes", () => {
       { ...item, description: "Two" }
     );
     expect(reads("planItems.list")).toBe(before);
-    expect(reconcile.pending()).toStrictEqual([2500, 2500, 2500]);
+    expect(reconcile.pending()).toStrictEqual([2500, 2500, 2500, 2500]);
     reconcile.fire();
     await vi.waitFor(() => {
       expect(reads("planItems.list")).toBe(before + 1);

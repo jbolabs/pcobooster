@@ -17,6 +17,11 @@ const arrangement: ChordChartArrangement = {
   lyrics: "Morning",
   keys: [],
   updatedAt: "2026-10-19T00:00:00Z",
+  length: null,
+  bpm: null,
+  meter: null,
+  sequence: [],
+  notes: null,
   layout: {
     font: null,
     fontSize: null,

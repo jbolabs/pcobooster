@@ -247,7 +247,9 @@ export class PlanningCenterSongsService {
         { filter: "after", after: afterDayKey, order: "-plan_sort_date" },
         SONG_SCHEDULES_PAGES
       )
-      .pipe(Effect.map(({ data, next }) => ({ data, truncated: next !== null })));
+      .pipe(
+        Effect.map(({ data, next }) => ({ data, truncated: next !== null }))
+      );
   }
 
   /** A song never scheduled for the service type has no last item. */

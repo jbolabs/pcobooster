@@ -713,7 +713,7 @@ const SongPageLayout = ({
   main: ReactNode;
   rail: ReactNode;
 }) => (
-  <div className="grid items-start gap-x-10 gap-y-8 @5xl:grid-cols-[minmax(0,1fr)_18rem]">
+  <div className="grid grid-cols-1 items-start gap-x-10 gap-y-8 @5xl:grid-cols-[minmax(0,1fr)_18rem]">
     <div className="flex min-w-0 flex-col gap-6">{main}</div>
     <aside aria-label="Schedule" className="flex min-w-0 flex-col gap-5">
       {rail}
