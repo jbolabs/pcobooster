@@ -1038,7 +1038,6 @@ const LeaveDialog = ({
             <Button
               type="button"
 
-              className="max-md:order-first"
               disabled={saving}
               onClick={() => {
                 setSaving(true);

@@ -66,9 +66,11 @@ Audited 2026-10-19 by crawling every product screen and opening every panel in a
 
 - **Sizes live in the primitives, on `pointer-coarse:`.** Every `Button` size grows on touch screens: `default`, `lg`, `icon`, `icon-lg` draw at 44px or more; `sm`, `xs`, `icon-sm`, `icon-xs` draw one step up with an invisible 44px tap area (`coarseHitArea` in `button-variants.ts`), so dense rows keep their look. The opt-in `touch="target"` variant is gone. Fields (`Input`, `NativeSelect`, `InputGroup`) and `TabsList` are 44px; segmented pickers, `Item` rows, drag handles, and switches grow too. A mouse keeps the compact desktop sizes.
 - **Panels open as sheets on phones.** Use `ResponsivePopover` and `ResponsiveDialog`, never the raw `popover` or `dialog`. Moved: the plan item key and length editors, key-transition ideas, chart formatting, and Your access. The add-song palette pins under the status bar on phones so the list stays above the keyboard. Anchored menus (`DropdownMenu`) stay anchored, as iOS menus do, with 44px rows.
+- **Sheet and dialog footers list actions in desktop order** (Cancel first, the primary last); `DrawerFooter`, like `DialogFooter` below `sm`, stacks them in reverse, so phones show the primary on top and the way out at the bottom, with any destructive action between. No `order-*` reshuffling for phones, and no ghost or link buttons in a footer.
+- **Ghost buttons keep a faint fill on touch screens**, since there's no hover to reveal them; buttons inside a field (`InputGroupButton`) stay clear.
 - **Inline links in rows** (a person's commitments) stretch over their row on touch screens (`CommitmentEntryText rowLink`).
 - Before: 4 to 11 controls under 44px on most screens (32px toolbar and card buttons, 24px item length, 17px commitment links, 31px tabs, 36px segments) and 4 floating popovers. After: none on the crawled screens except the month grid's 41px day cells (seven to a 390px row) and wide 36px tab pills inside a 44px track.
-- Guard: `lint/touch-targets.test.ts` checks every button size and field primitive for a 44px touch size and lists the only files allowed the raw popover or dialog, with why. It failed 10 tests on the code before this change.
+- Guard: `lint/touch-targets.test.ts` checks every button size and field primitive for a 44px touch size and lists the only files allowed the raw popover or dialog, with why; it also rejects phone `order-*` classes and ghost or link buttons in dialog and sheet footers. It failed 11 tests on the code before this change.
 
 ## Already right (verified, unchanged)
 

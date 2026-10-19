@@ -65,7 +65,8 @@ const InputGroupAddon = ({
 /* eslint-enable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */
 
 const inputGroupButtonVariants = cva(
-  "flex items-center gap-2 rounded-4xl text-sm shadow-none",
+  // Inside a field the field is the surface, so ghost buttons stay clear on touch screens too.
+  "flex items-center gap-2 rounded-4xl text-sm shadow-none pointer-coarse:bg-transparent dark:pointer-coarse:bg-transparent",
   {
     variants: {
       size: {

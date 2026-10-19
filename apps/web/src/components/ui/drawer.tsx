@@ -174,10 +174,18 @@ const DrawerHeader = ({ className, ...props }: React.ComponentProps<"div">) => (
   />
 );
 
+/**
+ * Full-width actions stacked in reverse source order, like `DialogFooter` below `sm`: list
+ * them as a desktop row reads (Cancel, then the primary action last) and phones show the
+ * primary on top and the way out at the bottom.
+ */
 const DrawerFooter = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
     data-slot="drawer-footer"
-    className={cn("mt-auto flex shrink-0 flex-col gap-2 p-4 pt-0", className)}
+    className={cn(
+      "mt-auto flex shrink-0 flex-col-reverse gap-2 p-4 pt-0",
+      className
+    )}
     {...props}
   />
 );

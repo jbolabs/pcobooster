@@ -10,6 +10,8 @@ export const coarseHitArea =
 /**
  * Hover colors only reach precise pointers (the gated `hover:` variant), so each variant
  * repeats its hover color on `active:`: a finger gets the same instant press feedback.
+ * Touch screens have no hover to reveal a ghost button, so `ghost` and `ghost-destructive`
+ * keep a faint fill there and darken it on press.
  *
  * Every size grows on touch screens (`pointer-coarse:`), where people tap with a finger:
  * `default`, `lg`, `icon`, and `icon-lg` draw at 44px, the smaller sizes one step up with a
@@ -29,9 +31,9 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground aria-expanded:bg-secondary aria-expanded:text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] active:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]",
         ghost:
-          "hover:bg-muted hover:text-foreground active:bg-muted active:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 dark:active:bg-muted/50",
+          "hover:bg-muted hover:text-foreground active:bg-muted active:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 dark:active:bg-muted/50 pointer-coarse:bg-muted/50 dark:pointer-coarse:bg-muted/30",
         "ghost-destructive":
-          "text-destructive hover:bg-destructive/10 hover:text-destructive active:bg-destructive/10 aria-expanded:bg-destructive/10 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:hover:bg-destructive/20 dark:active:bg-destructive/20",
+          "text-destructive hover:bg-destructive/10 hover:text-destructive active:bg-destructive/10 aria-expanded:bg-destructive/10 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:hover:bg-destructive/20 dark:active:bg-destructive/20 pointer-coarse:bg-destructive/5 dark:pointer-coarse:bg-destructive/10",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 active:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:active:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",

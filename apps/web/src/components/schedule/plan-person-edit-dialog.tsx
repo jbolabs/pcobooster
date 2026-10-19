@@ -26,6 +26,7 @@ import {
   ResponsiveDialog,
   ResponsiveDialogContent,
   ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/ui/responsive-dialog";
@@ -346,53 +347,49 @@ const PlanPersonEditDialogBody = ({
         {saveError !== null && saveError !== "" ? (
           <p className="text-destructive text-sm">{saveError}</p>
         ) : null}
-
-        <div className="border-border flex flex-col-reverse gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            className="max-md:h-11"
-            disabled={isBusy}
-            onClick={() => {
-              setConfirmUnscheduleOpen(true);
-            }}
-          >
-            {isUnscheduling ? (
-              <Spinner />
-            ) : (
-              <Trash2 className="size-4" aria-hidden />
-            )}
-            Unschedule
-          </Button>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="max-md:h-11"
-              disabled={isBusy}
-              onClick={() => {
-                onOpenChange(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="max-md:h-11"
-              disabled={isBusy || !hasChanges}
-              onClick={() => {
-                startTransition(handleSave);
-              }}
-            >
-              {isSaving || isUpdating ? <Spinner /> : null}
-              Save
-            </Button>
-          </div>
-        </div>
       </div>
+      {/* Phones stack Save, Unschedule, Cancel; wider screens put Unschedule on the left. */}
+      <ResponsiveDialogFooter className="max-md:mt-4">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isBusy}
+          onClick={() => {
+            onOpenChange(false);
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="sm:order-first sm:mr-auto"
+          disabled={isBusy}
+          onClick={() => {
+            setConfirmUnscheduleOpen(true);
+          }}
+        >
+          {isUnscheduling ? (
+            <Spinner />
+          ) : (
+            <Trash2 className="size-4" aria-hidden />
+          )}
+          Unschedule
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={isBusy || !hasChanges}
+          onClick={() => {
+            startTransition(handleSave);
+          }}
+        >
+          {isSaving || isUpdating ? <Spinner /> : null}
+          Save
+        </Button>
+      </ResponsiveDialogFooter>
       <DeleteConfirmationDialog
         open={confirmUnscheduleOpen}
         onOpenChange={setConfirmUnscheduleOpen}

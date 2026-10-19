@@ -4,6 +4,7 @@ import { extname, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { buttonVariants } from "../apps/web/src/components/ui/button-variants";
+import { parseJsxElements, stringLiterals } from "./jsx-elements";
 
 /**
  * What keeps the product usable with a finger (see docs/mobile-native-audit.md, "Touch
@@ -134,5 +135,57 @@ describe("panels on phones", () => {
     expect(rawOverlayFiles).toStrictEqual(
       Object.keys(rawOverlayAllowed).toSorted()
     );
+  });
+});
+
+const footerTags = new Set([
+  "DialogFooter",
+  "DrawerFooter",
+  "ResponsiveDialogFooter",
+]);
+
+/** `order-*` that reorders the phone stack: unprefixed, or under a `max-*` breakpoint. */
+const phoneOrderPattern = /^(?:max-[\w-]+:)?order-/u;
+
+/** Variants that read as plain text on a touch screen, where nothing hovers. */
+const textLikeVariants = new Set(["ghost", "ghost-destructive", "link"]);
+
+/**
+ * Problems with a file's dialog and sheet footers: phones stack the actions in reverse
+ * source order (primary on top, the way out at the bottom), so source order is the only
+ * order, and every action there is a full-width button that looks like one.
+ */
+const footerProblems = (path: string): string[] => {
+  const source = readFileSync(join(webSource, path), "utf8");
+  if (![...footerTags].some((tag) => source.includes(`<${tag}`))) {
+    return [];
+  }
+  return parseJsxElements(path, source)
+    .filter(({ ancestors }) => ancestors.some(({ tag }) => footerTags.has(tag)))
+    .flatMap(({ tag, attributes, classes }) => {
+      const variant = stringLiterals(attributes.get("variant")).join();
+      return [
+        ...classes
+          .filter((token) => phoneOrderPattern.test(token))
+          .map(
+            (token) =>
+              `${path}: <${tag}> \`${token}\` reorders the phone stack; list the actions in desktop order instead`
+          ),
+        ...(textLikeVariants.has(variant)
+          ? [
+              `${path}: <${tag} variant="${variant}"> in a footer reads as text on a phone; use outline or secondary`,
+            ]
+          : []),
+      ];
+    });
+};
+
+describe("dialog and sheet footers", () => {
+  it("orders actions by source and draws each as a button", () => {
+    expect(
+      walkFiles(webSource)
+        .filter((path) => path.endsWith(".tsx"))
+        .flatMap((path) => footerProblems(relative(webSource, path)))
+    ).toStrictEqual([]);
   });
 });
