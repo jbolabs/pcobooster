@@ -4,12 +4,14 @@ import type {
 } from "@pcobooster/contracts/http/chord-charts";
 import type { SongHistoryEntry } from "@pcobooster/contracts/http/songs";
 import {
-  arrangementFacts,
+  arrangementDisplayName,
   chartActionLabel,
+  formatLength,
   historyDateLabel,
   historyNamesArrangements,
   historyRowDetail,
   keyEndingLabel,
+  keyLabel,
   planningCenterArrangementUrl,
   planningCenterSongUrl,
   serviceTypeLabel,
@@ -41,7 +43,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { PageShell } from "@/components/page-shell";
 import {
-  ArrangementPicker,
+  ArrangementNav,
   KeyTabs,
   useSongSelection,
 } from "@/components/songs/song-arrangement-controls";
@@ -50,9 +52,10 @@ import {
   SongPageHeader,
   SongPageHeaderSkeleton,
 } from "@/components/songs/song-page-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { Item, ItemMedia } from "@/components/ui/item";
+import { Item, ItemList, ItemMedia } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChordChartSong } from "@/hooks/use-chord-chart-song";
 import { useOrganizationTimeZone } from "@/hooks/use-organization-timezone";
@@ -68,11 +71,6 @@ import { rememberRecentSong } from "@/lib/recent-songs";
 const UPCOMING_PREVIEW_ROWS = 3;
 /** Past plans shown before "Show all". */
 const PAST_PREVIEW_ROWS = 5;
-
-/** A quiet sentence-case label over a section's rows. */
-const SectionLabel = ({ children }: { children: ReactNode }) => (
-  <h2 className="text-muted-foreground mb-1 text-xs font-medium">{children}</h2>
-);
 
 /** One line saying a section didn't load, with a way to try again. */
 const SectionRetry = ({
@@ -121,62 +119,112 @@ const ChartLink = ({
   </Link>
 );
 
-/** "4:13 · 70 bpm · 4/4", values in the text color and units muted. */
-const FactsLine = ({
+/** A titled block of the page: Files, Schedule, Notes. */
+const Panel = ({
+  label,
+  action,
+  children,
+}: {
+  label: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) => (
+  <section aria-label={label} className="flex min-w-0 flex-col gap-2">
+    <div className="flex min-h-8 items-center justify-between gap-3">
+      <h2 className="text-sm font-semibold">{label}</h2>
+      {action}
+    </div>
+    {children}
+  </section>
+);
+
+/** One of the arrangement's numbers; one Planning Center doesn't set says so, quietly. */
+const StatTile = ({
+  label,
+  value,
+  caption = null,
+}: {
+  label: string;
+  value: string | null;
+  caption?: string | null;
+}) => (
+  <div className="border-border/40 bg-card/30 flex min-w-0 flex-col rounded-xl border px-3 py-2">
+    <dt className="text-muted-foreground text-xs">{label}</dt>
+    <dd className="min-w-0">
+      {value === null ? (
+        <span className="text-muted-foreground block py-0.5 text-sm">
+          Not set
+        </span>
+      ) : (
+        <span className="block truncate text-lg font-semibold tracking-tight tabular-nums">
+          {value}
+        </span>
+      )}
+      {caption === null ? null : (
+        <span className="text-muted-foreground block truncate text-xs">
+          {caption}
+        </span>
+      )}
+    </dd>
+  </div>
+);
+
+/** Key, tempo, meter, and length, always all four, so arrangements read the same way. */
+const ArrangementStats = ({
   arrangement,
   chartKey,
 }: {
   arrangement: ChordChartArrangement;
   chartKey: KeyOption | null;
 }) => {
-  const facts = arrangementFacts(arrangement);
-  // Shown here too, since the key tabs' hover never opens on touch or with a single key.
-  const ending = chartKey === null ? null : keyEndingLabel(chartKey);
-  if (facts.length === 0 && ending === null) {
-    return null;
-  }
+  const meter = arrangement.meter?.trim() ?? "";
   return (
-    <p className="text-muted-foreground text-sm tabular-nums">
-      {facts.map((fact, index) => (
-        <span key={fact.label}>
-          {index > 0 ? " · " : null}
-          <span className="sr-only">{`${fact.label} `}</span>
-          <span className="text-foreground">{fact.value}</span>
-          {fact.unit === null ? null : ` ${fact.unit}`}
-        </span>
-      ))}
-      {ending === null ? null : (
-        <span>
-          {facts.length > 0 ? " · " : null}
-          {ending}
-        </span>
-      )}
-    </p>
+    <dl className="grid grid-cols-2 gap-2 @lg:grid-cols-4">
+      <StatTile
+        label="Key"
+        value={chartKey === null ? null : keyLabel(chartKey)}
+        caption={chartKey === null ? null : keyEndingLabel(chartKey)}
+      />
+      <StatTile
+        label="Tempo"
+        value={
+          arrangement.bpm === null || arrangement.bpm <= 0
+            ? null
+            : `${arrangement.bpm} bpm`
+        }
+      />
+      <StatTile label="Meter" value={meter === "" ? null : meter} />
+      <StatTile
+        label="Length"
+        value={
+          arrangement.length === null ? null : formatLength(arrangement.length)
+        }
+      />
+    </dl>
   );
 };
 
-/** The arrangement, its facts and sequence, the chart action, and its keys. */
+/** The arrangement's name, its chart, its numbers, and its sequence. */
 const ArrangementSummary = ({
   songId,
   arrangement,
-  arrangements,
   chartKey,
-  onShow,
 }: {
   songId: string;
   arrangement: ChordChartArrangement;
-  arrangements: readonly ChordChartArrangement[];
   chartKey: KeyOption | null;
-  onShow: (search: SongPageSearch) => void;
 }) => (
-  <section aria-label="Arrangement" className="flex flex-col gap-1">
-    <div className="flex min-w-0 items-center gap-3">
-      <ArrangementPicker
-        arrangements={arrangements}
-        arrangement={arrangement}
-        onShow={onShow}
-        flush
-      />
+  <section aria-label="Arrangement" className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <h2 className="min-w-0 text-lg font-semibold tracking-tight wrap-break-word">
+        {arrangementDisplayName(arrangement.name)}
+        {arrangement.archived ? (
+          <span className="text-muted-foreground text-sm font-normal">
+            {" "}
+            · Archived
+          </span>
+        ) : null}
+      </h2>
       <ChartLink
         songId={songId}
         arrangementId={arrangement.id}
@@ -184,26 +232,28 @@ const ArrangementSummary = ({
         className="shrink-0 max-md:hidden"
       />
     </div>
-    <FactsLine arrangement={arrangement} chartKey={chartKey} />
-    {arrangement.sequence.length === 0 ? null : (
-      <ol aria-label="Sequence" className="flex flex-wrap gap-x-2 text-sm">
-        {arrangement.sequence.map((section, index) => (
-          // Sections repeat ("C" three times), so the position names each.
-          // oxlint-disable-next-line react/no-array-index-key -- the sequence is fixed and positional
-          <li key={`${index}-${section}`}>{section}</li>
-        ))}
-      </ol>
-    )}
+    <ArrangementStats arrangement={arrangement} chartKey={chartKey} />
+    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
+      <span className="text-muted-foreground text-xs">Sequence</span>
+      {arrangement.sequence.length === 0 ? (
+        <span className="text-muted-foreground text-sm">None yet</span>
+      ) : (
+        <ol aria-label="Sequence" className="flex flex-wrap gap-1">
+          {arrangement.sequence.map((section, index) => (
+            // Sections repeat ("C" three times), so the position names each.
+            // oxlint-disable-next-line react/no-array-index-key, react-doctor/no-array-index-as-key -- the sequence is fixed and positional
+            <li key={`${index}-${section}`}>
+              <Badge variant="secondary">{section}</Badge>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
     <ChartLink
       songId={songId}
       arrangementId={arrangement.id}
       chartKey={chartKey}
-      className="mt-2 h-11 w-full md:hidden"
-    />
-    <KeyTabs
-      arrangement={arrangement}
-      keyId={chartKey?.id ?? null}
-      onShow={onShow}
+      className="h-11 w-full md:hidden"
     />
   </section>
 );
@@ -377,82 +427,129 @@ const PlanningCenterLink = ({
   </a>
 );
 
+/** A bordered panel's quiet one line, for a section with nothing to list. */
+const PanelMessage = ({ children }: { children: ReactNode }) => (
+  <ItemList>
+    <p className="text-muted-foreground px-3 py-3 text-sm">{children}</p>
+  </ItemList>
+);
+
+const FilesSkeleton = () => (
+  <ItemList aria-busy aria-label="Loading files">
+    <div className="flex flex-col gap-2 px-3 py-3">
+      <Skeleton variant="text" className="h-3.5 w-40" />
+      <Skeleton variant="text" className="h-3.5 w-28" />
+    </div>
+  </ItemList>
+);
+
 /**
- * Files people uploaded to the arrangement and its keys (Planning Center's own chart renders
- * are the Chart action instead). With two or more keys, the key tabs pick whose files show.
- * Nothing to list takes no room.
+ * Files people uploaded to the arrangement and its keys, side by side as Planning Center lays
+ * them out: the arrangement's own (every key), then the chosen key's. With two or more keys,
+ * the key tabs pick whose files show. Planning Center's own chart renders are the Chart action.
  */
 const FilesSection = ({
   songId,
   arrangement,
   chartKey,
+  onShow,
 }: {
   songId: string;
   arrangement: ChordChartArrangement;
   chartKey: KeyOption | null;
+  onShow: (search: SongPageSearch) => void;
 }) => {
   const files = useSongAttachments(songId, arrangement.id);
   const openAttachment = useOpenSongAttachment(songId, arrangement.id);
+  let body: ReactNode = <FilesSkeleton />;
   if (files.data === undefined) {
-    // Most arrangements have no files, so nothing holds room for them while they load.
-    return files.isError ? (
-      <section aria-label="Files">
-        <SectionLabel>Files</SectionLabel>
-        <SectionRetry
-          message="Files didn’t load."
-          busy={files.isFetching}
-          onRetry={() => {
-            void files.refetch();
-          }}
-        />
-      </section>
-    ) : null;
-  }
-  const groups = songFileGroups(
-    files.data.attachments,
-    arrangement.keys,
-    chartKey?.id ?? null
-  );
-  if (groups.length === 0 && !files.data.truncated) {
-    return null;
-  }
-  return (
-    <section aria-label="Files">
-      <SectionLabel>Files</SectionLabel>
-      <div className="flex flex-col gap-2">
-        {groups.map((group) => (
-          <div
-            key={group.id}
-            className="flex flex-col md:grid md:grid-cols-[7rem_minmax(0,1fr)] md:items-start md:gap-3"
-          >
-            <h3 className="text-muted-foreground px-1.5 text-xs md:px-0 md:pt-3">
-              {group.label}
-            </h3>
-            <FileList
-              files={group.files}
-              renderFile={(attachment) => (
-                <AttachmentRow
-                  songId={songId}
-                  arrangementId={arrangement.id}
-                  attachment={attachment}
-                  onOpen={openAttachment}
-                />
-              )}
+    if (files.isError) {
+      body = (
+        <ItemList>
+          <div className="px-3 py-2">
+            <SectionRetry
+              message="Files didn’t load."
+              busy={files.isFetching}
+              onRetry={() => {
+                void files.refetch();
+              }}
             />
           </div>
-        ))}
-        {files.data.truncated ? (
-          <p className="text-muted-foreground px-1.5 text-xs md:px-0">
-            Some files aren&apos;t listed ·{" "}
-            <PlanningCenterLink
-              href={planningCenterArrangementUrl(songId, arrangement.id)}
-            >
-              Open in Planning Center
-            </PlanningCenterLink>
-          </p>
-        ) : null}
-      </div>
-    </section>
+        </ItemList>
+      );
+    }
+  } else {
+    const groups = songFileGroups(
+      files.data.attachments,
+      arrangement.keys,
+      chartKey?.id ?? null
+    );
+    body =
+      groups.length === 0 && !files.data.truncated ? (
+        <PanelMessage>
+          No files on this arrangement ·{" "}
+          <PlanningCenterLink
+            href={planningCenterArrangementUrl(songId, arrangement.id)}
+          >
+            Add in Planning Center
+          </PlanningCenterLink>
+        </PanelMessage>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 items-start gap-3 @3xl:grid-cols-2">
+            {groups.map((group) => (
+              <ItemList key={group.id}>
+                <h3 className="px-3 py-2 text-sm font-medium">
+                  {group.label}
+                  {group.id === "arrangement" ? (
+                    <span className="text-muted-foreground font-normal">
+                      {" "}
+                      · every key
+                    </span>
+                  ) : null}
+                </h3>
+                <div className="p-1.5">
+                  <FileList
+                    files={group.files}
+                    renderFile={(attachment) => (
+                      <AttachmentRow
+                        songId={songId}
+                        arrangementId={arrangement.id}
+                        attachment={attachment}
+                        onOpen={openAttachment}
+                      />
+                    )}
+                  />
+                </div>
+              </ItemList>
+            ))}
+          </div>
+          {files.data.truncated ? (
+            <p className="text-muted-foreground text-xs">
+              Some files aren&apos;t listed ·{" "}
+              <PlanningCenterLink
+                href={planningCenterArrangementUrl(songId, arrangement.id)}
+              >
+                Open in Planning Center
+              </PlanningCenterLink>
+            </p>
+          ) : null}
+        </div>
+      );
+  }
+  return (
+    <Panel
+      label="Files"
+      action={
+        <KeyTabs
+          arrangement={arrangement}
+          keyId={chartKey?.id ?? null}
+          onShow={onShow}
+        />
+      }
+    >
+      {body}
+    </Panel>
   );
 };
 
@@ -512,7 +609,7 @@ const NoteText = ({ note }: { note: SongNote }) => {
   );
 };
 
-/** The arrangement's notes (band directions), then the song's; only when there are some. */
+/** The arrangement's notes (band directions), then the song's. */
 const NotesSection = ({
   arrangement,
   song,
@@ -521,27 +618,27 @@ const NotesSection = ({
   song: ChordChartSong;
 }) => {
   const notes = songNotes(arrangement, song);
-  if (notes.length === 0) {
-    return null;
-  }
   return (
-    <section aria-label="Notes">
-      <SectionLabel>Notes</SectionLabel>
-      <div className="flex flex-col gap-3">
-        {notes.map((note) => (
-          // Keyed by the text too, so new text is measured afresh.
-          <div
-            key={`${note.source}-${note.text}`}
-            className="flex flex-col gap-0.5"
-          >
-            {notes.length > 1 ? (
-              <h3 className="text-muted-foreground text-xs">{note.source}</h3>
-            ) : null}
-            <NoteText note={note} />
-          </div>
-        ))}
-      </div>
-    </section>
+    <Panel label="Notes">
+      {notes.length === 0 ? (
+        <PanelMessage>No notes</PanelMessage>
+      ) : (
+        <ItemList>
+          {notes.map((note) => (
+            // Keyed by the text too, so new text is measured afresh.
+            <div
+              key={`${note.source}-${note.text}`}
+              className="flex flex-col gap-0.5 px-3 py-2.5"
+            >
+              {notes.length > 1 ? (
+                <h3 className="text-muted-foreground text-xs">{note.source}</h3>
+              ) : null}
+              <NoteText note={note} />
+            </div>
+          ))}
+        </ItemList>
+      )}
+    </Panel>
   );
 };
 
@@ -555,15 +652,21 @@ const NoArrangements = ({ songId }: { songId: string }) => (
   </p>
 );
 
+const STAT_SKELETONS = ["key", "tempo", "meter", "length"];
+
 const MainColumnSkeleton = () => (
   <div
-    className="flex flex-col gap-2"
+    className="flex flex-col gap-3"
     aria-busy
     aria-label="Loading arrangement"
   >
     <Skeleton variant="text" className="h-5 w-48" />
-    <Skeleton variant="text" className="h-3.5 w-32" />
-    <Skeleton variant="control" className="mt-2 h-11 w-full md:hidden" />
+    <div className="grid grid-cols-2 gap-2 @lg:grid-cols-4">
+      {STAT_SKELETONS.map((stat) => (
+        <Skeleton key={stat} variant="block" className="h-15" />
+      ))}
+    </div>
+    <Skeleton variant="text" className="h-3.5 w-56" />
   </div>
 );
 
@@ -594,9 +697,9 @@ const ScheduleRow = ({
           </span>
         )}
       </span>
-      <span className="text-muted-foreground shrink-0 text-xs">
-        {entry.startingKey ?? ""}
-      </span>
+      {entry.startingKey === null ? null : (
+        <Badge variant="outline">{entry.startingKey}</Badge>
+      )}
     </>
   );
   if (entry.planId === null || entry.serviceTypeId === null) {
@@ -646,48 +749,55 @@ const ScheduleList = ({
   }
   const shown = showAll ? entries : entries.slice(0, previewRows);
   return (
-    <section aria-label={label}>
-      <SectionLabel>{label}</SectionLabel>
-      <ul className="-mx-1.5 flex flex-col">
-        {shown.map((entry) => (
-          <li key={scheduleRowKey(entry)}>
-            <ScheduleRow
-              entry={entry}
-              detail={historyRowDetail(entry, namesArrangement)}
-              now={now}
-              timeZone={timeZone}
-            />
-          </li>
-        ))}
-      </ul>
-      {entries.length > previewRows ? (
-        <Button
-          type="button"
-          variant="link"
-          size="xs"
-          touch="target"
-          className="-ml-2.5"
-          onClick={() => {
-            setShowAll((current) => !current);
-          }}
-        >
-          {showAll ? "Show less" : `Show all ${entries.length}`}
-        </Button>
-      ) : null}
-    </section>
+    <ItemList render={<section aria-label={label} />}>
+      <h3 className="px-3 py-2 text-sm font-medium">
+        {label}
+        <span className="text-muted-foreground font-normal tabular-nums">
+          {` · ${entries.length}`}
+        </span>
+      </h3>
+      <div className="flex flex-col items-start p-1.5">
+        <ul className="flex w-full flex-col">
+          {shown.map((entry) => (
+            <li key={scheduleRowKey(entry)}>
+              <ScheduleRow
+                entry={entry}
+                detail={historyRowDetail(entry, namesArrangement)}
+                now={now}
+                timeZone={timeZone}
+              />
+            </li>
+          ))}
+        </ul>
+        {entries.length > previewRows ? (
+          <Button
+            type="button"
+            variant="link"
+            size="xs"
+            touch="target"
+            onClick={() => {
+              setShowAll((current) => !current);
+            }}
+          >
+            {showAll ? "Show less" : `Show all ${entries.length}`}
+          </Button>
+        ) : null}
+      </div>
+    </ItemList>
   );
 };
 
-const SUMMARY_SKELETON_ROWS = ["last", "next", "year"];
+const SCHEDULE_SKELETONS = ["last", "next", "year"];
 
-const RailSkeleton = () => (
-  <div className="flex flex-col gap-2" aria-busy aria-label="Loading history">
-    {SUMMARY_SKELETON_ROWS.map((row) => (
-      <div key={row} className="flex items-center gap-3">
-        <Skeleton variant="text" className="h-3.5 w-16" />
-        <Skeleton variant="text" className="h-3.5 w-28" />
-      </div>
-    ))}
+const ScheduleSkeleton = () => (
+  <div className="flex flex-col gap-3" aria-busy aria-label="Loading history">
+    <div className="grid grid-cols-3 gap-2">
+      {SCHEDULE_SKELETONS.map((stat) => (
+        <Skeleton key={stat} variant="block" className="h-15" />
+      ))}
+    </div>
+    <Skeleton variant="text" className="h-3.5 w-40" />
+    <Skeleton variant="text" className="h-3.5 w-32" />
   </div>
 );
 
@@ -695,91 +805,121 @@ const RailSkeleton = () => (
  * When the song was last and next sung and how often in the past year, then the plans
  * themselves. One history read feeds it all, so one Retry covers it.
  */
-const ScheduleRail = ({ songId, now }: { songId: string; now: Date }) => {
+const ScheduleSection = ({ songId, now }: { songId: string; now: Date }) => {
   const history = useSongHistory(songId);
   const timeZone = useOrganizationTimeZone();
+  let body: ReactNode = <ScheduleSkeleton />;
   if (history.data === undefined) {
-    return history.isError ? (
-      <SectionRetry
-        message="History didn’t load."
-        busy={history.isFetching}
-        onRetry={() => {
-          void history.refetch();
-        }}
-      />
-    ) : (
-      <RailSkeleton />
+    if (history.isError) {
+      body = (
+        <SectionRetry
+          message="History didn’t load."
+          busy={history.isFetching}
+          onRetry={() => {
+            void history.refetch();
+          }}
+        />
+      );
+    }
+  } else {
+    const { entries, truncated } = history.data;
+    const { upcoming, past } = splitSongHistory(entries, now);
+    const namesArrangement = historyNamesArrangements(entries);
+    body = (
+      <div className="flex flex-col gap-3">
+        <dl className="grid grid-cols-3 gap-2">
+          {songFacts(entries, now, timeZone, truncated).map((fact) => (
+            <div
+              key={fact.label}
+              className="border-border/40 bg-card/30 flex min-w-0 flex-col rounded-xl border px-3 py-2"
+            >
+              <dt className="text-muted-foreground text-xs">{fact.label}</dt>
+              <dd className="min-w-0">
+                <span
+                  className="block truncate text-sm font-semibold tabular-nums"
+                  aria-hidden
+                >
+                  {fact.value}
+                </span>
+                <span className="sr-only">{fact.accessibilityValue}</span>
+                {fact.caption === null ? null : (
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {fact.caption}
+                  </span>
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <ScheduleList
+          label="Upcoming"
+          entries={upcoming}
+          previewRows={UPCOMING_PREVIEW_ROWS}
+          namesArrangement={namesArrangement}
+          now={now}
+          timeZone={timeZone}
+        />
+        <ScheduleList
+          label="Past year"
+          entries={past}
+          previewRows={PAST_PREVIEW_ROWS}
+          namesArrangement={namesArrangement}
+          now={now}
+          timeZone={timeZone}
+        />
+      </div>
     );
   }
-  const { entries, truncated } = history.data;
-  const { upcoming, past } = splitSongHistory(entries, now);
-  const namesArrangement = historyNamesArrangements(entries);
-  return (
-    <>
-      <dl className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
-        {songFacts(entries, now, timeZone, truncated).map((fact) => (
-          <div key={fact.label} className="contents">
-            <dt className="text-muted-foreground">{fact.label}</dt>
-            <dd className="min-w-0">
-              <span className="tabular-nums" aria-hidden>
-                {fact.value}
-              </span>
-              <span className="sr-only">{fact.accessibilityValue}</span>
-              {fact.caption === null ? null : (
-                <span className="text-muted-foreground block truncate text-xs">
-                  {fact.caption}
-                </span>
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      <ScheduleList
-        label="Upcoming"
-        entries={upcoming}
-        previewRows={UPCOMING_PREVIEW_ROWS}
-        namesArrangement={namesArrangement}
-        now={now}
-        timeZone={timeZone}
-      />
-      <ScheduleList
-        label="Past year"
-        entries={past}
-        previewRows={PAST_PREVIEW_ROWS}
-        namesArrangement={namesArrangement}
-        now={now}
-        timeZone={timeZone}
-      />
-    </>
-  );
+  return <Panel label="Schedule">{body}</Panel>;
 };
 
-/** Music on the left (on phones, first); the schedule in a rail from wide screens up. */
+/**
+ * Planning Center's layout: arrangements in a column beside the page (a sideways row on phones),
+ * then the arrangement, its files, and the schedule and notes side by side.
+ */
 const SongPageLayout = ({
+  nav,
   main,
-  rail,
+  schedule,
+  notes,
 }: {
+  nav: ReactNode;
   main: ReactNode;
-  rail: ReactNode;
+  schedule: ReactNode;
+  notes: ReactNode;
 }) => (
-  <div className="grid grid-cols-1 items-start gap-x-10 gap-y-8 @5xl:grid-cols-[minmax(0,42rem)_18rem]">
-    <div className="flex min-w-0 flex-col gap-6">{main}</div>
-    <aside aria-label="Schedule" className="flex min-w-0 flex-col gap-5">
-      {rail}
-    </aside>
+  <div className="grid grid-cols-1 items-start gap-x-8 gap-y-5 @4xl:grid-cols-[13rem_minmax(0,1fr)]">
+    <div className="min-w-0 @4xl:sticky @4xl:top-0">{nav}</div>
+    <div className="flex min-w-0 flex-col gap-8">
+      {main}
+      <div className="grid grid-cols-1 items-start gap-8 @5xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        {schedule}
+        {notes}
+      </div>
+    </div>
   </div>
 );
 
 export const SongPageSkeleton = () => (
   <PageShell label="Loading song" busy>
     <SongPageHeaderSkeleton />
-    <SongPageLayout main={<MainColumnSkeleton />} rail={<RailSkeleton />} />
+    <SongPageLayout
+      nav={null}
+      main={<MainColumnSkeleton />}
+      schedule={
+        <Panel label="Schedule">
+          <ScheduleSkeleton />
+        </Panel>
+      }
+      notes={null}
+    />
   </PageShell>
 );
 
 /**
- * A song as Planning Center has it: the arrangement and its chart, files, and notes, then when
- * it was sung and where. Facts only; nothing here ranks or suggests a song.
+ * A song as Planning Center has it: its arrangements, then the chosen one's numbers, chart,
+ * files, and notes, and when it was sung and where. Facts only; nothing here ranks or suggests
+ * a song.
  */
 export const SongPage = ({
   songId,
@@ -817,29 +957,38 @@ export const SongPage = ({
 
   const song = chart.data?.song ?? null;
   const arrangement = selection?.arrangement ?? null;
+  let nav: ReactNode = null;
   let main: ReactNode = <MainColumnSkeleton />;
+  let notes: ReactNode = null;
   if (song !== null && selection !== null) {
-    main =
-      arrangement === null ? (
-        <NoArrangements songId={songId} />
-      ) : (
+    if (arrangement === null) {
+      main = <NoArrangements songId={songId} />;
+    } else {
+      nav = (
+        <ArrangementNav
+          arrangements={selection.arrangements}
+          arrangement={arrangement}
+          onShow={show}
+        />
+      );
+      main = (
         <>
           <ArrangementSummary
             songId={songId}
             arrangement={arrangement}
-            arrangements={selection.arrangements}
             chartKey={selection.key}
-            onShow={show}
           />
           <FilesSection
             key={arrangement.id}
             songId={songId}
             arrangement={arrangement}
             chartKey={selection.key}
+            onShow={show}
           />
-          <NotesSection arrangement={arrangement} song={song} />
         </>
       );
+      notes = <NotesSection arrangement={arrangement} song={song} />;
+    }
   }
 
   return (
@@ -850,8 +999,10 @@ export const SongPage = ({
         credits={song === null ? [] : songCreditParts(song)}
       />
       <SongPageLayout
+        nav={nav}
         main={main}
-        rail={<ScheduleRail songId={songId} now={now} />}
+        schedule={<ScheduleSection songId={songId} now={now} />}
+        notes={notes}
       />
     </PageShell>
   );

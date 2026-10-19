@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HoverLabel } from "@/components/ui/hover-card";
+import { Item } from "@/components/ui/item";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 /** The song's page and its chart, which share `?arrangement=&key=`. */
@@ -197,6 +198,86 @@ export const ArrangementPicker = ({
     </DropdownMenu>
   );
 };
+
+const ArrangementNavItem = ({
+  arrangement,
+  selected,
+  onShow,
+}: {
+  arrangement: ChordChartArrangement;
+  selected: boolean;
+  onShow: (search: SongPageSearch) => void;
+}) => {
+  const name = arrangementDisplayName(arrangement.name);
+  const detail = [
+    arrangementPickerDetail(arrangement),
+    arrangement.archived ? "Archived" : "",
+  ]
+    .filter((part) => part !== "")
+    .join(" · ");
+  return (
+    <li className="shrink-0">
+      <Item
+        size="row"
+        variant={selected ? "outline" : "default"}
+        aria-current={selected ? "page" : undefined}
+        render={
+          <button
+            type="button"
+            aria-label={detail === "" ? name : `${name}, ${detail}`}
+          />
+        }
+        onClick={() => {
+          if (!selected) {
+            onShow({
+              arrangement: arrangement.id,
+              key: arrangement.keys[0]?.id,
+            });
+          }
+        }}
+        className="w-60 flex-col items-start justify-center gap-0 px-3 @4xl:w-full"
+      >
+        <span className="w-full truncate font-medium">{name}</span>
+        {detail === "" ? null : (
+          <span className="text-muted-foreground w-full truncate text-xs tabular-nums">
+            {detail}
+          </span>
+        )}
+      </Item>
+    </li>
+  );
+};
+
+/**
+ * Every arrangement, always in view: a column beside the page from wide screens up, a row that
+ * scrolls sideways on phones. Active ones first, archived last. Choosing one shows its first key.
+ */
+export const ArrangementNav = ({
+  arrangements,
+  arrangement,
+  onShow,
+}: {
+  /** Active first, then archived. */
+  arrangements: readonly ChordChartArrangement[];
+  arrangement: ChordChartArrangement;
+  onShow: (search: SongPageSearch) => void;
+}) => (
+  <nav aria-label="Arrangements" className="min-w-0">
+    <h2 className="text-muted-foreground sr-only mb-1.5 px-1 text-xs font-medium @4xl:not-sr-only">
+      Arrangements
+    </h2>
+    <ul className="flex gap-1 overflow-x-auto overscroll-x-contain @4xl:flex-col @4xl:overflow-visible">
+      {arrangements.map((candidate) => (
+        <ArrangementNavItem
+          key={candidate.id}
+          arrangement={candidate}
+          selected={candidate.id === arrangement.id}
+          onShow={onShow}
+        />
+      ))}
+    </ul>
+  </nav>
+);
 
 /**
  * The arrangement's keys as tabs, only when it has two or more: the key picks which chart opens

@@ -24,7 +24,7 @@ export const SongPageHeader = ({
   /** Writers, "CCLI 6605236", and the copyright; each shown whole, wrapping as needed. */
   credits: readonly string[];
 }) => (
-  <header className="flex min-w-0 shrink-0 items-start justify-between gap-3">
+  <header className="border-border/40 flex min-w-0 shrink-0 items-start justify-between gap-3 border-b pb-5">
     {title === null ? (
       <SongPageHeaderSkeleton />
     ) : (
