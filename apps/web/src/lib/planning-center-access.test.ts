@@ -33,12 +33,14 @@ describe(visibleFeatureAccess, () => {
       visibleFeatureAccess(limited, {
         people: true,
         chordCharts: false,
+        practice: false,
       }).map((item) => item.feature)
     ).toStrictEqual(["plans", "scheduling"]);
     expect(
       visibleFeatureAccess(limited, {
         people: false,
         chordCharts: true,
+        practice: false,
       }).map((item) => item.feature)
     ).toStrictEqual(["plans", "scheduling", "songs"]);
   });

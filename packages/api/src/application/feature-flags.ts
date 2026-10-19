@@ -35,6 +35,10 @@ const featureNotFound: Readonly<
     message: "The Songs pages are not enabled.",
     resource: "songs",
   },
+  practice: {
+    message: "The Practice view is not enabled.",
+    resource: "practice",
+  },
 };
 
 /** Fails with `NotFound` unless the flag is on for this caller. */

@@ -2,7 +2,7 @@
  * Every feature flag by name. The API's registry (`packages/api/src/config/feature-flags.ts`)
  * must define exactly these, so the browser, the API, and Flagship cannot disagree.
  */
-export const featureFlagNames = ["people", "chordCharts"] as const;
+export const featureFlagNames = ["people", "chordCharts", "practice"] as const;
 
 export type FeatureFlagName = (typeof featureFlagNames)[number];
 

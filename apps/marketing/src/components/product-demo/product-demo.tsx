@@ -1,7 +1,6 @@
 import Calendar04Icon from "@hugeicons/core-free-icons/Calendar04Icon";
 import Clock01Icon from "@hugeicons/core-free-icons/Clock01Icon";
 import DashboardSquare01Icon from "@hugeicons/core-free-icons/DashboardSquare01Icon";
-import HeadphonesIcon from "@hugeicons/core-free-icons/HeadphonesIcon";
 import Layout3ColumnIcon from "@hugeicons/core-free-icons/Layout3ColumnIcon";
 import ListMusicIcon from "@hugeicons/core-free-icons/ListMusicIcon";
 import Moon02Icon from "@hugeicons/core-free-icons/Moon02Icon";
@@ -31,7 +30,6 @@ import { OverviewView } from "./overview-view";
 import { PeopleView } from "./people-view";
 import { resetPlan } from "./plan-model";
 import { PlanView } from "./plan-view";
-import { PracticeView } from "./practice-view";
 import { ServicesView } from "./services-view";
 import { SongsView } from "./songs-view";
 import { TimesView } from "./times-view";
@@ -51,7 +49,6 @@ const planViews: readonly ViewEntry<PlanViewId>[] = [
   { id: "lineup", label: "Lineup", icon: Layout3ColumnIcon },
   { id: "plan", label: "Plan", icon: ListMusicIcon },
   { id: "times", label: "Times", icon: Clock01Icon },
-  { id: "practice", label: "Practice", icon: HeadphonesIcon },
 ];
 
 const sections: readonly ViewEntry<"people" | "songs">[] = [
@@ -387,7 +384,6 @@ export const ProductDemo = () => {
           ) : null}
           {view === "plan" ? <PlanView /> : null}
           {view === "times" ? <TimesView /> : null}
-          {view === "practice" ? <PracticeView /> : null}
           {view === "services" ? <ServicesView /> : null}
           {view === "people" ? <PeopleView /> : null}
           {view === "songs" && songId === null ? <SongsView /> : null}

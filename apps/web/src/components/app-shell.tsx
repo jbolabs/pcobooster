@@ -101,6 +101,7 @@ import { useSongTitle } from "@/hooks/use-chord-chart-song";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { usePersonName } from "@/hooks/use-people-dashboard-person";
 import { usePlanRoute } from "@/hooks/use-plan-route";
+import { useEnabledPlanViews } from "@/hooks/use-plan-views";
 import {
   APP_SHORTCUTS,
   PLAN_BUILDER_SHORTCUTS,
@@ -161,6 +162,7 @@ const headerTabClass = (active: boolean) =>
 
 const PlanViewTabs = () => {
   const planRoute = usePlanRoute();
+  const views = useEnabledPlanViews(planViews);
   if (planRoute === null) {
     return null;
   }
@@ -169,7 +171,7 @@ const PlanViewTabs = () => {
       aria-label="Plan views"
       className="flex min-w-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain"
     >
-      {planViews.map((view) => {
+      {views.map((view) => {
         const active = planRoute.view === view;
         return (
           <Link
@@ -510,12 +512,13 @@ const servicesRootItem: SidebarTabGroupItem<ServicesSidebarKey> = {
 const ServicesSidebarMenuItem = () => {
   const pathname = usePathname();
   const planRoute = usePlanRoute();
+  const views = useEnabledPlanViews(planViews);
   const servicesViewItems: SidebarTabGroupItem<ServicesSidebarKey>[] =
     planRoute === null
       ? [servicesRootItem]
       : [
           servicesRootItem,
-          ...planViews.map((view) => ({
+          ...views.map((view) => ({
             key: view,
             label: getPlanViewLabel(view),
             // Keeps the selected slot across views.
@@ -584,6 +587,7 @@ const AppSidebar = ({
 }) => {
   const pathname = usePathname();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const practiceEnabled = useFeatureEnabled("practice");
 
   useHotkey(
     SHORTCUTS_PALETTE_HOTKEY,
@@ -679,10 +683,12 @@ const AppSidebar = ({
             <h3 className="text-sm font-medium">Song files</h3>
             <ShortcutList shortcuts={FILE_DIALOG_SHORTCUTS} />
           </section>
-          <section className="flex flex-col gap-3">
-            <h3 className="text-sm font-medium">Practice</h3>
-            <ShortcutList shortcuts={PRACTICE_SHORTCUTS} />
-          </section>
+          {practiceEnabled ? (
+            <section className="flex flex-col gap-3">
+              <h3 className="text-sm font-medium">Practice</h3>
+              <ShortcutList shortcuts={PRACTICE_SHORTCUTS} />
+            </section>
+          ) : null}
         </DialogContent>
       </Dialog>
     </>
