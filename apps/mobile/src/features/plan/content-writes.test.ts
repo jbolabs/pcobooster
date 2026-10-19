@@ -95,6 +95,44 @@ const setup = async (
 const PLACEHOLDER_IN_BODY = /"(?:optimistic|pending)-/u;
 
 describe("run sheet and time writes", () => {
+  it("refreshes warm song history and options after a run-sheet edit", async () => {
+    const timer = makeManualTimer();
+    const { writer, items, cache, context } = await setup(
+      undefined,
+      timer.timer
+    );
+    let saved = "C";
+    const observers = ["songs.history", "songs.options"].map(
+      (name) =>
+        new QueryObserver(cache, {
+          queryKey: [context.scope, name, "song-1"],
+          queryFn: () => saved,
+          staleTime: Infinity,
+        })
+    );
+    const stops = observers.map((observer) => observer.subscribe(() => {}));
+    await Promise.all(
+      observers.map(async (observer) => await observer.refetch())
+    );
+    const draft = new ItemDraft(items[1]);
+    draft.change({ title: "Greeting" });
+    await draft.commit(writer);
+    saved = "D";
+    timer.fire();
+    await Promise.all(
+      observers.map(
+        async (observer) => await observer.getCurrentQuery().promise
+      )
+    );
+    expect(
+      observers.map((observer) => observer.getCurrentResult().data)
+    ).toStrictEqual(["D", "D"]);
+    for (const stop of stops) {
+      stop();
+    }
+    cache.clear();
+  });
+
   it("autosaves a draft once and rejects invalid lengths before any write", async () => {
     const { writer, items, client, calls } = await setup();
     const [, item] = items;
@@ -787,7 +825,7 @@ describe("run sheet and time writes", () => {
       { ...item, description: "Two" }
     );
     expect(reads("planItems.list")).toBe(before);
-    expect(reconcile.pending()).toStrictEqual([2500]);
+    expect(reconcile.pending()).toStrictEqual([2500, 2500, 2500]);
     reconcile.fire();
     await vi.waitFor(() => {
       expect(reads("planItems.list")).toBe(before + 1);

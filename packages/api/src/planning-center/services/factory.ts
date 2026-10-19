@@ -106,9 +106,6 @@ export const planningCenterReadCachesForRequest = (
   },
   songs: {
     catalogs: caches.songs.catalogs.forRequest(),
-    songs: caches.songs.songs.forRequest(),
-    arrangements: caches.songs.arrangements.forRequest(),
-    schedules: caches.songs.schedules.forRequest(),
   },
   // Holds resolved zones only, never a load in flight.
   organizationTimeZones: caches.organizationTimeZones,

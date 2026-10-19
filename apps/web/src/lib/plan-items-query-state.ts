@@ -1,8 +1,8 @@
 import type { PlanItem } from "@pcobooster/planning-center-models/types";
-import type { QueryClient } from "@tanstack/react-query";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 import { clearCachedPlanItems } from "@/lib/plan-items-cache";
-import type { queryKeys } from "@/lib/query-keys";
+import { queryKeys } from "@/lib/query-keys";
 import { clearCachedSongOptions } from "@/lib/song-options-cache";
 import { clearCachedSongSearch } from "@/lib/song-search-cache";
 
@@ -195,7 +195,22 @@ export const settlePlanItemsQuery = (
   clearCachedPlanItems();
   clearCachedSongOptions();
   clearCachedSongSearch();
-  void queryClient.invalidateQueries({ queryKey, refetchType: "inactive" });
+  const [, serviceTypeId, planId] = queryKey;
+  // Arrangement, key, and song edits change which attachments the plan reaches.
+  const relatedKeys: QueryKey[] = [
+    queryKey,
+    [queryKeys.songHistory(null)[0]],
+    [queryKeys.songOptions(null, null)[0]],
+  ];
+  if (serviceTypeId !== null && planId !== null) {
+    relatedKeys.push(queryKeys.planFiles(serviceTypeId, planId));
+  }
+  for (const relatedKey of relatedKeys) {
+    void queryClient.invalidateQueries({
+      queryKey: relatedKey,
+      refetchType: "inactive",
+    });
+  }
 
   let clientTimers = activeRefetchTimers.get(queryClient);
   if (!clientTimers) {
@@ -213,7 +228,12 @@ export const settlePlanItemsQuery = (
     clientTimers.delete(timerKey);
     // The last pending edit schedules its own reconciliation when it settles.
     if (queryClient.isMutating({ mutationKey: queryKey }) === 0) {
-      void queryClient.refetchQueries({ queryKey, type: "active" });
+      for (const relatedKey of relatedKeys) {
+        void queryClient.refetchQueries({
+          queryKey: relatedKey,
+          type: "active",
+        });
+      }
     }
   }, PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
   clientTimers.set(timerKey, nextTimer);

@@ -17,7 +17,10 @@ import type { QueryClient, QueryFunctionContext } from "@tanstack/react-query";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 import { queryKeys } from "@/lib/query-keys";
-import { clearCachedSongOptionsForSong } from "@/lib/song-options-cache";
+import {
+  rememberWrittenArrangement,
+  settleSongCreation,
+} from "@/lib/song-query-state";
 import { productClient } from "@/product-client";
 
 export const createChordChartSongQueryOptions = (songId: string) => ({
@@ -98,44 +101,6 @@ export const fetchLatestChordChartArrangement = async (
   );
 };
 
-const replaceArrangement = (
-  current: ChordChartSongOutput | undefined,
-  arrangement: ChordChartArrangement
-): ChordChartSongOutput | undefined => {
-  if (current === undefined) {
-    return current;
-  }
-  const exists = current.arrangements.some(
-    (candidate) => candidate.id === arrangement.id
-  );
-  return {
-    ...current,
-    arrangements: exists
-      ? current.arrangements.map((candidate) =>
-          candidate.id === arrangement.id ? arrangement : candidate
-        )
-      : [...current.arrangements, arrangement],
-  };
-};
-
-/**
- * Keeps the editor's copy of the song current after a write, and makes the plan builder read
- * the song's arrangements again, here and in this browser's saved copy.
- */
-const rememberWrittenArrangement = (
-  queryClient: QueryClient,
-  songId: string,
-  arrangement: ChordChartArrangement
-) => {
-  queryClient.setQueryData<ChordChartSongOutput>(
-    queryKeys.chordChartSong(songId),
-    (current) => replaceArrangement(current, arrangement)
-  );
-  clearCachedSongOptionsForSong(songId);
-  const [songOptionsScope] = queryKeys.songOptions(songId, null);
-  void queryClient.invalidateQueries({ queryKey: [songOptionsScope, songId] });
-};
-
 export const isChordChartConflict = (error: Error): boolean =>
   error instanceof Conflict;
 
@@ -207,6 +172,9 @@ export const useCreateSong = () => {
         queryKeys.chordChartSong(created.song.id),
         created
       );
+    },
+    onSettled: () => {
+      settleSongCreation(queryClient);
     },
   });
 };
