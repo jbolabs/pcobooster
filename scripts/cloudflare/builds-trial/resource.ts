@@ -7,6 +7,10 @@ import { Effect, Option, Redacted, Schema } from "effect";
 import { trialBranch } from "./settings";
 
 export interface TrialBuildsProps {
+  readonly name?: string;
+  readonly branches?: readonly string[];
+  readonly buildCommand?: string;
+  readonly deployCommand?: string;
   readonly workerTag: string;
   readonly buildCaching: boolean;
   readonly tokenId: string;
@@ -17,6 +21,7 @@ interface Attributes {
   readonly workerTag: string;
   readonly triggerId: string;
   readonly buildTokenId: string;
+  readonly name?: string;
 }
 type TrialBuildsResource = Resource<
   "PCOBooster.TrialBuilds",
@@ -43,7 +48,7 @@ const triggerSchema = Schema.Struct({
   trigger_name: Schema.String,
 });
 const connectionSchema = Schema.Struct({ repo_connection_uuid: Schema.String });
-const tokenName = "pcobooster-builds-trial";
+const defaultTokenName = "pcobooster-builds-trial";
 
 /** Decode failures never include API response bodies, which can contain build secrets. */
 // oxlint-disable-next-line anti-slop/no-unknown-parameters -- This is the schema decoder at the external JSON boundary; failed values must never enter diagnostics.
@@ -130,6 +135,7 @@ export const trialBuildsProvider = Provider.effect(
               "Trial Worker replacement requires explicit teardown first"
             );
           }
+          const tokenName = news.name ?? "pcobooster-builds-trial";
           const tokens = decode(
             Schema.Array(tokenSchema),
             yield* request("GET", "tokens")
@@ -164,10 +170,14 @@ export const trialBuildsProvider = Provider.effect(
               ?.trigger_uuid;
           const body = {
             trigger_name: tokenName,
-            branch_includes: [trialBranch],
+            branch_includes: [...(news.branches ?? [trialBranch])],
             branch_excludes: [],
-            build_command: "bun scripts/cloudflare/builds-trial/run.ts check",
-            deploy_command: "bun scripts/cloudflare/builds-trial/run.ts deploy",
+            build_command:
+              news.buildCommand ??
+              "bun scripts/cloudflare/builds-trial/run.ts check",
+            deploy_command:
+              news.deployCommand ??
+              "bun scripts/cloudflare/builds-trial/run.ts deploy",
             build_token_uuid: buildTokenId,
             external_script_id: news.workerTag,
             repo_connection_uuid: connection.repo_connection_uuid,
@@ -200,6 +210,7 @@ export const trialBuildsProvider = Provider.effect(
             )
           );
           return {
+            name: tokenName,
             workerTag: news.workerTag,
             triggerId: trigger.trigger_uuid,
             buildTokenId,
@@ -223,7 +234,7 @@ export const trialBuildsProvider = Provider.effect(
             tokens.some(
               (token) =>
                 token.build_token_uuid === output.buildTokenId &&
-                token.build_token_name === tokenName
+                token.build_token_name === (output.name ?? defaultTokenName)
             )
           ) {
             yield* request("DELETE", `tokens/${output.buildTokenId}`);

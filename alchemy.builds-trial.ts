@@ -94,6 +94,7 @@ export default Alchemy.Stack(
       return value;
     })(access.clientSecret);
     const props = {
+      branches: ["__retired_trial__"],
       workerTag: worker.workerId,
       buildCaching: true,
       tokenId: token.tokenId,
