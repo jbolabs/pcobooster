@@ -23,6 +23,7 @@ describe(latchChartMode, () => {
 
   it("waits for permissions before deciding", () => {
     expect(latchChartMode(null, empty, "pending")).toBeNull();
+    expect(latchChartMode(null, empty, "unavailable")).toBeNull();
   });
 
   it("keeps editing on another arrangement, and reads one opened from reading", () => {

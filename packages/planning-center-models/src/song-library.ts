@@ -106,12 +106,9 @@ const WEEK_DAYS = 7;
 const MONTH_DAYS = 30;
 const YEAR_DAYS = 365;
 
-/** "3d", "4w", "5mo", "2y": how long before `reference` something happened. */
-export const formatCompactAgo = (at: Date, reference: Date): string => {
-  const days = Math.max(
-    0,
-    Math.floor((reference.getTime() - at.getTime()) / DAY_MS)
-  );
+/** "3d", "4w", "5mo", "2y": a span of days, compactly. */
+export const formatCompactDays = (elapsedDays: number): string => {
+  const days = Math.max(0, elapsedDays);
   if (days < WEEK_DAYS) {
     return `${days}d`;
   }
@@ -123,6 +120,10 @@ export const formatCompactAgo = (at: Date, reference: Date): string => {
   }
   return `${Math.floor(days / YEAR_DAYS)}y`;
 };
+
+/** "3d", "4w", "5mo", "2y": how long before `reference` something happened. */
+export const formatCompactAgo = (at: Date, reference: Date): string =>
+  formatCompactDays(Math.floor((reference.getTime() - at.getTime()) / DAY_MS));
 
 export interface SongHistorySummary<
   Entry extends SongHistoryFact = SongHistoryFact,

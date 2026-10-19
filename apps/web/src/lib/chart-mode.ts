@@ -12,7 +12,8 @@ export interface ChartModeState {
 }
 
 /**
- * Decides an arrangement's opening mode once, when it first shows with permissions known: an
+ * Decides an arrangement's opening mode once, when it first shows with permissions known (a
+ * failed permissions read waits for a retry): an
  * editor opens an empty chart (or a new arrangement while already editing) to edit, anything
  * else to read. The decision then holds, so the first save, which fills the chart, doesn't
  * send the editor back to reading. Returns `current` itself when nothing changes.
@@ -25,6 +26,7 @@ export const latchChartMode = (
   if (
     arrangement === null ||
     access === "pending" ||
+    access === "unavailable" ||
     current?.arrangementId === arrangement.id
   ) {
     return current;

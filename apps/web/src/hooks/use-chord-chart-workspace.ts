@@ -25,6 +25,7 @@ import {
   SAVE_AS_YOU_TYPE_PAUSE_MS,
   adoptTheirChordChart,
   beginChordChartSave,
+  chordChartExit,
   canSaveChordChart,
   chordChartCopy,
   chordChartSaveFailed,
@@ -46,6 +47,7 @@ import {
   versionOf,
 } from "@/lib/chord-chart-session";
 import type {
+  ChordChartExitBlock,
   ChordChartImportText,
   ChordChartSession,
 } from "@/lib/chord-chart-session";
@@ -68,10 +70,10 @@ const startFromBrowser = (arrangement: ChordChartArrangement) =>
     readChordChartSession(arrangement.id)
   );
 
-/** What follows a save someone waits on. */
-export interface SaveOutcome {
+/** How leaving the editor turned out: every edit saved, or why some can't be. */
+export interface ExitOutcome {
   readonly onSaved: () => void;
-  readonly onFailed: () => void;
+  readonly onBlocked: (reason: ChordChartExitBlock) => void;
 }
 
 export interface ChordChartWorkspaceOptions {
@@ -109,13 +111,29 @@ export const useChordChartWorkspace = ({
       setSession(received);
     }
   }
+  // The session as of the last commit or update, for decisions made after a save lands.
+  const sessionRef = useRef(session);
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
   const update = (
     change: (current: ChordChartSession) => ChordChartSession
   ) => {
-    setSession((current) => (current === null ? current : change(current)));
+    const { current } = sessionRef;
+    if (current === null) {
+      return;
+    }
+    const next = change(current);
+    sessionRef.current = next;
+    setSession(next);
   };
+  // Set while leaving waits for the last save; edits are refused so nothing lands after it.
+  const exitRef = useRef<ExitOutcome | null>(null);
+  const [committing, setCommitting] = useState(false);
   const edit = (change: (draft: ChordChartDraft) => ChordChartDraft) => {
-    update((current) => editChordChartDraft(current, change));
+    if (exitRef.current === null) {
+      update((current) => editChordChartDraft(current, change));
+    }
   };
 
   const [storedSetting, setStoredSetting] = useBrowserStorage(
@@ -141,6 +159,20 @@ export const useChordChartWorkspace = ({
     [arrangement.id, session]
   );
 
+  // Leaving keeps the latest draft in this browser even if its delayed write hadn't run.
+  useEffect(
+    () => () => {
+      const latest = sessionRef.current;
+      if (latest !== null) {
+        writeChordChartSession(
+          arrangement.id,
+          storedChordChartSession(latest, Date.now())
+        );
+      }
+    },
+    [arrangement.id]
+  );
+
   const loadTheirVersion = async () => {
     try {
       const latest = await fetchLatestChordChartArrangement(
@@ -158,18 +190,8 @@ export const useChordChartWorkspace = ({
 
   // Set before the session shows the save, so a second Save in the same moment sends nothing.
   const sendingRef = useRef(false);
-  // What to do once the save in flight lands, for leaving the editor after it.
-  const afterSaveRef = useRef<SaveOutcome | null>(null);
-  const settleAfterSave = (saved: boolean) => {
-    const after = afterSaveRef.current;
-    afterSaveRef.current = null;
-    if (saved) {
-      after?.onSaved();
-    } else {
-      after?.onFailed();
-    }
-  };
-  const save = (current: ChordChartSession) => {
+  /** Sends the draft; `onLanded` runs once Planning Center answers, either way. */
+  const sendSave = (current: ChordChartSession, onLanded: () => void) => {
     if (sendingRef.current || !canSaveChordChart(current)) {
       return;
     }
@@ -181,13 +203,15 @@ export const useChordChartWorkspace = ({
       { songId, arrangementId: arrangement.id, ...request },
       {
         onSuccess: (saved) => {
+          sendingRef.current = false;
           update((latest) => chordChartSaveSucceeded(latest, saved.updatedAt));
-          settleAfterSave(true);
+          onLanded();
         },
         onError: (error) => {
+          sendingRef.current = false;
           const refusedAsStale = isChordChartConflict(error);
           update((latest) => chordChartSaveFailed(latest, refusedAsStale));
-          settleAfterSave(false);
+          onLanded();
           if (refusedAsStale) {
             void loadTheirVersion();
             return;
@@ -199,11 +223,38 @@ export const useChordChartWorkspace = ({
             )
           );
         },
-        onSettled: () => {
-          sendingRef.current = false;
-        },
       }
     );
+  };
+
+  /** Moves a pending exit on: saves what is left, waits for a save out, or settles it. */
+  const continueExit = () => {
+    const outcome = exitRef.current;
+    if (outcome === null) {
+      return;
+    }
+    const exit = chordChartExit(sessionRef.current, saveAsYouType);
+    if (exit.kind === "wait") {
+      return;
+    }
+    if (exit.kind === "save") {
+      const latest = sessionRef.current;
+      if (latest !== null) {
+        sendSave(latest, continueExit);
+      }
+      return;
+    }
+    exitRef.current = null;
+    setCommitting(false);
+    if (exit.kind === "leave") {
+      outcome.onSaved();
+    } else {
+      outcome.onBlocked(exit.reason);
+    }
+  };
+  // Every save checks a pending exit when it lands, autosaves included.
+  const save = (current: ChordChartSession) => {
+    sendSave(current, continueExit);
   };
 
   const autosaving =
@@ -234,6 +285,10 @@ export const useChordChartWorkspace = ({
     status: session === null ? "saved" : chordChartSaveStatus(session),
     saveAsYouType,
     canSave,
+    /** Leaving waits for the last save; the editor takes no edits meanwhile. */
+    committing,
+    /** What leaving needs now, for guarding navigation away. */
+    exit: chordChartExit(session, saveAsYouType),
     /** The last save didn't reach Planning Center, so typing no longer saves on its own. */
     saveFailed: session?.paused ?? false,
     /** Saving waits for the person: the setting is off, paused, or yet to see an edit. */
@@ -261,20 +316,14 @@ export const useChordChartWorkspace = ({
       }
     },
     /**
-     * Saves what is pending (or waits for the save already in flight), then reports how it
-     * went; with nothing to save it reports saved at once.
+     * Leaves only with every edit saved: saves until the draft on screen is the one Planning
+     * Center holds (edits typed while a save is out go in the next one), refusing new edits
+     * meanwhile. Reports why when edits can't save (a conflict, a failed save, saving off).
      */
-    handleSaveThen: (outcome: SaveOutcome) => {
-      if (sendingRef.current) {
-        afterSaveRef.current = outcome;
-        return;
-      }
-      if (session === null || !canSaveChordChart(session)) {
-        outcome.onSaved();
-        return;
-      }
-      afterSaveRef.current = outcome;
-      save(session);
+    handleExit: (outcome: ExitOutcome) => {
+      exitRef.current = outcome;
+      setCommitting(true);
+      continueExit();
     },
     handleChartChange: (chart: string) => {
       edit((current) => ({ ...current, chart }));

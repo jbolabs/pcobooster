@@ -7,6 +7,7 @@ import {
   canSaveChordChart,
   changedLayout,
   chordChartCopy,
+  chordChartExit,
   chordChartSaveFailed,
   chordChartSaveRequest,
   chordChartSaveStatus,
@@ -393,5 +394,53 @@ describe(isNewerVersion, () => {
     expect(isNewerVersion(V1, V1)).toBeFalsy();
     expect(isNewerVersion(V1, null)).toBeTruthy();
     expect(isNewerVersion(null, V1)).toBeFalsy();
+  });
+});
+
+describe(chordChartExit, () => {
+  const opened = startChordChartSession(version("VERSE", V1), null);
+
+  it("leaves only once the draft typed during a save has saved too", () => {
+    const first = typeChart(opened, "VERSE first");
+    const sendingFirst = beginChordChartSave(first, first.draft);
+    const typedSecond = typeChart(sendingFirst, "VERSE second");
+    expect(chordChartExit(typedSecond, true)).toStrictEqual({ kind: "wait" });
+
+    const firstLanded = chordChartSaveSucceeded(typedSecond, V2);
+    expect(chordChartExit(firstLanded, true)).toStrictEqual({ kind: "save" });
+
+    const sendingSecond = beginChordChartSave(firstLanded, firstLanded.draft);
+    const secondLanded = chordChartSaveSucceeded(sendingSecond, V3);
+    expect(chordChartExit(secondLanded, true)).toStrictEqual({
+      kind: "leave",
+    });
+  });
+
+  it("leaves at once with nothing edited or nothing loaded", () => {
+    expect([
+      chordChartExit(opened, true),
+      chordChartExit(null, false),
+    ]).toStrictEqual([{ kind: "leave" }, { kind: "leave" }]);
+  });
+
+  it("blocks leaving over a conflict, a failed save, or saving turned off", () => {
+    const edited = typeChart(opened, "VERSE mine");
+    const failed = chordChartSaveFailed(
+      beginChordChartSave(edited, edited.draft),
+      false
+    );
+    const refused = chordChartSaveFailed(
+      beginChordChartSave(edited, edited.draft),
+      true
+    );
+    expect([
+      chordChartExit(refused, true),
+      chordChartExit(failed, true),
+      chordChartExit(edited, false),
+    ]).toStrictEqual([
+      { kind: "blocked", reason: "conflict" },
+      { kind: "blocked", reason: "failed" },
+      { kind: "blocked", reason: "manual" },
+    ]);
   });
 });

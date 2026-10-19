@@ -370,6 +370,44 @@ export const savesAsYouType = (
   !session.paused &&
   canSaveChordChart(session);
 
+/** Why the editor can't be left with every edit saved. */
+export type ChordChartExitBlock = "conflict" | "failed" | "manual";
+
+/**
+ * What leaving the editor needs right now. `leave` only once the draft on screen is the one
+ * Planning Center holds; while a save is out, `wait` and ask again when it lands (edits made
+ * meanwhile then need another `save`). Edits that can't save on their own block leaving.
+ */
+export type ChordChartExit =
+  | { readonly kind: "leave" }
+  | { readonly kind: "wait" }
+  | { readonly kind: "save" }
+  | { readonly kind: "blocked"; readonly reason: ChordChartExitBlock };
+
+export const chordChartExit = (
+  session: ChordChartSession | null,
+  saveAsYouType: boolean
+): ChordChartExit => {
+  if (session === null) {
+    return { kind: "leave" };
+  }
+  if (session.saving !== null) {
+    return { kind: "wait" };
+  }
+  if (session.conflict !== null) {
+    return { kind: "blocked", reason: "conflict" };
+  }
+  if (!isDirty(session)) {
+    return { kind: "leave" };
+  }
+  if (session.paused) {
+    return { kind: "blocked", reason: "failed" };
+  }
+  return saveAsYouType
+    ? { kind: "save" }
+    : { kind: "blocked", reason: "manual" };
+};
+
 export type ChordChartSaveStatus = "saved" | "saving" | "unsaved";
 
 export const chordChartSaveStatus = (

@@ -21,19 +21,33 @@ export const SongPageHeader = ({
   songId: string;
   /** Null until a read names the song. */
   title: string | null;
-  /** "Writers · CCLI 6605236 · © 2013", or null when Planning Center has none. */
-  credits: string | null;
+  /** Writers, "CCLI 6605236", and the copyright; each shown whole, wrapping as needed. */
+  credits: readonly string[];
 }) => (
   <header className="flex min-w-0 shrink-0 items-start justify-between gap-3">
     {title === null ? (
       <SongPageHeaderSkeleton />
     ) : (
       <div className="min-w-0">
-        <h1 className="truncate text-xl font-semibold tracking-tight md:text-2xl">
+        <h1 className="line-clamp-2 text-xl font-semibold tracking-tight wrap-break-word md:text-2xl">
           {title}
         </h1>
-        {credits === null ? null : (
-          <p className="text-muted-foreground truncate text-sm">{credits}</p>
+        {credits.length === 0 ? null : (
+          <p className="text-muted-foreground text-sm wrap-break-word">
+            {credits.map((part, index) => (
+              <span key={part}>
+                {index > 0 ? " · " : null}
+                {/* Writers and copyright wrap; a CCLI number stays whole. */}
+                <span
+                  className={
+                    part.startsWith("CCLI ") ? "whitespace-nowrap" : undefined
+                  }
+                >
+                  {part}
+                </span>
+              </span>
+            ))}
+          </p>
         )}
       </div>
     )}
@@ -51,7 +65,8 @@ export const SongPageHeader = ({
           className={buttonVariants({
             variant: "outline",
             size: "icon-sm",
-            className: "shrink-0 max-md:size-9 max-md:rounded-full",
+            touch: "target",
+            className: "shrink-0 max-md:rounded-full",
           })}
         />
       }

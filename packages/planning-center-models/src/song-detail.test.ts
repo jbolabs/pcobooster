@@ -18,7 +18,10 @@ import {
   missingChartLabel,
   planningCenterArrangementUrl,
   serviceTypeCounts,
-  songCreditsLine,
+  copyrightLabel,
+  keyContextLabel,
+  songCreditParts,
+  sungAgoLabel,
   songFacts,
   songFileGroups,
   songNotes,
@@ -92,7 +95,7 @@ describe("song history facts", () => {
       {
         label: "Last sung",
         value: "Oct 3",
-        caption: "3d ago",
+        caption: "4d ago",
         accessibilityValue: "Sat, Oct 3, 2026",
       },
       {
@@ -127,6 +130,29 @@ describe("song history facts", () => {
     expect(songFacts(planned, now, zone, false).at(2)?.caption).toBe(
       "Sung in A, G"
     );
+  });
+
+  it("says Today and Yesterday by the congregation's calendar, not 24-hour spans", () => {
+    // 9 PM Saturday in Los Angeles, read at 8 AM Sunday there: under 24 hours, but yesterday.
+    const sunday = new Date("2026-10-04T15:00:00.000Z");
+    expect([
+      sungAgoLabel(new Date("2026-10-04T04:00:00.000Z"), sunday, zone),
+      sungAgoLabel(new Date("2026-10-04T14:00:00.000Z"), sunday, zone),
+      sungAgoLabel(new Date("2026-09-20T17:00:00.000Z"), sunday, zone),
+    ]).toStrictEqual(["Yesterday", "Today", "2w ago"]);
+  });
+
+  it("counts a plan exactly at now with the past rows and as the last time sung", () => {
+    const atNow = entry(now.toISOString(), "Sunday Gathering", {
+      startingKey: "C",
+    });
+    const facts = songFacts([atNow], now, zone, false);
+    expect([
+      splitSongHistory([atNow], now).past.length,
+      facts.at(0)?.caption,
+      facts.at(2)?.value,
+      facts.at(2)?.caption,
+    ]).toStrictEqual([1, "Today", "Once", "Sung in C"]);
   });
 
   it("says plainly when the song was never sung or planned", () => {
@@ -292,6 +318,8 @@ describe("keys", () => {
   it("notes a key that ends somewhere else", () => {
     expect(keyEndingLabel(key("1", "G", { endingKey: "A" }))).toBe("Ends in A");
     expect(keyEndingLabel(key("1", "G", { endingKey: "G" }))).toBeNull();
+    expect(keyContextLabel(key("1", "G", { endingKey: "A" }))).toBe("G → A");
+    expect(keyContextLabel(key("2", "Bb"))).toBe("Bb");
   });
 
   it("names the chart action and a missing chart by the key", () => {
@@ -393,24 +421,37 @@ const groupIds = (
 ) => groups.map((group) => [group.label, group.files.map(({ id }) => id)]);
 
 describe("credits, files, and notes", () => {
-  it("joins writers, CCLI number, and copyright year, skipping missing parts", () => {
+  it("lists writers, CCLI number, and the full copyright, skipping missing parts", () => {
     expect(
-      songCreditsLine({
+      songCreditParts({
         author: "Joel Davies and Aodhan King",
         ccliNumber: 6_605_236,
         copyright: "2013 Hillsong Music Publishing",
       })
-    ).toBe("Joel Davies and Aodhan King · CCLI 6605236 · © 2013");
+    ).toStrictEqual([
+      "Joel Davies and Aodhan King",
+      "CCLI 6605236",
+      "© 2013 Hillsong Music Publishing",
+    ]);
     expect(
-      songCreditsLine({
-        author: "",
-        ccliNumber: null,
-        copyright: "Public Domain",
-      })
-    ).toBe("Public Domain");
+      songCreditParts({ author: " ", ccliNumber: null, copyright: null })
+    ).toStrictEqual([]);
+  });
+
+  it("marks copyright with © unless it already says so or is public domain", () => {
     expect(
-      songCreditsLine({ author: " ", ccliNumber: null, copyright: null })
-    ).toBeNull();
+      [
+        "Original test fixture",
+        "© 2013 Hillsong",
+        "Copyright 1998 Vineyard Songs",
+        "Public Domain",
+      ].map(copyrightLabel)
+    ).toStrictEqual([
+      "© Original test fixture",
+      "© 2013 Hillsong",
+      "Copyright 1998 Vineyard Songs",
+      "Public Domain",
+    ]);
   });
 
   it("scopes key files to the chosen key when there are two or more keys", () => {

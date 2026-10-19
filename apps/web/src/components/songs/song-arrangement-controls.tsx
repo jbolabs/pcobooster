@@ -93,14 +93,17 @@ const ArrangementMenuItem = ({
         onSelect(arrangement);
       }}
     >
-      <span className="min-w-0 flex-1 truncate">
-        {arrangementDisplayName(arrangement.name)}
-      </span>
-      {detail === "" ? null : (
-        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-          {detail}
+      {/* The name comes first and keeps its room; tempo and keys sit under it. */}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate">
+          {arrangementDisplayName(arrangement.name)}
         </span>
-      )}
+        {detail === "" ? null : (
+          <span className="text-muted-foreground truncate text-xs font-normal tabular-nums">
+            {detail}
+          </span>
+        )}
+      </span>
       <Check className={selected ? undefined : "invisible"} aria-hidden />
       {selected ? <span className="sr-only">(shown)</span> : null}
     </DropdownMenuItem>
@@ -115,11 +118,14 @@ export const ArrangementPicker = ({
   arrangements,
   arrangement,
   onShow,
+  flush = false,
 }: {
   /** Active first, then archived. */
   arrangements: readonly ChordChartArrangement[];
   arrangement: ChordChartArrangement;
   onShow: (search: SongPageSearch) => void;
+  /** Lines the menu's text up with text above it, its hit area reaching into the gutter. */
+  flush?: boolean;
 }) => {
   const name = arrangementDisplayName(arrangement.name);
   if (arrangements.length < 2) {
@@ -143,7 +149,10 @@ export const ArrangementPicker = ({
         render={
           <Button
             variant="ghost"
-            className="-ml-3 min-w-0"
+            touch="target"
+            className={
+              flush ? "-ml-3 max-w-full min-w-0" : "max-w-full min-w-0"
+            }
             aria-label={`Arrangement: ${name}`}
           />
         }

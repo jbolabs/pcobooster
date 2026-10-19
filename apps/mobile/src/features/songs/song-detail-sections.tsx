@@ -623,7 +623,7 @@ const HistoryRows = ({
 
 /**
  * Every plan with the song over the past year and the ones already planned, with the key each
- * sang it in (`songs.history`). A row opens its plan's run sheet in Services.
+ * sang it in (`songs.schedule`). A row opens its plan's run sheet in Services.
  */
 export const SongHistorySection = ({ model }: { model: SongDetailModel }) => {
   const [showsAll, setShowsAll] = useState(false);

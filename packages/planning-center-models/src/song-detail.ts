@@ -1,9 +1,10 @@
 import {
   formatCalendarDateLabel,
   formatCalendarDayInTimeZone,
+  orgCalendarDaysBetween,
 } from "./calendar";
 import {
-  formatCompactAgo,
+  formatCompactDays,
   songHistoryCountLabel,
   summarizeSongHistory,
 } from "./song-library";
@@ -127,6 +128,25 @@ export const historyDateLabel = (
     sameOrgYear(date, now, timeZone) ? "weekdayMonthDay" : "monthDayYear"
   );
 
+/**
+ * How long ago a service was, in the congregation's calendar days: "Today", "Yesterday", then
+ * "3d ago", "2w ago".
+ */
+export const sungAgoLabel = (
+  date: Date,
+  now: Date,
+  timeZone: string
+): string => {
+  const days = orgCalendarDaysBetween(date, now, timeZone);
+  if (days <= 0) {
+    return "Today";
+  }
+  if (days === 1) {
+    return "Yesterday";
+  }
+  return `${formatCompactDays(days)} ago`;
+};
+
 /** One line of the song's summary: a label, its value, and a muted caption. */
 export interface SongFact {
   readonly label: string;
@@ -146,20 +166,20 @@ export const songFacts = (
   timeZone: string,
   truncated: boolean
 ): SongFact[] => {
-  const summary = summarizeSongHistory(history, now, null);
-  const { last, next, timesThisYear } = summary;
+  // The same split as the page's Upcoming and Past year rows.
+  const { upcoming, past } = splitSongHistory(history, now);
+  const [last] = past;
+  const [next] = upcoming;
   // Keys it was sung in: past plans only, not ones still ahead.
   const sungKeys = [
     ...new Set(
-      history.flatMap((entry) =>
-        entry.sortDate < now && entry.startingKey !== null
-          ? [entry.startingKey]
-          : []
+      past.flatMap((entry) =>
+        entry.startingKey === null ? [] : [entry.startingKey]
       )
     ),
   ];
   const lastSung: SongFact =
-    last === null
+    last === undefined
       ? {
           label: "Last sung",
           value: "Not in the past year",
@@ -169,7 +189,7 @@ export const songFacts = (
       : {
           label: "Last sung",
           value: compactDate(last.sortDate, now, timeZone),
-          caption: `${formatCompactAgo(last.sortDate, now)} ago`,
+          caption: sungAgoLabel(last.sortDate, now, timeZone),
           accessibilityValue: formatCalendarDateLabel(
             last.sortDate,
             timeZone,
@@ -177,7 +197,7 @@ export const songFacts = (
           ),
         };
   const nextPlanned: SongFact =
-    next === null
+    next === undefined
       ? {
           label: "Next",
           value: "Not planned",
@@ -194,10 +214,10 @@ export const songFacts = (
             "weekdayMonthDayYear"
           ),
         };
-  let times = `${timesThisYear} times`;
+  let times = `${past.length} times`;
   if (truncated) {
-    times = `${timesThisYear}+ times`;
-  } else if (timesThisYear === 1) {
+    times = `${past.length}+ times`;
+  } else if (past.length === 1) {
     times = "Once";
   }
   return [
@@ -352,6 +372,12 @@ export const keyEndingLabel = (key: KeyOption): string | null =>
     ? null
     : `Ends in ${key.endingKey}`;
 
+/** The chosen key on the chart: "G", or "G → A" when it ends somewhere else. */
+export const keyContextLabel = (key: KeyOption): string => {
+  const start = key.startingKey ?? keyLabel(key);
+  return keyEndingLabel(key) === null ? start : `${start} → ${key.endingKey}`;
+};
+
 /** The primary chart action: "Chart in G", or "Chart" for the lyrics sheet. */
 export const chartActionLabel = (key: KeyOption | null): string => {
   if (key === null) {
@@ -443,14 +469,30 @@ export const songPageSelection = <Arrangement extends ChartArrangementSummary>(
   };
 };
 
-const COPYRIGHT_YEAR_PATTERN = /\b(?<year>(?:1[6-9]|20)\d{2})\b/u;
+const COPYRIGHT_MARK_PATTERN = /^(?:©|\(c\)|copyright\b)/iu;
+const PUBLIC_DOMAIN_PATTERN = /^public domain$/iu;
 
-/** The song's credits line: "Writers · CCLI 6605236 · © 2013"; missing parts are skipped. */
-export const songCreditsLine = (song: {
+/**
+ * The copyright as Planning Center has it, marked "©" unless it already says so; public-domain
+ * songs stay unmarked.
+ */
+export const copyrightLabel = (copyright: string): string => {
+  const text = copyright.trim();
+  if (COPYRIGHT_MARK_PATTERN.test(text) || PUBLIC_DOMAIN_PATTERN.test(text)) {
+    return text;
+  }
+  return `© ${text}`;
+};
+
+/**
+ * The song's credits, each shown in full: writers, "CCLI 6605236", and the copyright. Missing
+ * parts are skipped; the page joins them with " · ".
+ */
+export const songCreditParts = (song: {
   readonly author: string;
   readonly ccliNumber: number | null;
   readonly copyright: string | null;
-}): string | null => {
+}): string[] => {
   const parts: string[] = [];
   const author = song.author.trim();
   if (author !== "") {
@@ -461,10 +503,9 @@ export const songCreditsLine = (song: {
   }
   const copyright = song.copyright?.trim() ?? "";
   if (copyright !== "") {
-    const year = COPYRIGHT_YEAR_PATTERN.exec(copyright)?.groups?.year;
-    parts.push(year === undefined ? copyright : `© ${year}`);
+    parts.push(copyrightLabel(copyright));
   }
-  return parts.length === 0 ? null : parts.join(" · ");
+  return parts;
 };
 
 /** A group of files on the song page: the arrangement's own, or one key's. */

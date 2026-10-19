@@ -36,11 +36,11 @@ describe(chordChartEditAccess, () => {
     ]).toStrictEqual(["viewer", "viewer", "viewer"]);
   });
 
-  it("waits while permissions load, and leaves an unreported level or a failed read open", () => {
+  it("waits while permissions load, grants nothing on a failed read, and leaves an unreported level open", () => {
     expect([
       chordChartEditAccess(null, false, false),
-      chordChartEditAccess(snapshot(null), false, false),
       chordChartEditAccess(null, false, true),
-    ]).toStrictEqual(["pending", "editor", "editor"]);
+      chordChartEditAccess(snapshot(null), false, false),
+    ]).toStrictEqual(["pending", "unavailable", "editor"]);
   });
 });

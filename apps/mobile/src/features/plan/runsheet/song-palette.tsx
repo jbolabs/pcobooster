@@ -62,10 +62,10 @@ const SongPreview = ({
   const options = useQuery(
     songReads.options(context, ids.serviceTypeId, song.id)
   );
-  const history = useQuery(songReads.history(context, song.id));
+  const history = useQuery(songReads.schedule(context, song.id));
   const facts = previewFactRows(
     songPreviewFacts({
-      history: history.data,
+      history: history.data?.entries,
       arrangements: options.data?.arrangements ?? [],
       serviceTypeId: ids.serviceTypeId,
       previousSong: palette.previousSong,

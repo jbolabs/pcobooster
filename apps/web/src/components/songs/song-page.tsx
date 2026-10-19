@@ -13,7 +13,7 @@ import {
   planningCenterArrangementUrl,
   planningCenterSongUrl,
   serviceTypeLabel,
-  songCreditsLine,
+  songCreditParts,
   songFacts,
   songFileGroups,
   songNotes,
@@ -86,7 +86,13 @@ const SectionRetry = ({
 }) => (
   <div className="text-muted-foreground flex items-center gap-3 text-sm">
     <span>{message}</span>
-    <Button variant="outline" size="sm" disabled={busy} onClick={onRetry}>
+    <Button
+      variant="outline"
+      size="sm"
+      touch="target"
+      disabled={busy}
+      onClick={onRetry}
+    >
       Retry
     </Button>
   </div>
@@ -169,12 +175,13 @@ const ArrangementSummary = ({
         arrangements={arrangements}
         arrangement={arrangement}
         onShow={onShow}
+        flush
       />
       <ChartLink
         songId={songId}
         arrangementId={arrangement.id}
         chartKey={chartKey}
-        className="ml-auto max-md:hidden"
+        className="shrink-0 max-md:hidden"
       />
     </div>
     <FactsLine arrangement={arrangement} chartKey={chartKey} />
@@ -316,6 +323,42 @@ const AttachmentRow = ({
   );
 };
 
+/** Files shown before "Show all", so notes and the schedule stay near. */
+const FILE_PREVIEW_ROWS = 8;
+
+const FileList = ({
+  files,
+  renderFile,
+}: {
+  files: readonly SongAttachment[];
+  renderFile: (attachment: SongAttachment) => ReactNode;
+}) => {
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? files : files.slice(0, FILE_PREVIEW_ROWS);
+  return (
+    <div className="flex min-w-0 flex-col items-start">
+      <ul className="flex w-full min-w-0 flex-col">
+        {shown.map((attachment) => (
+          <li key={attachment.id}>{renderFile(attachment)}</li>
+        ))}
+      </ul>
+      {files.length > FILE_PREVIEW_ROWS ? (
+        <Button
+          type="button"
+          variant="link"
+          size="xs"
+          touch="target"
+          onClick={() => {
+            setShowAll((current) => !current);
+          }}
+        >
+          {showAll ? "Show less" : `Show all ${files.length}`}
+        </Button>
+      ) : null}
+    </div>
+  );
+};
+
 const PlanningCenterLink = ({
   href,
   children,
@@ -385,18 +428,17 @@ const FilesSection = ({
             <h3 className="text-muted-foreground px-1.5 text-xs md:px-0 md:pt-3">
               {group.label}
             </h3>
-            <ul className="flex min-w-0 flex-col">
-              {group.files.map((attachment) => (
-                <li key={attachment.id}>
-                  <AttachmentRow
-                    songId={songId}
-                    arrangementId={arrangement.id}
-                    attachment={attachment}
-                    onOpen={openAttachment}
-                  />
-                </li>
-              ))}
-            </ul>
+            <FileList
+              files={group.files}
+              renderFile={(attachment) => (
+                <AttachmentRow
+                  songId={songId}
+                  arrangementId={arrangement.id}
+                  attachment={attachment}
+                  onOpen={openAttachment}
+                />
+              )}
+            />
           </div>
         ))}
         {files.data.truncated ? (
@@ -446,8 +488,8 @@ const NoteText = ({ note }: { note: SongNote }) => {
         ref={textRef}
         className={
           expanded
-            ? "text-sm whitespace-pre-wrap"
-            : "line-clamp-4 text-sm whitespace-pre-wrap"
+            ? "text-sm wrap-anywhere whitespace-pre-wrap"
+            : "line-clamp-4 text-sm wrap-anywhere whitespace-pre-wrap"
         }
       >
         {note.text}
@@ -456,6 +498,7 @@ const NoteText = ({ note }: { note: SongNote }) => {
         <Button
           variant="link"
           size="xs"
+          touch="target"
           className="-ml-2.5"
           aria-expanded={expanded}
           onClick={() => {
@@ -540,10 +583,15 @@ const ScheduleRow = ({
       <span className="w-24 shrink-0 tabular-nums">
         {historyDateLabel(entry.sortDate, now, timeZone)}
       </span>
-      <span className="min-w-0 flex-1 truncate">
-        {serviceTypeLabel(entry.serviceTypeName)}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate">
+          {serviceTypeLabel(entry.serviceTypeName)}
+        </span>
         {detail === null ? null : (
-          <span className="text-muted-foreground"> · {detail}</span>
+          // The arrangement (when the history spans several) gets its own line, so it shows.
+          <span className="text-muted-foreground block truncate text-xs">
+            {detail}
+          </span>
         )}
       </span>
       <span className="text-muted-foreground shrink-0 text-xs">
@@ -617,6 +665,7 @@ const ScheduleList = ({
           type="button"
           variant="link"
           size="xs"
+          touch="target"
           className="-ml-2.5"
           onClick={() => {
             setShowAll((current) => !current);
@@ -713,7 +762,7 @@ const SongPageLayout = ({
   main: ReactNode;
   rail: ReactNode;
 }) => (
-  <div className="grid grid-cols-1 items-start gap-x-10 gap-y-8 @5xl:grid-cols-[minmax(0,1fr)_18rem]">
+  <div className="grid grid-cols-1 items-start gap-x-10 gap-y-8 @5xl:grid-cols-[minmax(0,42rem)_18rem]">
     <div className="flex min-w-0 flex-col gap-6">{main}</div>
     <aside aria-label="Schedule" className="flex min-w-0 flex-col gap-5">
       {rail}
@@ -798,7 +847,7 @@ export const SongPage = ({
       <SongPageHeader
         songId={songId}
         title={song?.title ?? null}
-        credits={song === null ? null : songCreditsLine(song)}
+        credits={song === null ? [] : songCreditParts(song)}
       />
       <SongPageLayout
         main={main}
