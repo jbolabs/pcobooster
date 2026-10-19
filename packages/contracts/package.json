@@ -22,11 +22,11 @@
   },
   "dependencies": {
     "@pcobooster/planning-center-models": "workspace:*",
-    "effect": "4.0.4"
+    "effect": "4.0.5"
   },
   "devDependencies": {
     "@pcobooster/config": "workspace:*",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.5"
   }
 }
