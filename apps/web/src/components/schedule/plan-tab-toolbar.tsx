@@ -58,6 +58,7 @@ export const PlanTabToolbar = ({
     <div
       role="toolbar"
       aria-label="Add to plan"
+      data-plan-toolbar
       className="bg-popover text-popover-foreground ring-foreground/5 dark:ring-foreground/10 pointer-events-auto flex items-center gap-1 rounded-full p-1 shadow-lg ring-1"
     >
       <ShortcutButton
