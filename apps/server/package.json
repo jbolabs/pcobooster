@@ -13,7 +13,7 @@
     "@pcobooster/api": "workspace:*",
     "@pcobooster/config": "workspace:*",
     "@pcobooster/contracts": "workspace:*",
-    "alchemy": "2.0.0-beta.82",
+    "alchemy": "2.0.0-beta.83",
     "better-auth": "1.7.7",
     "effect": "4.0.4"
   },

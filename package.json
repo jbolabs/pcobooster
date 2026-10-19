@@ -80,7 +80,7 @@
     "@shadcn/lint": "0.1.2",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
-    "alchemy": "2.0.0-beta.82",
+    "alchemy": "2.0.0-beta.83",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "effect": "4.0.4",
     "lefthook": "^2.2.1",
@@ -102,8 +102,7 @@
   },
   "packageManager": "bun@1.4.2",
   "patchedDependencies": {
-    "better-auth@1.7.7": "patches/better-auth@1.7.7.patch",
-    "alchemy@2.0.0-beta.82": "patches/alchemy@2.0.0-beta.82.patch"
+    "better-auth@1.7.7": "patches/better-auth@1.7.7.patch"
   },
   "trustedDependencies": [
     "esbuild",
