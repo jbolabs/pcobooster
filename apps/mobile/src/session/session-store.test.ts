@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
+import { AccountDeletedWithLeftoversError } from "./account-deleted-with-leftovers";
+import { AccountDeletionUnavailableError } from "./account-deletion-unavailable";
 import {
   clearIfFreshInstall,
   INSTALL_MARKER_KEY,
@@ -41,6 +43,9 @@ const makeStore = (overrides: Partial<SessionApi> = {}) => {
         await Promise.resolve();
       },
       isSignedInWithoutCredentials: async () => await Promise.resolve(false),
+      deleteAccount: async () => {
+        await Promise.resolve();
+      },
       ...overrides,
     },
     revoke: async (token) => {
@@ -53,8 +58,9 @@ const makeStore = (overrides: Partial<SessionApi> = {}) => {
       clock += 1000;
       return new Date(clock);
     },
-    onForget: (ids) => {
+    onForget: async (ids) => {
       forgotten.push(...ids);
+      await Promise.resolve();
     },
   });
   return { store, secrets, revoked, forgotten };
@@ -97,6 +103,9 @@ describe(SessionStore, () => {
           await Promise.resolve();
         },
         isSignedInWithoutCredentials: async () => await Promise.resolve(false),
+        deleteAccount: async () => {
+          await Promise.resolve();
+        },
       },
       revoke: async () => {
         await Promise.resolve();
@@ -223,6 +232,226 @@ describe(SessionStore, () => {
   });
 });
 
+describe("deleting the active account", () => {
+  it("deletes with the active token, then forgets only that person on this device", async () => {
+    const deletedWith: string[] = [];
+    const { store, secrets, revoked, forgotten } = makeStore({
+      deleteAccount: async (token) => {
+        deletedWith.push(token);
+        await Promise.resolve();
+      },
+    });
+    await store.restore();
+    await store.completeSignIn(result("stays", "tok-stays"));
+    await store.completeSignIn(result("leaves", "tok-leaves"));
+
+    await store.deleteAccount();
+
+    const saved = secrets.items.get(SESSION_ITEM_KEY) ?? "";
+    // The server ended the sessions itself, so nothing is revoked.
+    expect({
+      deletedWith,
+      forgotten,
+      revoked,
+      phase: store.getSnapshot().phase.kind,
+      remembered: store
+        .getSnapshot()
+        .stored.accounts.map((account) => account.userId),
+      keychain: {
+        leaves: saved.includes("tok-leaves"),
+        stays: saved.includes("tok-stays"),
+      },
+    }).toStrictEqual({
+      deletedWith: ["tok-leaves"],
+      forgotten: ["leaves"],
+      revoked: [],
+      phase: "signedOut",
+      remembered: ["stays"],
+      keychain: { leaves: false, stays: true },
+    });
+  });
+
+  it("changes nothing on this device when the server refuses or fails", async () => {
+    const { store, secrets, forgotten } = makeStore({
+      deleteAccount: async () => {
+        await Promise.resolve();
+        throw new Error("Internal server error");
+      },
+    });
+    await store.restore();
+    await store.completeSignIn(result("u1", "tok1"));
+    await store.flush();
+
+    await expect(store.deleteAccount()).rejects.toThrow(
+      "Internal server error"
+    );
+
+    expect(store.credentials().bearerToken).toBe("tok1");
+    expect(forgotten).toStrictEqual([]);
+    expect(secrets.items.get(SESSION_ITEM_KEY)).toContain("tok1");
+  });
+
+  it("deletes and forgets the person who started it when someone else becomes active mid-request", async () => {
+    const { promise: answered, resolve: answer } =
+      Promise.withResolvers<null>();
+    const deletedWith: string[] = [];
+    const { store, secrets, forgotten } = makeStore({
+      deleteAccount: async (token) => {
+        deletedWith.push(token);
+        await answered;
+      },
+    });
+    await store.restore();
+    await store.completeSignIn(result("stays", "tok-stays"));
+    await store.completeSignIn(result("leaves", "tok-leaves"));
+
+    const deleting = store.deleteAccount();
+    store.switchAccount("stays");
+    answer(null);
+    await deleting;
+    await store.flush();
+
+    const saved = secrets.items.get(SESSION_ITEM_KEY) ?? "";
+    expect({
+      deletedWith,
+      forgotten,
+      active: store.credentials().bearerToken,
+      keychain: {
+        leaves: saved.includes("tok-leaves"),
+        stays: saved.includes("tok-stays"),
+      },
+    }).toStrictEqual({
+      deletedWith: ["tok-leaves"],
+      forgotten: ["leaves"],
+      active: "tok-stays",
+      keychain: { leaves: false, stays: true },
+    });
+  });
+
+  it("reports a deleted account whose Keychain entry could not be removed, and never signs it back in", async () => {
+    const secrets = memorySecretStorage();
+    const failures: string[] = [];
+    let keychainBroken = false;
+    const credentialStore = makeCredentialStore(secrets);
+    const store = new SessionStore({
+      store: {
+        load: credentialStore.load,
+        save: async (session) => {
+          if (keychainBroken) {
+            throw new Error("errSecInteractionNotAllowed");
+          }
+          await credentialStore.save(session);
+        },
+      },
+      api: {
+        selectAccount: async (id) => await Promise.resolve(id),
+        startDemo: async () => await Promise.resolve("demo-token"),
+        exitDemo: async () => {
+          await Promise.resolve();
+        },
+        isSignedInWithoutCredentials: async () => await Promise.resolve(false),
+        deleteAccount: async () => {
+          keychainBroken = true;
+          await Promise.resolve();
+        },
+      },
+      revoke: async () => {
+        await Promise.resolve();
+      },
+      credentialIdentity: async (token) => await Promise.resolve(token),
+      now: () => NOW,
+      onBackgroundFailure: (error) => {
+        failures.push(error.message);
+      },
+    });
+    await store.restore();
+    await store.completeSignIn(result("u1", "tok1"));
+    await store.flush();
+
+    await expect(store.deleteAccount()).rejects.toThrow(
+      new AccountDeletedWithLeftoversError(["keychain"])
+    );
+
+    expect({
+      // Gone from the running app even though the Keychain still holds it.
+      phase: store.getSnapshot().phase.kind,
+      bearer: store.credentials().bearerToken,
+      keychainStillHoldsToken:
+        secrets.items.get(SESSION_ITEM_KEY)?.includes("tok1") ?? false,
+      failures,
+    }).toStrictEqual({
+      phase: "signedOut",
+      bearer: null,
+      keychainStillHoldsToken: true,
+      failures: ["errSecInteractionNotAllowed", "errSecInteractionNotAllowed"],
+    });
+  });
+
+  it("waits for cached reads to be cleared and reports when they could not be", async () => {
+    const steps: string[] = [];
+    const secrets = memorySecretStorage();
+    const store = new SessionStore({
+      store: makeCredentialStore(secrets),
+      api: {
+        selectAccount: async (id) => await Promise.resolve(id),
+        startDemo: async () => await Promise.resolve("demo-token"),
+        exitDemo: async () => {
+          await Promise.resolve();
+        },
+        isSignedInWithoutCredentials: async () => await Promise.resolve(false),
+        deleteAccount: async () => {
+          await Promise.resolve();
+        },
+      },
+      revoke: async () => {
+        await Promise.resolve();
+      },
+      credentialIdentity: async (token) => await Promise.resolve(token),
+      now: () => NOW,
+      onForget: async () => {
+        await Promise.resolve();
+        steps.push("cache removal failed");
+        throw new Error("AsyncStorage is full");
+      },
+    });
+    await store.restore();
+    await store.completeSignIn(result("u1", "tok1"));
+
+    const deleting = store.deleteAccount();
+    await expect(deleting).rejects.toThrow(
+      new AccountDeletedWithLeftoversError(["cache"])
+    );
+    steps.push("deletion settled");
+
+    expect({
+      steps,
+      keychainCleared: !secrets.items.has(SESSION_ITEM_KEY),
+    }).toStrictEqual({
+      steps: ["cache removal failed", "deletion settled"],
+      keychainCleared: true,
+    });
+  });
+
+  it("refuses the demo without calling the API, even with a person remembered", async () => {
+    const deletedWith: string[] = [];
+    const { store } = makeStore({
+      deleteAccount: async (token) => {
+        deletedWith.push(token);
+        await Promise.resolve();
+      },
+    });
+    await store.restore();
+    await store.completeSignIn(result("u1", "tok1"));
+    await store.startDemo("key");
+
+    await expect(store.deleteAccount()).rejects.toBeInstanceOf(
+      AccountDeletionUnavailableError
+    );
+    expect(deletedWith).toStrictEqual([]);
+    expect(store.getSnapshot().stored.accounts).toHaveLength(1);
+  });
+});
+
 describe("the Keychain item", () => {
   it("deletes an unreadable item instead of staying stuck", async () => {
     const secrets = memorySecretStorage({ [SESSION_ITEM_KEY]: "{not json" });
@@ -281,6 +510,9 @@ describe("launch races and cache identity", () => {
           },
           isSignedInWithoutCredentials: async () =>
             await Promise.resolve(false),
+          deleteAccount: async () => {
+            await Promise.resolve();
+          },
         },
         revoke: async () => {
           await Promise.resolve();

@@ -41,6 +41,12 @@ export interface SessionValue {
   readonly switchAccount: (userId: string) => void;
   /** Forgets a person on this device and revokes their session. */
   readonly forget: (account: DeviceAccount) => Promise<void>;
+  readonly isDeletingAccount: boolean;
+  /**
+   * Deletes the active person's pcobooster.com account, then forgets them on this device.
+   * Failures toast and leave everything as it was; resolves whether it was deleted.
+   */
+  readonly deleteAccount: () => Promise<boolean>;
   /** Signs out of this device, or leaves the demo. */
   readonly signOut: () => Promise<void>;
   /** Switches to another of the person's Planning Center organizations. */

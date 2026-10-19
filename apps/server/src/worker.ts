@@ -14,6 +14,10 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import { Config, Effect, Layer, Redacted, Scope } from "effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
+import {
+  ANALYTICS_ERASURE_CRON,
+  runScheduledErasures,
+} from "./analytics-erasure-schedule";
 import { Database } from "./database";
 import { waitUntilAfterDisconnect } from "./disconnect";
 import { FeatureFlagApp } from "./feature-flags";
@@ -176,7 +180,32 @@ export default class Api extends Cloudflare.Worker<Api>()(
       },
     });
     const resolveEnvironment = yield* readEnvironment;
-    const { publicOrigin } = yield* currentStageSettings;
+    const { publicOrigin, production } = yield* currentStageSettings;
+    // Production only: the queue holds real deleted accounts, and only production captures to
+    // PostHog. Previews, staging, local, and tests declare no cron and read no erasure key.
+    if (production) {
+      const erasureApiKey = yield* readRuntimeSecret("POSTHOG_ERASURE_API_KEY");
+      const reportingKey = yield* optionalString("POSTHOG_PROJECT_KEY");
+      yield* Cloudflare.Workers.cron(ANALYTICS_ERASURE_CRON, (controller) =>
+        Effect.gen(function* eraseDeletedAccounts() {
+          const binding = yield* database.raw;
+          const apiKey = yield* erasureApiKey.pipe(
+            Effect.catchTag("SecretError", () =>
+              Effect.logError("Analytics erasure secret read failed").pipe(
+                Effect.as("")
+              )
+            )
+          );
+          yield* runScheduledErasures({
+            database: binding,
+            erasureApiKey: apiKey,
+            reportingKey,
+            fetch: globalThis.fetch,
+            now: new Date(controller.scheduledTime),
+          });
+        })
+      );
+    }
     // One pacer per isolate shares each credential's Planning Center budget across requests.
     const pacer = new PlanningCenterRatePacer();
     // The router lives as long as the isolate, so this scope is never closed.
@@ -294,6 +323,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
     Effect.provide(Cloudflare.KV.ReadWriteNamespaceBinding),
     Effect.provide(Cloudflare.R2.ReadBucketBinding),
     Effect.provide(Cloudflare.Flagship.ReadFlagsBinding),
-    Effect.provide(Cloudflare.Workers.RateLimitBinding)
+    Effect.provide(Cloudflare.Workers.RateLimitBinding),
+    Effect.provide(Cloudflare.Workers.CronEventSourceLive)
   )
 ) {}

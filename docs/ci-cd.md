@@ -89,13 +89,24 @@ To roll back, revert the change on `main`; the revert deploys like any other mer
 
 A deploy you run yourself (`bun run deploy:production`, `bun run infra:deploy`) is still a manual production change: confirm it with Jake first.
 
+### Analytics erasure cron
+
+The production API Worker carries the hourly [analytics erasure](analytics.md#schedule) Cron Trigger, and its deploy references `pcobooster__prod__analytics__POSTHOG_ERASURE_API_KEY`. A production deploy fails before uploading the Worker if that secret is not stored, so store it first:
+
+1. Create a PostHog personal API key with only the `person:write` scope, limited to project 614621. Save it in the production Keychain scope: `bun run secrets:set production POSTHOG_ERASURE_API_KEY --stdin`.
+2. `bun run secrets:plan:production` must show exactly one created secret, `pcobooster__prod__analytics__POSTHOG_ERASURE_API_KEY`, and no other change. After Jake approves, `bun run secrets:deploy:production`. From then on that command requires the key, like every other production runtime secret.
+3. Merge. The production deploy reconciles D1 migrations (including `analytics_erasure_requests`) before the API Worker uploads, because the Worker's `DB` binding is a props-level dependency on the database; the cron ships with that Worker.
+4. Verify: the Worker's Settings → Triggers lists `17 * * * *`; the next hour's Workers Logs show `Analytics erasure run` with counts; PostHog shows no `cron:analytics-erasure` exception. `bun run analytics:erase -- --database-id <id>` shows the queue's counts read-only.
+
+Rolling back the Worker removes the trigger; queued requests wait in D1 and resume on the next deploy that carries it.
+
 ## iOS releases (TestFlight)
 
 Until the CI executor below is enabled, TestFlight builds ship from a person's Mac with `ios:testflight`, the one supported local upload path. `ios:release` on its own still only prepares archives or exports signed IPAs, and `release-ios.sh --upload` stays refused.
 
 ### Local TestFlight release
 
-From the main checkout (or any worktree) at `origin/main` with no changes, signed into Xcode with an account on team `6C46GY4Z38`, with the `pcob-release-smoke` simulator and Maestro installed (see [Release smoke check](#release-smoke-check)):
+From the main checkout (or any worktree) at `origin/main` with no changes, signed into Xcode with an account on team `6C46GY4Z38`, with an idle shared `agent-sim-*` simulator and Maestro installed (see [Release smoke check](#release-smoke-check)):
 
 ```bash
 bun run secrets:run apple -- bun run --cwd apps/mobile ios:testflight
@@ -202,7 +213,7 @@ dSYMs stay in the archive and the IPA carries `Symbols/`; the source-map workstr
 
 ### Release smoke check
 
-`bun run --cwd apps/mobile ios:release-smoke --build` builds a Release simulator app (Hermes bytecode, no Metro) with `EXPO_PUBLIC_PCOB_RELEASE_SMOKE=1`, erases the dedicated `pcob-release-smoke` simulator (create it once with `xcrun simctl create pcob-release-smoke "iPhone 17 Pro"`), and cold-launches five paths with Maestro: fresh install signed out, signed out offline, fixture sign-in saved to the Keychain, restored session, and restored session offline. A path passes when its first screen appears, the process is still running, `device.log` has no fatal JS or native error, and no crash report appeared. The smoke flag routes every request to the fixtures, or fails it as a lost connection, while the Keychain, app storage, query-cache restoration, native modules, and router stay real; no Planning Center or production API request is made. `release-ios.sh` refuses to archive with the flag set, and builds without it never read `-PCOBSmoke`. Before/after source fingerprints and full native app/bundle hashes bind the build stamp. Without `--build`, reuse requires the same source state and every app file to match; a dirty stamp cannot be promoted to clean evidence after reverting edits. A sealed evidence tree and manifest validator check all five paths, app/source identity, logs, and screenshots. Revalidate retained evidence with `bun run --cwd apps/mobile scripts/release/artifact-cli.ts verify-evidence <capture-directory> <app-directory>`; the sibling `<capture-directory>.sha256` is an integrity checksum, not a signature against a malicious operator. Evidence lands in `apps/mobile/.captures/release-smoke/<revision>/manifest.json` with each path's log, screenshots, and Maestro output, labeled `simulator-release-smoke`.
+`bun run --cwd apps/mobile ios:release-smoke --build` builds a Release simulator app (Hermes bytecode, no Metro) with `EXPO_PUBLIC_PCOB_RELEASE_SMOKE=1`, selects the first Shutdown shared simulator (`agent-sim-1`, `agent-sim-2`, `agent-sim-3`, then `agent-sim-ipad`; `--simulator` may select one explicitly), uninstalls only this app to clear its container and trigger its own first-install Keychain cleanup, and cold-launches five paths with Maestro: fresh install signed out, signed out offline, fixture sign-in saved to the Keychain, restored session, and restored session offline. The simulator is never erased; exit cleanup shuts down only the simulator this invocation booted. A path passes when its first screen appears, the process is still running, `device.log` has no fatal JS or native error, and no crash report appeared. The smoke flag routes every request to the fixtures, or fails it as a lost connection, while the Keychain, app storage, query-cache restoration, native modules, and router stay real; no Planning Center or production API request is made. `release-ios.sh` refuses to archive with the flag set, and builds without it never read `-PCOBSmoke`. Before/after source fingerprints and full native app/bundle hashes bind the build stamp. Without `--build`, reuse requires the same source state and every app file to match; a dirty stamp cannot be promoted to clean evidence after reverting edits. A sealed evidence tree and manifest validator check all five paths, app/source identity, logs, and screenshots. Revalidate retained evidence with `bun run --cwd apps/mobile scripts/release/artifact-cli.ts verify-evidence <capture-directory> <app-directory>`; the sibling `<capture-directory>.sha256` is an integrity checksum, not a signature against a malicious operator. Evidence lands in `apps/mobile/.captures/release-smoke/<revision>/manifest.json` with each path's log, screenshots, and Maestro output, labeled `simulator-release-smoke`.
 
 Run the smoke check before declaring a beta usable. The Release build takes several minutes and several GB of derived data, so it is not part of PR CI. The smoke check does not cover the signed TestFlight binary, a physical device, native OAuth, or live data; installed-device acceptance is #304.
 

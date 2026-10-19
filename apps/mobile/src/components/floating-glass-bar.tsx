@@ -12,6 +12,7 @@ import {
   accessibilityIdentifier,
   accessibilityLabel,
   animation,
+  background,
   buttonStyle,
   disabled,
   font,
@@ -32,6 +33,7 @@ import type { SFSymbol } from "sf-symbols-typescript";
 
 import { resolvedTokenColor, useColorVariant } from "../design/colors";
 import { Spacing } from "../design/metrics";
+import { hasLiquidGlass } from "../design/native-glass";
 
 export interface FloatingGlassAction {
   /** Stable and unique within the bar; it drives the glass morph. */
@@ -130,15 +132,25 @@ export const FloatingGlassBar = ({
                     key={action.id}
                     modifiers={[
                       buttonStyle("plain"),
-                      // No shape: the glass takes the default, a capsule.
-                      glassEffect({
-                        glass: {
-                          interactive: true,
-                          tint: prominent ? inkFill : undefined,
-                          variant: "regular",
-                        },
-                      }),
-                      glassEffectId(action.id, namespace),
+                      ...(hasLiquidGlass
+                        ? [
+                            glassEffect({
+                              glass: {
+                                interactive: true,
+                                tint: prominent ? inkFill : undefined,
+                                variant: "regular",
+                              },
+                            }),
+                            glassEffectId(action.id, namespace),
+                          ]
+                        : [
+                            background(
+                              prominent
+                                ? inkFill
+                                : resolvedTokenColor("surfaceRaised", variant),
+                              SwiftUIModifiers.shapes.capsule()
+                            ),
+                          ]),
                       accessibilityLabel(action.title),
                       disabled(action.disabled === true),
                       opacity(action.disabled === true ? DISABLED_OPACITY : 1),

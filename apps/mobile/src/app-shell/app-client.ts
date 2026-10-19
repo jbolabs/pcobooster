@@ -7,7 +7,10 @@ import { uuidv7 } from "@posthog/core/vendor/uuidv7";
 import { recordCallFailure } from "../diagnostics/call-failures";
 import type { ReportOrigin } from "../diagnostics/diagnostics-client";
 import { credentialHeaders } from "../session/session-store";
-import type { SessionStore } from "../session/session-store";
+import type {
+  RequestCredentials,
+  SessionStore,
+} from "../session/session-store";
 import { ScopeChangedError } from "./scope-changed";
 
 /** The product client screens use: every call scheduled, and 401s reported to the session. */
@@ -16,6 +19,8 @@ export type AppClient = Pick<ProductClient, "run">;
 /** The app client, plus copies bound to one account scope for that scope's query cache. */
 export interface AppClients extends AppClient {
   readonly forScope: (scope: string) => AppClient;
+  /** Pin transport and unauthorized attribution for session operations queued across switches. */
+  readonly forCredentials: (credentials: RequestCredentials) => AppClient;
 }
 
 /** What the app client reads from the session. */
@@ -62,44 +67,49 @@ export const makeAppClient = (
   scheduler: RequestScheduler,
   identity: CallIdentity = liveCallIdentity
 ): AppClients => {
-  const send: AppClient["run"] = async (call, options) => {
-    const sent = session.credentials();
-    const origin = identity.origin?.() ?? null;
-    const requestId = identity.newRequestId();
-    const startedAt = identity.now();
-    let procedure: string | null = null;
-    try {
-      const pinnedOptions = {
-        ...options,
-        httpHeaders: {
-          authorization: "",
-          "x-pcobooster-account": "",
-          "x-pcobooster-demo": "",
-          ...credentialHeaders(sent),
-          ...Object.fromEntries(new Headers(options?.httpHeaders)),
-          [REQUEST_ID_HEADER]: requestId,
-        },
-        onProcedure: (name: string) => {
-          procedure = name;
-          options?.onProcedure?.(name);
-        },
-      };
-      return await client.run(call, pinnedOptions);
-    } catch (error) {
-      recordCallFailure(error, {
-        requestId,
-        procedure,
-        durationMs: identity.now() - startedAt,
-        origin,
-      });
-      if (error instanceof Unauthenticated) {
-        session.handleUnauthorized(sent);
+  const sendWith =
+    (pinnedCredentials?: RequestCredentials): AppClient["run"] =>
+    async (call, options) => {
+      const sent = pinnedCredentials ?? session.credentials();
+      const origin = identity.origin?.() ?? null;
+      const requestId = identity.newRequestId();
+      const startedAt = identity.now();
+      let procedure: string | null = null;
+      try {
+        const pinnedOptions = {
+          ...options,
+          httpHeaders: {
+            authorization: "",
+            "x-pcobooster-account": "",
+            "x-pcobooster-demo": "",
+            ...credentialHeaders(sent),
+            ...Object.fromEntries(new Headers(options?.httpHeaders)),
+            [REQUEST_ID_HEADER]: requestId,
+          },
+          onProcedure: (name: string) => {
+            procedure = name;
+            options?.onProcedure?.(name);
+          },
+        };
+        return await client.run(call, pinnedOptions);
+      } catch (error) {
+        recordCallFailure(error, {
+          requestId,
+          procedure,
+          durationMs: identity.now() - startedAt,
+          origin,
+        });
+        if (error instanceof Unauthenticated) {
+          session.handleUnauthorized(sent);
+        }
+        throw error;
       }
-      throw error;
-    }
-  };
+    };
   const runIn =
-    (scope: string | null): AppClient["run"] =>
+    (
+      scope: string | null,
+      credentials?: RequestCredentials
+    ): AppClient["run"] =>
     async (call, options) =>
       await scheduler.track(
         options?.priority ?? "interactive",
@@ -107,13 +117,14 @@ export const makeAppClient = (
           if (scope !== null && session.scope() !== scope) {
             throw new ScopeChangedError();
           }
-          return await send(call, options);
+          return await sendWith(credentials)(call, options);
         },
         options?.signal
       );
   return {
     run: runIn(null),
     forScope: (scope) => ({ run: runIn(scope) }),
+    forCredentials: (credentials) => ({ run: runIn(null, { ...credentials }) }),
   };
 };
 

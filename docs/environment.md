@@ -21,7 +21,7 @@ The existing Infisical values are imported without rotation by `bun run secrets:
 
 Global names use `pcobooster__<tier>__<purpose>__<KEY>`; bindings keep their familiar key names. Namespace components cannot contain the separator. `scripts/secrets/manifest.ts` defines the keys and command allowlists.
 
-- Production: `BETTER_AUTH_SECRET`, `OAUTH_PROXY_SECRET`, Planning Center OAuth client ID and secret, and the three demo credentials.
+- Production: `BETTER_AUTH_SECRET`, `OAUTH_PROXY_SECRET`, Planning Center OAuth client ID and secret, the three demo credentials, and `POSTHOG_ERASURE_API_KEY` (a PostHog `person:write` key for the [analytics erasure cron](analytics.md#schedule)).
 - Preview tier: only `OAUTH_PROXY_SECRET` and Planning Center OAuth client ID and secret. Persistent staging consumes this tier too.
 - Each preview or staging signing secret remains an independent `Alchemy.Random` resource, destroyed with its stage. Neither reads the production signing secret.
 - Every centrally owned secret has a retain policy. Product deployments and preview teardown never own its lifecycle.

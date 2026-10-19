@@ -25,6 +25,7 @@ import { playHaptic } from "../design/haptics";
 import { Radius, Spacing } from "../design/metrics";
 import { snappy } from "../design/motion";
 import { Curves } from "../design/motion-tokens";
+import { hasLiquidGlass } from "../design/native-glass";
 import { fontSize } from "../design/typography";
 import { ToastContext, toastDuration } from "../lib/toasts";
 import type { ErrorToastValue, ToastCenter } from "../lib/toasts";
@@ -49,6 +50,11 @@ const styles = StyleSheet.create({
     top: 0,
   },
   text: { flex: 1, gap: Spacing.xxs },
+  solidToast: {
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.hairline,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   toast: {
     alignItems: "flex-start",
     alignSelf: "center",
@@ -136,7 +142,10 @@ const ErrorToastView = ({
         onAccessibilityAction={onDismiss}
         onPress={onDismiss}
       >
-        <GlassView glassEffectStyle="regular" style={styles.toast}>
+        <GlassView
+          glassEffectStyle="regular"
+          style={[styles.toast, hasLiquidGlass ? undefined : styles.solidToast]}
+        >
           <Glyph
             color={colors.destructive}
             size={fontSize("body")}

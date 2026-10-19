@@ -16,6 +16,7 @@ import {
   serviceTypeSummary,
 } from "./agenda";
 import type { ServicesWindow } from "./agenda";
+import { selectedLoading, selectedQueries } from "./loading";
 
 /** Service types and past plans change rarely. */
 const SLOW_STALE_MS = 600_000;
@@ -79,22 +80,6 @@ interface NamedServiceType {
   readonly id: string;
   readonly name: string;
 }
-
-/** A selected service type's read has not answered yet (a failure counts as an answer). */
-const selectedLoading = (
-  serviceTypes: readonly NamedServiceType[],
-  selectedIds: ReadonlySet<string>,
-  queries: readonly QueryStatus[]
-): boolean =>
-  serviceTypes.some((serviceType, index) => {
-    const query = queries[index];
-    return (
-      selectedIds.has(serviceType.id) &&
-      query !== undefined &&
-      query.isPending &&
-      !query.isError
-    );
-  });
 
 const retrying = (query: QueryStatus) => () => {
   void query.refetch();
@@ -250,7 +235,8 @@ export const useServicesAgenda = () => {
     planQueries
   );
   const recentLoading =
-    isRecent && selectedLoading(allServiceTypes, selectedIds, recentQueries);
+    isRecent &&
+    selectedLoading(allServiceTypes, selectedIds, recentQueries, anchors);
   const everythingLoaded =
     !serviceTypes.isPending && !myPlans.isPending && !plansLoading;
   if (everythingLoaded && !hasLoaded) {
@@ -283,11 +269,22 @@ export const useServicesAgenda = () => {
     const queries = [
       serviceTypes,
       myPlans,
-      ...planQueries,
-      ...(isRecent ? recentQueries : []),
+      ...selectedQueries(allServiceTypes, selectedIds, planQueries),
+      ...(isRecent
+        ? selectedQueries(allServiceTypes, selectedIds, recentQueries, anchors)
+        : []),
     ];
     await Promise.all(queries.map(async (query) => await query.refetch()));
-  }, [isRecent, myPlans, planQueries, recentQueries, serviceTypes]);
+  }, [
+    allServiceTypes,
+    anchors,
+    isRecent,
+    myPlans,
+    planQueries,
+    recentQueries,
+    selectedIds,
+    serviceTypes,
+  ]);
 
   return {
     window,

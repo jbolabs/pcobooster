@@ -369,9 +369,64 @@ const DeviceAccounts = () => {
 };
 
 /**
+ * Deleting the signed-in person's pcobooster.com account (App Store guideline 5.1.1(v)): a
+ * destructive row, then a confirmation that says exactly what goes and what stays. Only a real
+ * signed-in account sees it; the demo and the local API's sign-in have nothing to delete.
+ */
+const DeleteAccountSection = () => {
+  const session = useSession();
+  const [confirming, setConfirming] = useState(false);
+  if (session.phase.kind !== "signedIn") {
+    return null;
+  }
+  return (
+    <>
+      <AccountSection footer="Deletes your account and what pcobooster.com keeps about you. Nothing in Planning Center changes.">
+        <AccountRow
+          accessibilityHint="Asks before permanently deleting your pcobooster.com account"
+          disabled={session.isDeletingAccount}
+          onPress={() => {
+            setConfirming(true);
+          }}
+          testID="delete-account-row"
+        >
+          <AppText
+            color={colors.destructive}
+            font="rowTitle"
+            style={styles.deviceText}
+          >
+            {session.isDeletingAccount
+              ? "Deleting account\u2026"
+              : "Delete Account"}
+          </AppText>
+          {session.isDeletingAccount ? <ActivityIndicator /> : null}
+        </AccountRow>
+      </AccountSection>
+      <ConfirmationSheet
+        visible={confirming}
+        title="Delete your pcobooster.com account?"
+        message={[
+          "This permanently deletes your pcobooster.com account on every device: your profile, your linked Planning Center organizations and the sign-in tokens we stored for them, your sessions, the feedback you sent, and your activity history. It can't be undone.",
+          "Nothing in Planning Center changes. Your church's people, plans, songs, and schedules stay exactly as they are.",
+          "Deleting also requests erasure of the usage analytics, error reports, and session recordings sent to PostHog, our analytics provider. That erasure is processed separately and can take up to a few weeks to finish; you don't need to contact us. You can sign in with Planning Center again later as a new account.",
+        ].join("\n\n")}
+        action="Delete Account"
+        onCancel={() => {
+          setConfirming(false);
+        }}
+        onConfirm={() => {
+          setConfirming(false);
+          void session.deleteAccount();
+        }}
+      />
+    </>
+  );
+};
+
+/**
  * The account sheet (Swift `AccountSheet`), opened from the avatar on every tab root: who is
  * signed in, the people on this device, the Planning Center organization and "Your access",
- * appearance, feedback, and about. Sign Out (or Exit Demo) is the full-width bottom action,
+ * appearance, feedback, account deletion, and about. Sign Out (or Exit Demo) is the full-width bottom action,
  * confirmed in an action sheet.
  */
 export const AccountSheet = () => {
@@ -419,6 +474,7 @@ export const AccountSheet = () => {
         {isDemo ? null : <PlanningCenterSection />}
         <AppearanceSection />
         {isDemo ? null : <FeedbackSection />}
+        <DeleteAccountSection />
         <AboutSection />
       </ScrollView>
       <ConfirmationSheet

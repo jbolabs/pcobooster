@@ -145,12 +145,28 @@ describe("the procedures route table", () => {
 
 /** Procedures added after the cutover, so they are absent from main's list. */
 const addedSinceCutover = [
-  { tag: "catalog.planWindow", kind: "read", feature: null },
-  { tag: "planFiles.list", kind: "read", feature: null },
-  { tag: "planFiles.open", kind: "read", feature: null },
-  { tag: "songs.attachmentLink", kind: "read", feature: "chordCharts" },
-  { tag: "songs.attachments", kind: "read", feature: "chordCharts" },
-  { tag: "songs.schedule", kind: "read", feature: null },
+  {
+    tag: "catalog.planWindow",
+    kind: "read",
+    feature: null,
+    planningCenter: true,
+  },
+  { tag: "planFiles.list", kind: "read", feature: null, planningCenter: true },
+  { tag: "planFiles.open", kind: "read", feature: null, planningCenter: true },
+  {
+    tag: "songs.attachmentLink",
+    kind: "read",
+    feature: "chordCharts",
+    planningCenter: true,
+  },
+  {
+    tag: "songs.attachments",
+    kind: "read",
+    feature: "chordCharts",
+    planningCenter: true,
+  },
+  { tag: "songs.schedule", kind: "read", feature: null, planningCenter: true },
+  { tag: "user.delete", kind: "write", feature: null, planningCenter: false },
 ] as const;
 const addedTags = new Set<string>(addedSinceCutover.map(({ tag }) => tag));
 
@@ -173,7 +189,12 @@ describe("parity with the procedures main served before the cutover", () => {
     expect(
       procedureRoutes
         .filter(({ tag }) => addedTags.has(tag))
-        .map(({ tag, kind, feature }) => ({ tag, kind, feature }))
+        .map(({ tag, kind, feature, planningCenter }) => ({
+          tag,
+          kind,
+          feature,
+          planningCenter,
+        }))
         .toSorted(byTag)
     ).toStrictEqual([...addedSinceCutover].toSorted(byTag));
   });
@@ -181,6 +202,7 @@ describe("parity with the procedures main served before the cutover", () => {
   it("resolves Planning Center access for exactly the procedures main did", () => {
     expect(
       procedureRoutes
+        .filter(({ tag }) => !addedTags.has(tag))
         .filter(({ planningCenter }) => !planningCenter)
         .map(({ tag }) => tag)
         .toSorted((left, right) => left.localeCompare(right))

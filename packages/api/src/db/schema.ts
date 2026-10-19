@@ -209,3 +209,30 @@ export const songCatalogRevision = sqliteTable("song_catalog_revision", {
   scope: text("scope").primaryKey(),
   revision: integer("revision").notNull().default(0),
 });
+
+/**
+ * PostHog erasure owed to deleted accounts, written in the same D1 batch that deletes the
+ * account (`modules/account-deletion`). The processor (`analytics-erasure.ts`) asks PostHog to
+ * delete the person, their events, and their recordings twice: after a grace period for captures
+ * already in flight, then once more to catch late arrivals. `distinct_id` (the deleted user's
+ * id) is cleared after the last pass; the row stays as a receipt with no personal data.
+ */
+export const analyticsErasureRequests = sqliteTable(
+  "analytics_erasure_requests",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    distinctId: text("distinct_id"),
+    requestedAt: integer("requested_at", { mode: "timestamp_ms" }).notNull(),
+    /** When the next pass is due; null once every pass is done. */
+    nextAttemptAt: integer("next_attempt_at", { mode: "timestamp_ms" }),
+    passesCompleted: integer("passes_completed").notNull().default(0),
+    /** Failed tries since the last completed pass, for backoff. */
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+    /** The last failure's category (an HTTP status or `network`), never a response body. */
+    lastError: text("last_error"),
+    completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    index("analytics_erasure_requests_due_idx").on(table.nextAttemptAt),
+  ]
+);

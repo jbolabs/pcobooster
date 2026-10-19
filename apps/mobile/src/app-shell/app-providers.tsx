@@ -55,6 +55,7 @@ import {
 } from "../lib/environment";
 import type { AppClock } from "../lib/environment";
 import { useToasts } from "../lib/toasts";
+import { AccountDeletedWithLeftoversError } from "../session/account-deleted-with-leftovers";
 import {
   appStorage,
   deviceCrypto,
@@ -63,6 +64,7 @@ import {
   removeAppStorageKeys,
 } from "../session/device-services";
 import { SignInFailure } from "../session/native-sign-in";
+import { accountDeletionFailureMessage } from "./account-deletion-messages";
 import { syncAccountAnalytics } from "./analytics";
 import {
   makeFixtureRuntime,
@@ -129,9 +131,9 @@ const deviceServices = {
   productFetch: isApiProbe(diagnosticsProbe)
     ? withApiProbe(globalThis.fetch, diagnosticsProbe)
     : globalThis.fetch,
-  onForget: (userIds: readonly string[]) => {
-    void cacheStorage.forget(userIds);
+  onForget: async (userIds: readonly string[]) => {
     clearSongPreviews();
+    await cacheStorage.forget(userIds);
   },
 };
 
@@ -356,6 +358,7 @@ const SessionProvider = ({ children }: { children: ReactNode }) => {
 
   const [signInMessage, setSignInMessage] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -499,6 +502,25 @@ const SessionProvider = ({ children }: { children: ReactNode }) => {
       forget: async (account) => {
         await session.remove(account.userId);
       },
+      isDeletingAccount,
+      deleteAccount: async () => {
+        setIsDeletingAccount(true);
+        let deleted = false;
+        try {
+          await session.deleteAccount();
+          deleted = true;
+        } catch (error) {
+          // Deleted on the server: say what this device kept, never "couldn't delete".
+          deleted = error instanceof AccountDeletedWithLeftoversError;
+          toasts.showError(
+            error instanceof Error
+              ? accountDeletionFailureMessage(error)
+              : "Couldn't delete your account."
+          );
+        }
+        setIsDeletingAccount(false);
+        return deleted;
+      },
       signOut: async () => {
         setIsSigningOut(true);
         try {
@@ -527,6 +549,7 @@ const SessionProvider = ({ children }: { children: ReactNode }) => {
       active,
       activity,
       continueAs,
+      isDeletingAccount,
       isSignedIn,
       isSigningOut,
       phase,

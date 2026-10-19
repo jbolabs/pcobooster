@@ -122,10 +122,26 @@ const PrivacyPage = () => (
       replays are kept for 30 days in PostHog.
     </p>
     <p>
-      You can ask us to delete your account and the data we hold about you at
-      any time using the contact link below, and we will do so within a
-      reasonable time. Some records may remain briefly in backups or where we
-      are required to keep them.
+      You can delete your account yourself in the iPhone app: open your account
+      and choose Delete Account. That immediately and permanently deletes, from
+      our database, your account, your linked Planning Center organizations and
+      the OAuth tokens we stored for them, your sessions on every device, your
+      feedback, and your activity log entries. It changes nothing in Planning
+      Center. If you sign in again later, you start a new, empty account.
+    </p>
+    <p>
+      Deleting your account also records a request to erase what PostHog holds
+      about you: your analytics, the activity and feedback mirror, error
+      reports, and session replays. You don&apos;t need to contact us for that.
+      We send the erasure to PostHog no sooner than an hour after the deletion,
+      so events already on their way are included, and again at least a week
+      later; PostHog then removes the data in the background, so it can take up
+      to a few weeks to finish. Entries in our server logs and the briefly
+      cached Planning Center responses described above expire on their own. Our
+      database provider&apos;s point-in-time recovery can hold deleted records
+      for up to 30 days. To delete your account without the iPhone app, use the
+      contact link below and we will do so within a reasonable time. Some
+      records may remain where we are required to keep them.
     </p>
 
     <h2>Revoking access</h2>
@@ -133,8 +149,10 @@ const PrivacyPage = () => (
       You can disconnect PCOBooster at any time from your Planning Center
       account by removing it from your authorized applications. That invalidates
       the tokens we hold. Signing out of PCOBooster ends your session on that
-      device. Revoking access does not delete data on its own, so send a
-      deletion request if you want it removed.
+      device. Revoking access does not delete data on its own, so delete your
+      account if you want it removed. Deleting your account does not remove
+      PCOBooster from your Planning Center authorized applications; remove it
+      there as well if you no longer want it listed.
     </p>
 
     <h2>Security</h2>

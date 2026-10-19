@@ -12,6 +12,8 @@ appId: com.pcobooster.ios
     id: "feedback-editor"
 - inputText: "Fixture feedback confirmation test"
 - tapOn:
+    id: "feedback-dismiss-keyboard"
+- tapOn:
     id: "feedback-send-button"
 - assertVisible: ".*Sent.*"
 - takeScreenshot: feedback-sent

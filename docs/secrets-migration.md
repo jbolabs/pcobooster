@@ -12,7 +12,7 @@ The control-plane apply created 9 encrypted GitHub environment secrets and 5 var
 
 ## Ownership
 
-- `alchemy.secrets.ts`, stack `pcobooster-secrets`: the sole writer for retained runtime secrets. Stages `prod` and `preview` create 7 and 3 secrets respectively. Product stacks only reference them.
+- `alchemy.secrets.ts`, stack `pcobooster-secrets`: the sole writer for retained runtime secrets. Stages `prod` and `preview` hold 8 and 3 secrets respectively (production added `POSTHOG_ERASURE_API_KEY` after the migration). Product stacks only reference them.
 - `alchemy.ci.ts`: generated deployment tokens and Access check credentials, delivered as encrypted GitHub environment secrets. It reuses existing token generations and service-token values during migration.
 - macOS Keychain: `com.pcobooster.secrets.<scope>`, one generic-password item per key. Scopes separate development, cloud development, preview, production bootstrap/rotation, Apple signing, PostHog administration, and legacy recovery.
 - Public configuration stays in source. Process-owned development switches are not imported. User OAuth tokens remain in D1.

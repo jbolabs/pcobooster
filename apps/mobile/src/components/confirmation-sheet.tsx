@@ -1,4 +1,4 @@
-import { Modal, StyleSheet, View } from "react-native";
+import { Modal, ScrollView, StyleSheet, View } from "react-native";
 
 import { AppText } from "../design/app-text";
 import { colors } from "../design/colors";
@@ -9,10 +9,12 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.surfaceCanvas,
+  },
+  content: {
     padding: Spacing.lg,
     gap: Spacing.lg,
   },
-  space: { flex: 1 },
+  scroll: { flex: 1 },
 });
 
 export const ConfirmationSheet = ({
@@ -37,11 +39,19 @@ export const ConfirmationSheet = ({
     onRequestClose={onCancel}
   >
     <View style={styles.root}>
-      <AppText font="pageTitle">{title}</AppText>
-      <AppText font="rowDetail" color={colors.inkSecondary}>
-        {message}
-      </AppText>
-      <View style={styles.space} />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        testID="confirmation-content"
+      >
+        <AppText accessibilityRole="header" font="pageTitle">
+          {title}
+        </AppText>
+        <AppText font="rowDetail" color={colors.inkSecondary}>
+          {message}
+        </AppText>
+      </ScrollView>
       <BottomActionBar
         actions={[
           {

@@ -50,6 +50,7 @@
     "deploy:production": "bun run secrets:run production -- bun alchemy deploy --stage prod",
     "infra:plan": "bun scripts/secrets/infra.ts bun alchemy deploy alchemy.ci.ts --stage ci --dry-run --detect-drift --no-input",
     "infra:deploy": "bun scripts/secrets/infra.ts bun alchemy deploy alchemy.ci.ts --stage ci",
+    "analytics:erase": "bun run secrets:run analytics-erasure -- bun scripts/analytics/erase-deleted-accounts.ts",
     "posthog:plan": "bun run secrets:run posthog -- env -u CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=984b82870acd18daf8bda97bad966b38 bun alchemy deploy alchemy.posthog.ts --stage prod --dry-run",
     "posthog:deploy": "bun run secrets:run posthog -- env -u CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=984b82870acd18daf8bda97bad966b38 bun alchemy deploy alchemy.posthog.ts --stage prod",
     "db:rehearse": "bun run secrets:run recovery -- bun run scripts/database/migrate-from-postgres.ts --local",

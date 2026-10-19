@@ -1,7 +1,17 @@
 import { FEEDBACK_MESSAGE_MAX_LENGTH } from "@pcobooster/contracts/feedback";
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
+import {
+  InputAccessoryView,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 
 import {
   failureMessage,
@@ -35,6 +45,18 @@ const styles = StyleSheet.create({
     fontSize: 17,
   },
   fact: { padding: Spacing.lg, gap: Spacing.sm },
+  keyboardAccessory: {
+    alignItems: "flex-end",
+    backgroundColor: colors.surfaceRaised,
+    borderTopColor: colors.hairline,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  dismissKeyboard: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: "center",
+    paddingHorizontal: Spacing.lg,
+  },
 });
 
 export const AccountAccess = () => {
@@ -111,10 +133,15 @@ export const AccountFeedback = () => {
     setSending(false);
   };
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         contentInsetAdjustmentBehavior="automatic"
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
       >
         <AppText font="rowDetail" color={colors.inkSecondary}>
           Found a bug or something confusing? Tell us what happened.
@@ -123,6 +150,7 @@ export const AccountFeedback = () => {
           accessibilityLabel="What happened?"
           testID="feedback-editor"
           multiline
+          inputAccessoryViewID="feedback-keyboard"
           value={draft.text}
           onChangeText={(text) => {
             draft.setText(text);
@@ -149,6 +177,23 @@ export const AccountFeedback = () => {
           },
         ]}
       />
-    </View>
+      {Platform.OS === "ios" ? (
+        <InputAccessoryView nativeID="feedback-keyboard">
+          <View style={styles.keyboardAccessory}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss keyboard"
+              onPress={() => {
+                Keyboard.dismiss();
+              }}
+              style={styles.dismissKeyboard}
+              testID="feedback-dismiss-keyboard"
+            >
+              <AppText font="rowTitleEmphasized">Done</AppText>
+            </Pressable>
+          </View>
+        </InputAccessoryView>
+      ) : null}
+    </KeyboardAvoidingView>
   );
 };

@@ -16,6 +16,7 @@ import { PeopleHandlers } from "@pcobooster/api/http/handlers/people";
 import { RunSheetHandlers } from "@pcobooster/api/http/handlers/run-sheet";
 import { scheduleHandlers } from "@pcobooster/api/http/handlers/schedule";
 import { SongHandlers } from "@pcobooster/api/http/handlers/songs";
+import { UserHandlers } from "@pcobooster/api/http/handlers/user";
 import { PlanningCenterSessionLive } from "@pcobooster/api/http/planning-center-session";
 import { ProcedureScopeLive } from "@pcobooster/api/http/procedure-scope";
 import type { ProcedureScopeOptions } from "@pcobooster/api/http/procedure-scope";
@@ -37,6 +38,7 @@ export const productApiLayer = (options: ProductApiOptions) =>
       Layer.mergeAll(
         HealthHandlers,
         IdentityHandlers,
+        UserHandlers,
         DemoHandlers,
         FeedbackHandlers,
         CatalogHandlers,
