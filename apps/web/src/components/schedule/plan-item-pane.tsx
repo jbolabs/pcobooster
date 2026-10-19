@@ -24,15 +24,7 @@ import type {
   SongOptionSet,
 } from "@pcobooster/planning-center-models/types";
 import { useHotkey } from "@tanstack/react-hotkeys";
-import { Link } from "@tanstack/react-router";
-import {
-  ExternalLink,
-  FileMusic,
-  ChevronRight,
-  Replace,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ChevronRight, ExternalLink, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { KeyTransitionPopover } from "@/components/schedule/key-transition-popover";
@@ -64,7 +56,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { useSongOptions } from "@/hooks/use-song-options";
 import { planningCenterSongUrl } from "@/lib/songs-index";
 import { cn } from "@/lib/utils";
@@ -113,8 +104,6 @@ interface PlanItemPaneProps {
     key: KeyOption
   ) => void;
   onRemove: (itemId: string) => void;
-  /** Swap this song for another in the same place. */
-  onReplaceSong: (itemId: string) => void;
   /** Open one of the item's files in the file dialog. */
   onOpenFile: (file: PlanFile) => void;
   /** Close the pane; Escape does too, handing the keyboard back to the run sheet. */
@@ -129,17 +118,12 @@ const PaneHeader = ({
   focusTitle,
   persist,
   onRemove,
-  onReplaceSong,
   onClose,
   inSheet,
-}: Pick<
-  PlanItemPaneProps,
-  "item" | "focusTitle" | "onRemove" | "onReplaceSong" | "onClose"
-> & {
+}: Pick<PlanItemPaneProps, "item" | "focusTitle" | "onRemove" | "onClose"> & {
   persist: Persist;
   inSheet: boolean;
 }) => {
-  const chordChartsEnabled = useFeatureEnabled("chordCharts");
   const titleRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (focusTitle) {
@@ -179,60 +163,23 @@ const PaneHeader = ({
       {inSheet ? null : (
         <CardAction className="flex items-center">
           {item.song ? (
-            <>
-              <HoverLabel
-                label="Replace song"
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Replace ${item.song.title}`}
-                    onClick={() => {
-                      onReplaceSong(item.id);
-                    }}
-                  />
-                }
-              >
-                <Replace />
-              </HoverLabel>
-              {chordChartsEnabled ? (
-                <HoverLabel
-                  label="Edit chord chart"
-                  render={
-                    <Link
-                      to="/songs/$songId"
-                      params={{ songId: item.song.id }}
-                      search={{ arrangement: item.arrangement?.id }}
-                      aria-label={`Edit the chord chart for ${item.song.title}`}
-                      className={buttonVariants({
-                        variant: "ghost",
-                        size: "icon-sm",
-                      })}
-                    />
-                  }
-                >
-                  <FileMusic />
-                </HoverLabel>
-              ) : null}
-              <HoverLabel
-                label="Open in Planning Center"
-                render={
-                  <a
-                    href={planningCenterSongUrl(item.song.id)}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Open in Planning Center"
-                    className={buttonVariants({
-                      variant: "ghost",
-                      size: "icon-sm",
-                    })}
-                  />
-                }
-              >
-                <ExternalLink />
-              </HoverLabel>
-            </>
+            <HoverLabel
+              label="Open in Planning Center"
+              render={
+                <a
+                  href={planningCenterSongUrl(item.song.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open in Planning Center"
+                  className={buttonVariants({
+                    variant: "ghost",
+                    size: "icon-sm",
+                  })}
+                />
+              }
+            >
+              <ExternalLink />
+            </HoverLabel>
           ) : null}
           <HoverLabel
             label="Remove"
@@ -274,68 +221,37 @@ const PaneHeader = ({
 const SheetActions = ({
   item,
   onRemove,
-  onReplaceSong,
-}: Pick<PlanItemPaneProps, "item" | "onRemove" | "onReplaceSong">) => {
-  const chordChartsEnabled = useFeatureEnabled("chordCharts");
-  return (
-    <CardFooter>
-      <div className="flex w-full flex-col gap-2">
-        {item.song ? (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 w-full"
-              onClick={() => {
-                onReplaceSong(item.id);
-              }}
-            >
-              <Replace />
-              Replace song
-            </Button>
-            {chordChartsEnabled ? (
-              <Link
-                to="/songs/$songId"
-                params={{ songId: item.song.id }}
-                search={{ arrangement: item.arrangement?.id }}
-                className={buttonVariants({
-                  variant: "outline",
-                  className: "h-11 w-full",
-                })}
-              >
-                <FileMusic />
-                Edit chord chart
-              </Link>
-            ) : null}
-            <a
-              href={planningCenterSongUrl(item.song.id)}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonVariants({
-                variant: "outline",
-                className: "h-11 w-full",
-              })}
-            >
-              <ExternalLink />
-              Open in Planning Center
-            </a>
-          </>
-        ) : null}
-        <Button
-          type="button"
-          variant="destructive"
-          className="h-11 w-full"
-          onClick={() => {
-            onRemove(item.id);
-          }}
+}: Pick<PlanItemPaneProps, "item" | "onRemove">) => (
+  <CardFooter>
+    <div className="flex w-full flex-col gap-2">
+      {item.song ? (
+        <a
+          href={planningCenterSongUrl(item.song.id)}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonVariants({
+            variant: "outline",
+            className: "h-11 w-full",
+          })}
         >
-          <Trash2 />
-          Remove
-        </Button>
-      </div>
-    </CardFooter>
-  );
-};
+          <ExternalLink />
+          Open in Planning Center
+        </a>
+      ) : null}
+      <Button
+        type="button"
+        variant="destructive"
+        className="h-11 w-full"
+        onClick={() => {
+          onRemove(item.id);
+        }}
+      >
+        <Trash2 />
+        Remove
+      </Button>
+    </div>
+  </CardFooter>
+);
 
 /** Arrangement and key as dropdowns, saved as soon as one is picked. */
 const SongFields = ({
@@ -605,7 +521,6 @@ export const PlanItemPane = ({
   onSave,
   onChangeKey,
   onRemove,
-  onReplaceSong,
   onOpenFile,
   onClose,
   inSheet = false,
@@ -648,7 +563,6 @@ export const PlanItemPane = ({
         focusTitle={focusTitle}
         persist={persist}
         onRemove={onRemove}
-        onReplaceSong={onReplaceSong}
         onClose={onClose}
         inSheet={inSheet}
       />
@@ -706,13 +620,7 @@ export const PlanItemPane = ({
           ) : null}
         </div>
       </CardContent>
-      {inSheet ? (
-        <SheetActions
-          item={item}
-          onRemove={onRemove}
-          onReplaceSong={onReplaceSong}
-        />
-      ) : null}
+      {inSheet ? <SheetActions item={item} onRemove={onRemove} /> : null}
     </Card>
   );
 };

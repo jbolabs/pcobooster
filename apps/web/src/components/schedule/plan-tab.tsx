@@ -216,23 +216,12 @@ const detailItemOf = (detailsOpen: boolean, selectedItem: PlanItem | null) =>
     ? selectedItem
     : null;
 
-/**
- * What the song dialog needs: its title, the song a chosen one would follow (the one
- * before the song being replaced, else before the insertion point), and what's in the plan.
- */
+/** What the song dialog needs: the song a chosen one would follow, and what's in the plan. */
 const paletteContextOf = (
   items: readonly PlanItem[],
-  selectedItem: PlanItem | null,
-  replacing: PlanItem | null
+  selectedItem: PlanItem | null
 ) => ({
-  title:
-    replacing === null
-      ? "Add song"
-      : `Replace ${replacing.title || "this song"}`,
-  previousSong:
-    replacing === null
-      ? previousSongBefore(items, selectedItem?.id ?? null)
-      : songBefore(items, replacing),
+  previousSong: previousSongBefore(items, selectedItem?.id ?? null),
   planSongIds: new Set(
     items.flatMap((item) => (item.song === null ? [] : [item.song.id]))
   ),
@@ -411,8 +400,6 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   // A header or item just added, whose title is selected so typing names it.
   const [titleFocusItemId, setTitleFocusItemId] = useState<string | null>(null);
-  // The song the dialog is choosing a replacement for, if any.
-  const [replacingItemId, setReplacingItemId] = useState<string | null>(null);
   // The item waiting on the remove confirmation, if any.
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const paneRef = useRef<HTMLElement>(null);
@@ -446,24 +433,12 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
       await controller.createBasicItem(kind, at);
     });
   };
-  /** Opens the song dialog to add a song, or to swap `replaceItemId` for another. */
-  const openSongPicker = (replaceItemId: string | null = null) => {
-    setReplacingItemId(replaceItemId);
+  const openSongPicker = () => {
     controller.setSongPickerOpen(true);
   };
-  const handleAddSong = () => {
-    openSongPicker();
-  };
   const chooseSong = (song: SongCatalogEntry) => {
-    const replaceItemId = replacingItemId;
     runQuietly(async () => {
-      if (replaceItemId === null) {
-        await controller.addSongToPlan(song, insertion);
-        return;
-      }
-      // The new song takes the old one's place; the old one leaves with an undo.
-      await controller.addSongToPlan(song, { afterItemId: replaceItemId });
-      controller.removeItem(replaceItemId);
+      await controller.addSongToPlan(song, insertion);
     });
   };
   const select = (itemId: string | null) => {
@@ -536,7 +511,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
       });
     },
     onRemove: setRemovingItemId,
-    onAddSong: handleAddSong,
+    onAddSong: openSongPicker,
     onAddBasic: (kind) => {
       addBasicItem(kind);
     },
@@ -585,7 +560,6 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
           handlers.onChangeKey(item, arrangement, key);
         }}
         onRemove={setRemovingItemId}
-        onReplaceSong={openSongPicker}
         onOpenFile={fileDialog.openFor(detailItem.id)}
         onClose={closeDetails}
         inSheet={!isWide}
@@ -629,11 +603,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
         serviceTypeId={serviceTypeId}
         planId={planId}
         planDate={planDate}
-        {...paletteContextOf(
-          items,
-          selectedItem,
-          items.find((item) => item.id === replacingItemId) ?? null
-        )}
+        {...paletteContextOf(items, selectedItem)}
         pendingSongId={controller.pendingSongId}
         onChooseSong={chooseSong}
       />
@@ -675,7 +645,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
                 serviceTypeId={serviceTypeId}
                 handlers={handlers}
                 getItemIntentProps={controller.getItemIntentProps}
-                onAddSong={handleAddSong}
+                onAddSong={openSongPicker}
                 onAddBasic={addBasicItem}
               />
             </QueryDataBoundary>
@@ -683,7 +653,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
           <PlanTabToolbar
             isCreatingBasicItem={controller.isCreatingBasicItem}
             disabled={isLoading}
-            onAddSong={handleAddSong}
+            onAddSong={openSongPicker}
             onAddHeader={() => {
               addBasicItem("header");
             }}
