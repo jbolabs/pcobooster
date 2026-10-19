@@ -23,7 +23,7 @@ const NativeSelect = ({
     <select
       data-slot="native-select"
       data-size={size}
-      className="bg-input/50 selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 h-9 w-full min-w-0 appearance-none rounded-3xl border border-transparent py-1 pr-8 pl-3 text-base transition-[color,box-shadow,background-color] outline-none select-none focus-visible:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed aria-invalid:ring-3 data-[size=sm]:h-8 max-md:h-10 md:pointer-fine:text-sm"
+      className="bg-input/50 selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 h-9 w-full min-w-0 appearance-none rounded-3xl border border-transparent py-1 pr-8 pl-3 text-base transition-[color,box-shadow,background-color] outline-none select-none focus-visible:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed aria-invalid:ring-3 data-[size=sm]:h-8 pointer-coarse:h-11 pointer-coarse:data-[size=sm]:h-10 md:pointer-fine:text-sm"
       {...props}
     />
     <HugeiconsIcon

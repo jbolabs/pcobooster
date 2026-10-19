@@ -427,7 +427,7 @@ const SaveStatusMenu = ({ workspace }: { workspace: ChordChartWorkspace }) => {
               <Button
                 variant="ghost"
                 size="sm"
-                touch="target"
+
                 aria-label={`${label.full}. Save settings`}
               />
             }
@@ -496,7 +496,7 @@ const ConflictNotice = ({ workspace }: { workspace: ChordChartWorkspace }) => {
             <Button
               variant="ghost"
               size="sm"
-              touch="target"
+
               onClick={() => {
                 void copy();
               }}
@@ -507,7 +507,7 @@ const ConflictNotice = ({ workspace }: { workspace: ChordChartWorkspace }) => {
             <Button
               variant="outline"
               size="sm"
-              touch="target"
+
               disabled={!theirsLoaded}
               onClick={workspace.handleUseTheirs}
             >
@@ -515,7 +515,7 @@ const ConflictNotice = ({ workspace }: { workspace: ChordChartWorkspace }) => {
             </Button>
             <Button
               size="sm"
-              touch="target"
+
               disabled={!theirsLoaded}
               onClick={() => {
                 setConfirming(true);
@@ -527,7 +527,7 @@ const ConflictNotice = ({ workspace }: { workspace: ChordChartWorkspace }) => {
               <Button
                 variant="ghost"
                 size="sm"
-                touch="target"
+
                 onClick={workspace.handleRetryTheirs}
               >
                 Load their version
@@ -555,7 +555,7 @@ const SaveControls = ({ workspace }: { workspace: ChordChartWorkspace }) => (
   <>
     <SaveStatusMenu workspace={workspace} />
     {workspace.needsSave ? (
-      <Button size="sm" touch="target" onClick={workspace.handleSave}>
+      <Button size="sm" onClick={workspace.handleSave}>
         Save
       </Button>
     ) : null}
@@ -589,7 +589,7 @@ const ChartMoreMenu = ({
             <Button
               variant="ghost"
               size="icon-sm"
-              touch="target"
+
               aria-label="More actions"
             />
           }
@@ -689,7 +689,7 @@ const AccessUnavailable = () => {
   return (
     <p className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs">
       Couldn’t check whether you can edit this chart.
-      <Button variant="link" size="xs" touch="target" onClick={retry}>
+      <Button variant="link" size="xs" onClick={retry}>
         Try again
       </Button>
     </p>
@@ -779,7 +779,7 @@ const ChartReader = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    touch="target"
+
                     onClick={onEdit}
                   >
                     Edit chart
@@ -802,7 +802,7 @@ const ChartReader = ({
             <Button
               ref={phoneEditRef}
               size="lg"
-              touch="target"
+
               className="w-full"
               onClick={onEdit}
             >
@@ -863,7 +863,7 @@ const PreviewStatus = ({ workspace }: { workspace: ChordChartWorkspace }) => {
   return (
     <p className="text-muted-foreground flex items-center gap-2 px-3 pb-2 text-xs">
       The preview shows the last saved chart.
-      <Button size="xs" touch="target" onClick={workspace.handleSave}>
+      <Button size="xs" onClick={workspace.handleSave}>
         Save to update
       </Button>
     </p>
@@ -1021,14 +1021,14 @@ const LeaveDialog = ({
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
         <ResponsiveDialogFooter>
-          <Button type="button" variant="outline" touch="target" onClick={stay}>
+          <Button type="button" variant="outline" onClick={stay}>
             Stay
           </Button>
           {offerLeave ? (
             <Button
               type="button"
               variant="destructive"
-              touch="target"
+
               onClick={leave}
             >
               Leave without saving
@@ -1037,7 +1037,7 @@ const LeaveDialog = ({
           {reason === null ? (
             <Button
               type="button"
-              touch="target"
+
               className="max-md:order-first"
               disabled={saving}
               onClick={() => {
@@ -1354,7 +1354,7 @@ const ChartEditor = ({
           <Button
             variant="link"
             size="xs"
-            touch="target"
+
             onClick={workspace.handleDiscard}
           >
             Discard
@@ -1372,7 +1372,7 @@ const ChartEditor = ({
         <Button
           size="lg"
           variant="outline"
-          touch="target"
+
           className="w-full"
           disabled={workspace.committing && !stalled}
           onClick={handleDoneTap}

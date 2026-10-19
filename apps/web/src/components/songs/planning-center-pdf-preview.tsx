@@ -211,7 +211,7 @@ export const PlanningCenterPdfPages = ({
           <Button
             variant="outline"
             size="sm"
-            touch="target"
+
             onClick={pdf.handleRetry}
           >
             Retry

@@ -89,7 +89,10 @@ export const PersonMonthCalendar = ({
           const details = (
             <div className="text-muted-foreground mt-1 grid grid-cols-1 gap-1 text-xs max-md:gap-2 max-md:text-sm">
               {entries.map((entry) => (
-                <div key={entryKey(entry)} className="flex items-start gap-2">
+                <div
+                  key={entryKey(entry)}
+                  className="has-[a]:active:bg-muted relative flex items-start gap-2 rounded-lg pointer-coarse:min-h-11 pointer-coarse:items-center"
+                >
                   <span aria-hidden className="flex h-lh shrink-0 items-center">
                     <span
                       className={cn(
@@ -105,7 +108,7 @@ export const PersonMonthCalendar = ({
                       {engagementLabel(entry.kind, entry.status)}
                     </span>
                     {" · "}
-                    <CommitmentEntryText entry={entry} />
+                    <CommitmentEntryText entry={entry} rowLink />
                   </p>
                 </div>
               ))}

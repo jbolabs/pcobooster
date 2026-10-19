@@ -404,7 +404,11 @@ export const AddSongPalette = ({
               </div>
             ) : (
               <>
-                <CommandEmpty>No songs match “{deferredQuery}”.</CommandEmpty>
+                <CommandEmpty>
+                  {browsing
+                    ? "No songs sung recently. Search your library to add one."
+                    : `No songs match “${deferredQuery}”.`}
+                </CommandEmpty>
                 <CommandGroup heading={browsing ? "Recently sung" : undefined}>
                   {songs.map((song) => (
                     <PaletteSongRow

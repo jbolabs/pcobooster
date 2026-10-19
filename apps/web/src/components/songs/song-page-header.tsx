@@ -66,7 +66,6 @@ export const SongPageHeader = ({
           className={buttonVariants({
             variant: "outline",
             size: "icon-sm",
-            touch: "target",
             className: "shrink-0 max-md:rounded-full",
           })}
         />

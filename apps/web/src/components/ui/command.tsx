@@ -46,9 +46,10 @@ const CommandDialog = ({
       <DialogTitle>{title}</DialogTitle>
       <DialogDescription>{description}</DialogDescription>
     </DialogHeader>
+    {/* Phones pin the palette under the status bar, so the list stays above the keyboard. */}
     <DialogContent
       className={cn(
-        "top-1/3 translate-y-0 overflow-hidden rounded-4xl! p-0",
+        "top-1/3 translate-y-0 overflow-hidden rounded-4xl! p-0 max-md:top-[calc(env(safe-area-inset-top)+0.75rem)]",
         className
       )}
       showCloseButton={showCloseButton}
