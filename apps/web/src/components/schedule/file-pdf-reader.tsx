@@ -8,6 +8,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { loadPdfDocument } from "@/lib/pdf-pages";
 import { cn } from "@/lib/utils";
 
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 2;
+const ZOOM_STEP = 0.25;
+
 export const FilePdfReader = ({ data }: { data: string }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const container = useRef<HTMLDivElement>(null);
@@ -170,9 +174,9 @@ export const FilePdfReader = ({ data }: { data: string }) => {
             variant="ghost"
             size="icon-sm"
             aria-label="Zoom out"
-            disabled={zoom <= 1}
+            disabled={zoom <= MIN_ZOOM}
             onClick={() => {
-              setZoom((value) => Math.max(1, value - 0.25));
+              setZoom((value) => Math.max(MIN_ZOOM, value - ZOOM_STEP));
             }}
           >
             <Minus />
@@ -184,9 +188,9 @@ export const FilePdfReader = ({ data }: { data: string }) => {
             variant="ghost"
             size="icon-sm"
             aria-label="Zoom in"
-            disabled={zoom >= 2}
+            disabled={zoom >= MAX_ZOOM}
             onClick={() => {
-              setZoom((value) => Math.min(2, value + 0.25));
+              setZoom((value) => Math.min(MAX_ZOOM, value + ZOOM_STEP));
             }}
           >
             <Plus />
