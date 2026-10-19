@@ -30,6 +30,7 @@ import { RateLimited } from "@pcobooster/contracts/faults/rate-limited";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Drizzle from "alchemy/Drizzle";
+import { evalStack } from "alchemy/Stack";
 import * as State from "alchemy/State";
 import * as Test from "alchemy/Test/Vitest";
 import { Effect, Layer, Result, Schedule, Schema } from "effect";
@@ -109,6 +110,30 @@ const stack = beforeAll(
     );
   }),
   { timeout: 180_000 }
+);
+
+const deploymentInputSchema = Schema.Struct({
+  env: Schema.Struct({
+    DB: Schema.Struct({ Type: Schema.String, FQN: Schema.String }),
+  }),
+});
+
+test(
+  "declares the database in API deployment inputs, before Worker reconciliation",
+  evalStack(
+    ApiStack,
+    (compiled) =>
+      Effect.sync(() => {
+        const inputs = Schema.decodeUnknownSync(deploymentInputSchema)(
+          compiled.resources.Api?.Props
+        );
+        assert.deepStrictEqual(inputs.env.DB, {
+          Type: "Cloudflare.D1Database",
+          FQN: "Database",
+        });
+      }),
+    { stage: "test", dev: true }
+  )
 );
 
 /**
