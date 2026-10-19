@@ -35,29 +35,25 @@ export default Alchemy.Stack(
   },
   Effect.gen(function* trial() {
     const { accountId } = yield* yield* Cloudflare.CloudflareEnvironment;
-    const token = yield* Cloudflare.ApiToken.AccountApiToken(
-      "TrialDeployToken",
-      {
-        name: "pcobooster-builds-trial-deploy",
-        accountId,
-        expiresOn: "2026-10-26T23:59:59Z",
-        policies: [
-          {
-            effect: "allow",
-            resources: { [`com.cloudflare.api.account.${accountId}`]: "*" },
-            permissionGroups: [
-              "Workers Scripts Write",
-              "D1 Write",
-              "Workers KV Storage Write",
-              "Workers R2 Storage Write",
-              "Secrets Store Write",
-              { id: "521a41dc78f94eaba5e643528846cb7b" },
-              { id: "1e13c5124ca64b72b1969a67e8829049" },
-            ],
-          },
-        ],
-      }
-    );
+    const token = yield* Cloudflare.ApiToken.UserApiToken("TrialDeployToken", {
+      name: "pcobooster-builds-trial-deploy",
+      expiresOn: "2026-10-26T23:59:59Z",
+      policies: [
+        {
+          effect: "allow",
+          resources: { [`com.cloudflare.api.account.${accountId}`]: "*" },
+          permissionGroups: [
+            "Workers Scripts Write",
+            "D1 Write",
+            "Workers KV Storage Write",
+            "Workers R2 Storage Write",
+            "Secrets Store Write",
+            { id: "521a41dc78f94eaba5e643528846cb7b" },
+            { id: "1e13c5124ca64b72b1969a67e8829049" },
+          ],
+        },
+      ],
+    });
     const access = yield* Cloudflare.Access.ServiceToken("TrialVerification", {
       name: "pcobooster-builds-trial-check",
       duration: "168h",

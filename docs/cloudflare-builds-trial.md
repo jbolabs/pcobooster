@@ -11,7 +11,7 @@ bun scripts/cloudflare/builds-trial/manage.ts plan
 bun scripts/cloudflare/builds-trial/manage.ts apply
 ```
 
-These local commands use the existing Alchemy `admin` profile. The only Keychain setting they read into the stack is the preview admin email allowlist. The hosted build receives a dedicated account-scoped API token (expires October 26, 2026), not the admin profile. Cloudflare token permissions are account-wide; branch and stage guards provide the experiment's deployment boundary, rather than a provider-enforced resource sandbox. Only trusted commits belong on this branch.
+These local commands use the existing Alchemy `admin` profile. The only Keychain setting they read into the stack is the preview admin email allowlist. The hosted build receives a dedicated user-owned API token scoped to this account (expires October 26, 2026), not the admin profile. Workers Builds currently rejects account-owned tokens before checkout; see [Cloudflare token requirements](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/#api-token). Cloudflare token permissions are account-wide; branch and stage guards provide the experiment's deployment boundary, rather than a provider-enforced resource sandbox. Only trusted commits belong on this branch.
 
 ## Hosted execution
 
