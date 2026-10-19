@@ -16,6 +16,7 @@ import {
   noSmallFieldTextRule,
   scrollContainerOverscrollRule,
   fieldKeyboardHintsRule,
+  gridTracksShrinkRule,
 } from "./oxlint-plugin-local.mjs";
 
 RuleTester.describe = describe;
@@ -949,6 +950,78 @@ ruleTester.run(
         errors: [
           { messageId: "numericSeparators", data: { placeholder: "m:ss" } },
         ],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "grid-tracks-shrink",
+  gridTracksShrinkRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "one shrinkable column",
+        code: `<div className="grid grid-cols-1 gap-3" />`,
+      },
+      {
+        name: "template behind the grid's own variant",
+        code: `<div className="flex md:grid md:grid-cols-[minmax(0,1fr)_auto]" />`,
+      },
+      {
+        name: "template in another cn argument",
+        code: `<div className={cn("grid gap-2", wide ? "grid-cols-2" : "grid-cols-1")} />`,
+      },
+      {
+        name: "content-sized on purpose",
+        code: `<span className="grid grid-cols-[max-content]" />`,
+      },
+      {
+        name: "fr tracks floored at zero",
+        code: `<div className="grid grid-cols-[4.5rem_minmax(0,1fr)_minmax(0,2fr)]" />`,
+      },
+      {
+        name: "a grid value that is not a class",
+        code: `<Toggle value="grid" />`,
+      },
+      {
+        name: "flowing into columns",
+        code: `<div className="grid grid-flow-col auto-cols-max" />`,
+      },
+    ],
+    invalid: [
+      {
+        name: "dialog box grows to a long file name",
+        code: `const dialog = cva("fixed grid max-w-md gap-6 p-6");`,
+        errors: [{ messageId: "implicitColumn", data: { token: "grid" } }],
+        output: `const dialog = cva("fixed grid grid-cols-1 max-w-md gap-6 p-6");`,
+      },
+      {
+        name: "bare below the breakpoint",
+        code: `<div className="grid gap-4 md:grid-cols-2" />`,
+        errors: [{ messageId: "implicitColumn", data: { token: "grid" } }],
+        output: `<div className="grid grid-cols-1 gap-4 md:grid-cols-2" />`,
+      },
+      {
+        name: "bare behind a variant",
+        code: `<div className="hidden md:grid" />`,
+        errors: [{ messageId: "implicitColumn", data: { token: "md:grid" } }],
+        output: `<div className="hidden md:grid md:grid-cols-1" />`,
+      },
+      {
+        name: "fr tracks keep content width as their minimum",
+        code: `<div className="grid grid-cols-[auto_1fr] md:grid-cols-[1.15fr_minmax(0,380px)_2fr]" />`,
+        errors: [
+          {
+            messageId: "bareFrTrack",
+            data: { token: "grid-cols-[auto_1fr]" },
+          },
+          {
+            messageId: "bareFrTrack",
+            data: { token: "md:grid-cols-[1.15fr_minmax(0,380px)_2fr]" },
+          },
+        ],
+        output: `<div className="grid grid-cols-[auto_minmax(0,1fr)] md:grid-cols-[minmax(0,1.15fr)_minmax(0,380px)_minmax(0,2fr)]" />`,
       },
     ],
   }

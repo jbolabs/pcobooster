@@ -391,7 +391,7 @@ export const AddSongPalette = ({
         />
         <div
           className={cn(
-            "mt-1 grid h-[min(26rem,60svh)]",
+            "mt-1 grid h-[min(26rem,60svh)] grid-cols-1",
             previewSong !== null && "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
           )}
         >

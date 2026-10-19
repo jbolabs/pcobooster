@@ -755,7 +755,7 @@ const ArrangementSection = ({
 };
 
 const SongPageBodySkeleton = () => (
-  <div className="grid items-start gap-3 @5xl:grid-cols-[minmax(0,1fr)_20rem]">
+  <div className="grid grid-cols-1 items-start gap-3 @5xl:grid-cols-[minmax(0,1fr)_20rem]">
     <section className="flex min-w-0 flex-col gap-3">
       <SongFacts history={undefined} now={new Date(0)} />
       <Skeleton variant="control" className="h-64" />
@@ -859,7 +859,7 @@ export const SongPage = ({
         tab="overview"
         arrangementId={row?.id ?? null}
       />
-      <div className="grid items-start gap-3 @5xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid grid-cols-1 items-start gap-3 @5xl:grid-cols-[minmax(0,1fr)_20rem]">
         <section className="flex min-w-0 flex-col gap-3">
           <SongFacts history={history.data} now={now} />
           <ArrangementSection

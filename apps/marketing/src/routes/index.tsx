@@ -125,7 +125,7 @@ const SectionHeading = ({
   title: ReactNode;
   children: ReactNode;
 }) => (
-  <header className="reveal mb-7 grid items-end gap-5 md:mb-10 md:grid-cols-[1fr_minmax(0,380px)] md:gap-10 lg:gap-16">
+  <header className="reveal mb-7 grid grid-cols-1 items-end gap-5 md:mb-10 md:grid-cols-[minmax(0,1fr)_minmax(0,380px)] md:gap-10 lg:gap-16">
     <h2 className="text-headline">{title}</h2>
     <p className="text-muted-foreground pb-1">{children}</p>
   </header>
@@ -141,13 +141,15 @@ const Checklist = ({
 }) => (
   <ul
     className={
-      divided ? "border-border mt-7 grid gap-3 border-t pt-6" : "grid gap-3"
+      divided
+        ? "border-border mt-7 grid grid-cols-1 gap-3 border-t pt-6"
+        : "grid grid-cols-1 gap-3"
     }
   >
     {items.map((item) => (
       <li key={item} className="flex items-start gap-3 text-sm">
         <span aria-hidden="true" className="flex h-lh shrink-0 items-center">
-          <span className="bg-brand-soft text-brand grid size-5.5 place-items-center rounded-full">
+          <span className="bg-brand-soft text-brand grid size-5.5 grid-cols-1 place-items-center rounded-full">
             <Check className="size-3.5" strokeWidth={2.5} />
           </span>
         </span>
@@ -176,7 +178,7 @@ const TryHint = ({ children }: { children: ReactNode }) => (
 );
 
 const Hero = () => (
-  <section className="wrap md:pt-hero-top md:pb-hero-bottom grid items-end gap-6 pt-12 pb-10 md:grid-cols-[1.15fr_1fr] md:gap-10 lg:gap-16">
+  <section className="wrap md:pt-hero-top md:pb-hero-bottom grid grid-cols-1 items-end gap-6 pt-12 pb-10 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:gap-10 lg:gap-16">
     <div>
       <h1 className="text-display">
         Planning Center,
@@ -232,7 +234,7 @@ const HowItWorks = () => (
       Your plans, teams, and songs stay in Planning Center Services. PCOBooster
       gives you a faster way to work with them.
     </SectionHeading>
-    <ol className="grid gap-4 md:grid-cols-3">
+    <ol className="grid grid-cols-1 gap-4 md:grid-cols-3">
       {steps.map((step, index) => (
         <li key={step.title} className="reveal flex">
           <Card className="w-full">
@@ -243,7 +245,7 @@ const HowItWorks = () => (
             </CardContent>
             <CardHeader>
               <div className="flex items-center gap-2.5">
-                <span className="bg-brand-soft text-brand grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold tabular-nums">
+                <span className="bg-brand-soft text-brand grid size-6 shrink-0 grid-cols-1 place-items-center rounded-full text-xs font-semibold tabular-nums">
                   {index + 1}
                 </span>
                 <CardTitle>
@@ -279,7 +281,7 @@ const Teams = () => (
         <LineupShowcase demoAnchorId={DEMO_ANCHOR} />
       </DemoFrame>
     </Stage>
-    <div className="pt-section grid items-center gap-9 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] md:gap-10 lg:gap-18">
+    <div className="pt-section grid grid-cols-1 items-center gap-9 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] md:gap-10 lg:gap-18">
       <div className="reveal">
         <h3 className="text-headline">
           A little history.
@@ -355,7 +357,7 @@ const Music = () => (
       Try it: open Transpose and pick a new key, or edit a line and watch the
       preview follow.
     </TryHint>
-    <div className="reveal mt-10 grid gap-x-16 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+    <div className="reveal mt-10 grid grid-cols-1 gap-x-16 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
       <p className="text-muted-foreground max-md:mb-6">
         For worship leaders and music directors who keep charts current every
         week, without exporting, retyping, or a second app.
@@ -398,7 +400,7 @@ const Pricing = () => (
       later, you’ll hear from us first.
     </SectionHeading>
     <div className="reveal">
-      <Card className="md:grid md:grid-cols-2 md:grid-rows-[auto_1fr]">
+      <Card className="md:grid md:grid-cols-2 md:grid-rows-[auto_minmax(0,1fr)]">
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <CardTitle variant="display">
@@ -423,7 +425,7 @@ const Pricing = () => (
 
 const Story = () => (
   <section className="wrap pt-section">
-    <figure className="reveal mx-auto grid max-w-3xl justify-items-center gap-7 text-center">
+    <figure className="reveal mx-auto grid max-w-3xl grid-cols-1 justify-items-center gap-7 text-center">
       <blockquote>
         <p className="text-quote text-balance">
           <span className="text-brand">“</span>Planning Center had everything I
@@ -431,15 +433,15 @@ const Story = () => (
           <span className="text-brand">”</span>
         </p>
       </blockquote>
-      <figcaption className="grid justify-items-center gap-4">
+      <figcaption className="grid grid-cols-1 justify-items-center gap-4">
         <span className="flex items-center gap-3 text-left text-sm">
           <span
             aria-hidden="true"
-            className="bg-brand-soft text-brand grid size-10 place-items-center rounded-full text-sm font-semibold"
+            className="bg-brand-soft text-brand grid size-10 grid-cols-1 place-items-center rounded-full text-sm font-semibold"
           >
             JB
           </span>
-          <span className="grid">
+          <span className="grid grid-cols-1">
             <span className="font-medium">Jake Bodea</span>
             <span className="text-muted-foreground">Creator of PCOBooster</span>
           </span>
@@ -451,7 +453,7 @@ const Story = () => (
 );
 
 const Faq = () => (
-  <section className="wrap pt-section grid gap-7 md:grid-cols-[1fr_1.45fr] md:gap-12 lg:gap-24">
+  <section className="wrap pt-section grid grid-cols-1 gap-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] md:gap-12 lg:gap-24">
     <div className="self-start md:sticky md:top-24">
       <h2 className="text-headline mb-5">FAQ</h2>
       <TextLink href={CONTACT_URL}>Ask another</TextLink>
@@ -471,7 +473,7 @@ const Faq = () => (
 
 const Closing = () => (
   <section className="wrap pt-section">
-    <div className="reveal bg-stage py-band relative isolate grid justify-items-center gap-7 overflow-hidden rounded-xl px-6 text-center md:rounded-3xl">
+    <div className="reveal bg-stage py-band relative isolate grid grid-cols-1 justify-items-center gap-7 overflow-hidden rounded-xl px-6 text-center md:rounded-3xl">
       <LoopWhenVisible className="absolute inset-0 -z-10">
         <StarField />
       </LoopWhenVisible>

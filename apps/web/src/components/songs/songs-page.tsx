@@ -436,7 +436,7 @@ export const SongsPage = ({
         </Button>
       </header>
 
-      <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
         <InputGroup>
           <InputGroupAddon>
             <Search />

@@ -260,7 +260,7 @@ const ReadinessCard = ({
       </CardDescription>
     </CardHeader>
     <CardContent>
-      <ul className="grid gap-1 sm:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
         {checks.map((check) => (
           <li key={check.id}>
             <ReadinessCheckItem
@@ -628,7 +628,7 @@ interface PlanOverviewTabProps {
 }
 
 const overviewGridClassName =
-  "pb-safe-4 grid gap-4 pt-1 md:grid-cols-2 md:pb-6";
+  "pb-safe-4 grid grid-cols-1 gap-4 pt-1 md:grid-cols-2 md:pb-6";
 
 /** A stand-in for handlers the loading overview never calls. */
 const ignore = () => {

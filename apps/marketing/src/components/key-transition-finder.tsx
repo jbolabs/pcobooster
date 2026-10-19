@@ -26,7 +26,7 @@ const KeyPicker = ({
 }) => {
   const minor = isMinorChoice(value);
   return (
-    <div className="grid min-w-0 gap-4">
+    <div className="grid min-w-0 grid-cols-1 gap-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-base font-medium">{label}</p>
         <fieldset className="flex gap-1">
@@ -86,7 +86,7 @@ export const KeyTransitionFinder = ({
     <section aria-label="Key transition finder" className="wrap mt-12 md:mt-16">
       <Card className="mx-auto max-w-[920px]">
         <CardContent>
-          <div className="grid items-start gap-8 md:grid-cols-[1fr_auto_1fr] md:gap-6">
+          <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-6">
             <KeyPicker
               label="First song"
               value={from}
@@ -116,10 +116,10 @@ export const KeyTransitionFinder = ({
           </div>
         </CardContent>
         <div
-          className="border-border mx-6 grid gap-6 border-t pt-8"
+          className="border-border mx-6 grid grid-cols-1 gap-6 border-t pt-8"
           aria-live="polite"
         >
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <h2 className="flex flex-wrap items-center gap-x-4 gap-y-2 text-3xl tracking-tight">
               <span>
                 {from}{" "}
@@ -136,7 +136,7 @@ export const KeyTransitionFinder = ({
             </h2>
             <p className="text-muted-foreground">{rating.reason}.</p>
           </div>
-          <ol className="grid gap-3 md:grid-cols-2">
+          <ol className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {suggestions.map((suggestion) => (
               <li
                 key={suggestion.id}
@@ -198,7 +198,7 @@ export const KeyTransitionFinder = ({
 
 export const KeyTransitionsClosing = () => (
   <section className="wrap pt-section">
-    <div className="bg-stage py-band grid justify-items-center gap-7 rounded-xl px-6 text-center md:rounded-3xl">
+    <div className="bg-stage py-band grid grid-cols-1 justify-items-center gap-7 rounded-xl px-6 text-center md:rounded-3xl">
       <h2 className="text-closing">
         Every key change in your set,
         <br />
@@ -227,11 +227,11 @@ export const PairLinks = ({ pairs }: { pairs: readonly KeyPair[] }) => (
 
 /** Every change's page, grouped by starting key, so each one is a link away from the finder. */
 export const AllTransitions = () => (
-  <section className="wrap pt-section grid gap-7 md:grid-cols-[1fr_1.45fr] md:gap-12 lg:gap-24">
+  <section className="wrap pt-section grid grid-cols-1 gap-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] md:gap-12 lg:gap-24">
     <div className="self-start md:sticky md:top-24">
       <h2 className="text-headline">Every key change</h2>
     </div>
-    <div className="grid content-start gap-x-8 sm:grid-flow-col sm:grid-cols-2 sm:grid-rows-12">
+    <div className="grid grid-cols-1 content-start gap-x-8 sm:grid-flow-col sm:grid-cols-2 sm:grid-rows-12">
       {ALL_KEYS.map((from) => (
         <details key={from} className="border-border group border-t py-3">
           <summary className="cursor-pointer font-medium">

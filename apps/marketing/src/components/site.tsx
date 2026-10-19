@@ -113,7 +113,7 @@ export const SiteHeader = () => {
         className="group/menu sticky top-0 z-20"
       >
         <div className="bg-background pt-safe relative z-10 group-data-[open]/menu:bg-transparent">
-          <div className="wrap flex h-14 items-center justify-between gap-3 md:grid md:h-(--header-height) md:grid-cols-[1fr_auto_1fr]">
+          <div className="wrap flex h-14 items-center justify-between gap-3 md:grid md:h-(--header-height) md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
             <div className="flex items-center gap-2.5 justify-self-start">
               <Brand />
               <span className="hidden sm:inline-flex">
