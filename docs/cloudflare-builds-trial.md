@@ -15,7 +15,7 @@ These local commands use the existing Alchemy `admin` profile. The only Keychain
 
 ## Hosted execution
 
-The check command runs `bun run ci` and `bun run build:cloudflare`. The deploy command runs the pinned Alchemy CLI, then checks the deployed web and API revision using the dedicated Access token. `GITHUB_SHA` is set from Cloudflare's verified commit SHA for the application's existing version endpoint. Build caching is disabled during the trial.
+The check command fetches full checkout history and `origin/main` for migration-history validation, then runs the same lint, typecheck, install-integrity, and test gates as `bun run ci`, followed by `bun run build:cloudflare`. Turbo package checks run with `--concurrency=1` so each package can use its four Vitest workers without oversubscribing the four-core build machine. Test assertions and timeouts are unchanged. The deploy command runs the pinned Alchemy CLI, then checks the deployed web and API revision using the dedicated Access token. `GITHUB_SHA` is set from Cloudflare's verified commit SHA for the application's existing version endpoint. Build caching is disabled during the trial.
 
 The application receives fresh D1, KV, R2, and Workers resources for its stage and uses the existing preview runtime secret references. It does not copy production data or exercise live Planning Center writes. A successful smoke check proves deployment and revision routing; it does not establish full application behavior or long-term provider reliability.
 
