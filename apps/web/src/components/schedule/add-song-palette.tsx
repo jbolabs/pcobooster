@@ -290,8 +290,6 @@ const TappedSongPreview = ({
 interface AddSongPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** "Add song", or "Replace Egypt" when swapping a song out. */
-  title: string;
   serviceTypeId: string | null;
   planId: string | null;
   /** The plan's service date, which times and history are counted from. */
@@ -310,7 +308,6 @@ interface AddSongPaletteProps {
 export const AddSongPalette = ({
   open,
   onOpenChange,
-  title,
   serviceTypeId,
   planId,
   planDate,
@@ -360,7 +357,7 @@ export const AddSongPalette = ({
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
-      title={title}
+      title="Add song"
       description="Search the song catalog"
       className="sm:max-w-2xl"
     >
@@ -384,7 +381,7 @@ export const AddSongPalette = ({
         shouldFilter={false}
         value={activeSongId}
         onValueChange={setHighlightedSongId}
-        label={title}
+        label="Add song"
       >
         <CommandInput
           value={query}
