@@ -438,20 +438,38 @@ describe("credits, files, and notes", () => {
     ).toStrictEqual([]);
   });
 
-  it("marks copyright with © unless it already says so or is public domain", () => {
+  it("marks only a bare year and holder with ©", () => {
     expect(
       [
+        "2013 Hillsong Music Publishing",
         "Original test fixture",
         "© 2013 Hillsong",
+        "(c) 2001 Integrity",
         "Copyright 1998 Vineyard Songs",
-        "Public Domain",
+        "Public domain.",
+        "Words: Public Domain",
+        "Music: 2004 sixsteps",
       ].map(copyrightLabel)
     ).toStrictEqual([
+      "© 2013 Hillsong Music Publishing",
       "© Original test fixture",
       "© 2013 Hillsong",
+      "(c) 2001 Integrity",
       "Copyright 1998 Vineyard Songs",
-      "Public Domain",
+      "Public domain.",
+      "Words: Public Domain",
+      "Music: 2004 sixsteps",
     ]);
+  });
+
+  it("shows a writer field that repeats the copyright once", () => {
+    expect(
+      songCreditParts({
+        author: "Public Domain",
+        ccliNumber: 22_025,
+        copyright: "Public Domain",
+      })
+    ).toStrictEqual(["Public Domain", "CCLI 22025"]);
   });
 
   it("scopes key files to the chosen key when there are two or more keys", () => {

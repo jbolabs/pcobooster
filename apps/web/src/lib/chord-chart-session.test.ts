@@ -399,48 +399,89 @@ describe(isNewerVersion, () => {
 
 describe(chordChartExit, () => {
   const opened = startChordChartSession(version("VERSE", V1), null);
+  const autosaving = { saveAsYouType: true, attemptLeft: false } as const;
+  const spent = { saveAsYouType: false, attemptLeft: false } as const;
+  const asked = { saveAsYouType: false, attemptLeft: true } as const;
 
   it("leaves only once the draft typed during a save has saved too", () => {
     const first = typeChart(opened, "VERSE first");
     const sendingFirst = beginChordChartSave(first, first.draft);
     const typedSecond = typeChart(sendingFirst, "VERSE second");
-    expect(chordChartExit(typedSecond, true)).toStrictEqual({ kind: "wait" });
+    expect(chordChartExit(typedSecond, autosaving)).toStrictEqual({
+      kind: "wait",
+    });
 
     const firstLanded = chordChartSaveSucceeded(typedSecond, V2);
-    expect(chordChartExit(firstLanded, true)).toStrictEqual({ kind: "save" });
+    expect(chordChartExit(firstLanded, autosaving)).toStrictEqual({
+      kind: "save",
+    });
 
     const sendingSecond = beginChordChartSave(firstLanded, firstLanded.draft);
     const secondLanded = chordChartSaveSucceeded(sendingSecond, V3);
-    expect(chordChartExit(secondLanded, true)).toStrictEqual({
+    expect(chordChartExit(secondLanded, autosaving)).toStrictEqual({
       kind: "leave",
     });
   });
 
   it("leaves at once with nothing edited or nothing loaded", () => {
     expect([
-      chordChartExit(opened, true),
-      chordChartExit(null, false),
+      chordChartExit(opened, autosaving),
+      chordChartExit(null, spent),
     ]).toStrictEqual([{ kind: "leave" }, { kind: "leave" }]);
   });
 
-  it("blocks leaving over a conflict, a failed save, or saving turned off", () => {
+  it("saves on Done with Save as you type off, and retries a failed save once", () => {
     const edited = typeChart(opened, "VERSE mine");
+    expect(chordChartExit(edited, asked)).toStrictEqual({ kind: "save" });
+
     const failed = chordChartSaveFailed(
       beginChordChartSave(edited, edited.draft),
       false
     );
+    expect(
+      chordChartExit(failed, { saveAsYouType: true, attemptLeft: true })
+    ).toStrictEqual({ kind: "save" });
+    // The retry failed too: the one explicit attempt is spent.
+    const failedAgain = chordChartSaveFailed(
+      beginChordChartSave(failed, failed.draft),
+      false
+    );
+    expect(chordChartExit(failedAgain, autosaving)).toStrictEqual({
+      kind: "blocked",
+      reason: "failed",
+    });
+  });
+
+  it("blocks leaving over a conflict even when asked, and once the attempt is spent", () => {
+    const edited = typeChart(opened, "VERSE mine");
     const refused = chordChartSaveFailed(
       beginChordChartSave(edited, edited.draft),
       true
     );
     expect([
-      chordChartExit(refused, true),
-      chordChartExit(failed, true),
-      chordChartExit(edited, false),
+      chordChartExit(refused, asked),
+      chordChartExit(edited, spent),
     ]).toStrictEqual([
       { kind: "blocked", reason: "conflict" },
-      { kind: "blocked", reason: "failed" },
       { kind: "blocked", reason: "manual" },
     ]);
+  });
+
+  it("clears the conflict once Keep mine saves, so leaving is free", () => {
+    const edited = typeChart(opened, "VERSE mine");
+    const refused = chordChartSaveFailed(
+      beginChordChartSave(edited, edited.draft),
+      true
+    );
+    const theirs = receiveConflictVersion(refused, version("VERSE theirs", V2));
+    const kept = keepMyChordChart(theirs);
+    const sending = beginChordChartSave(kept, kept.draft);
+    const landed = chordChartSaveSucceeded(sending, V3);
+    expect([
+      chordChartSaveRequest(kept).baseUpdatedAt,
+      landed.conflict,
+      landed.draft.chart,
+      chordChartExit(landed, autosaving),
+    ]).toStrictEqual([V2, null, "VERSE mine", { kind: "leave" }]);
   });
 });

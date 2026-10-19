@@ -20,6 +20,7 @@ import type { KeyOption } from "@pcobooster/planning-center-models/types";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
 import {
+  ArrowUpDown,
   Check,
   ChevronDown,
   CircleDot,
@@ -495,6 +496,7 @@ const ConflictNotice = ({ workspace }: { workspace: ChordChartWorkspace }) => {
             <Button
               variant="ghost"
               size="sm"
+              touch="target"
               onClick={() => {
                 void copy();
               }}
@@ -505,6 +507,7 @@ const ConflictNotice = ({ workspace }: { workspace: ChordChartWorkspace }) => {
             <Button
               variant="outline"
               size="sm"
+              touch="target"
               disabled={!theirsLoaded}
               onClick={workspace.handleUseTheirs}
             >
@@ -512,6 +515,7 @@ const ConflictNotice = ({ workspace }: { workspace: ChordChartWorkspace }) => {
             </Button>
             <Button
               size="sm"
+              touch="target"
               disabled={!theirsLoaded}
               onClick={() => {
                 setConfirming(true);
@@ -523,6 +527,7 @@ const ConflictNotice = ({ workspace }: { workspace: ChordChartWorkspace }) => {
               <Button
                 variant="ghost"
                 size="sm"
+                touch="target"
                 onClick={workspace.handleRetryTheirs}
               >
                 Load their version
@@ -858,7 +863,7 @@ const PreviewStatus = ({ workspace }: { workspace: ChordChartWorkspace }) => {
   return (
     <p className="text-muted-foreground flex items-center gap-2 px-3 pb-2 text-xs">
       The preview shows the last saved chart.
-      <Button size="xs" onClick={workspace.handleSave}>
+      <Button size="xs" touch="target" onClick={workspace.handleSave}>
         Save to update
       </Button>
     </p>
@@ -932,47 +937,62 @@ const EXIT_BLOCK_REASONS: Record<ChordChartExitBlock, string> = {
   manual: "Save your changes first, or turn on Save as you type.",
 };
 
+/** Runs `run` after `delayMs`; returns the cancel. */
+const afterDelay = (run: () => void, delayMs: number): (() => void) => {
+  const timeout = window.setTimeout(run, delayMs);
+  return () => {
+    window.clearTimeout(timeout);
+  };
+};
+
+/** How long a save may take before leaving without it is offered. */
+const SAVE_STALL_MS = 8000;
+
+/** True once `active` has stayed true for `delayMs`, so a stalled save can be stepped past. */
+const useStalled = (active: boolean, delayMs: number): boolean => {
+  const [stalled, setStalled] = useState(false);
+  const [wasActive, setWasActive] = useState(active);
+  if (wasActive !== active) {
+    setWasActive(active);
+    setStalled(false);
+  }
+  useEffect(
+    () =>
+      active
+        ? afterDelay(() => {
+            setStalled(true);
+          }, delayMs)
+        : undefined,
+    [active, delayMs]
+  );
+  return active && stalled;
+};
+
 /**
- * Asks before any navigation would leave edits unsaved: Back, the breadcrumb, a link, or
- * another arrangement. Saving and leaving waits for every edit to land; edits that can't save
- * may be left behind on purpose (they stay in this browser). Closing the tab asks too.
+ * The question a blocked navigation asks. Stay is always open; Save and leave waits for every
+ * edit to land. When edits can't save, or a save stalls, the person may leave without them
+ * (they stay in this browser's storage).
  */
-const LeaveGuard = ({
+const LeaveDialog = ({
   workspace,
-  allowNavigation,
+  onStay,
+  onLeave,
 }: {
   workspace: ChordChartWorkspace;
-  /** Set right before a navigation the editor starts itself, such as after a copy. */
-  allowNavigation: RefObject<boolean>;
+  onStay: () => void;
+  onLeave: () => void;
 }) => {
   const [problem, setProblem] = useState<string | null>(null);
-  const unsaved = workspace.exit.kind !== "leave";
-  const blocker = useBlocker({
-    shouldBlockFn: ({ current, next }) => {
-      if (allowNavigation.current || !unsaved) {
-        return false;
-      }
-      // Switching the preview's key stays in the editor.
-      const sameArrangement =
-        current.pathname === next.pathname &&
-        "arrangement" in current.search &&
-        "arrangement" in next.search &&
-        current.search.arrangement === next.search.arrangement;
-      return !sameArrangement;
-    },
-    enableBeforeUnload: () => unsaved,
-    withResolver: true,
-  });
-  if (blocker.status !== "blocked") {
-    return null;
-  }
+  const [saving, setSaving] = useState(false);
+  const stalled = useStalled(workspace.committing, SAVE_STALL_MS);
   const { exit } = workspace;
   const reason =
     problem ??
     (exit.kind === "blocked" ? EXIT_BLOCK_REASONS[exit.reason] : null);
+  const offerLeave = reason !== null || stalled;
   const stay = () => {
-    setProblem(null);
-    blocker.reset();
+    workspace.handleCancelExit();
+    onStay();
   };
   return (
     <ResponsiveDialog
@@ -990,54 +1010,120 @@ const LeaveGuard = ({
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
             {reason ??
-              "Your latest changes haven’t reached Planning Center yet."}
+              (stalled
+                ? "Planning Center hasn’t answered yet. Your changes stay in this browser if you leave."
+                : "Your latest changes haven’t reached Planning Center yet.")}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
         <ResponsiveDialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            touch="target"
-            disabled={workspace.committing}
-            onClick={stay}
-          >
+          <Button type="button" variant="outline" touch="target" onClick={stay}>
             Stay
           </Button>
+          {offerLeave ? (
+            <Button
+              type="button"
+              variant="destructive"
+              touch="target"
+              onClick={onLeave}
+            >
+              Leave without saving
+            </Button>
+          ) : null}
           {reason === null ? (
             <Button
               type="button"
               touch="target"
               className="max-md:order-first"
-              disabled={workspace.committing}
+              disabled={saving}
               onClick={() => {
+                setSaving(true);
+                // Takes over a Done already waiting, so the navigation goes on once saved.
                 workspace.handleExit({
-                  onSaved: blocker.proceed,
+                  onSaved: onLeave,
                   onBlocked: (blocked) => {
+                    setSaving(false);
                     setProblem(EXIT_BLOCK_REASONS[blocked]);
                   },
                 });
               }}
             >
-              {workspace.committing ? "Saving…" : "Save and leave"}
+              {saving ? "Saving…" : "Save and leave"}
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="destructive"
-              touch="target"
-              className="max-md:order-first"
-              onClick={() => {
-                setProblem(null);
-                blocker.proceed();
-              }}
-            >
-              Leave without saving
-            </Button>
-          )}
+          ) : null}
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>
     </ResponsiveDialog>
   );
+};
+
+/**
+ * Asks before any navigation would leave edits unsaved: Back, the breadcrumb, a link, or
+ * another arrangement. Closing the tab asks too. If the editor goes away while a navigation
+ * waits (Done's save landed), the navigation goes on, since the person asked to leave.
+ */
+const LeaveGuard = ({
+  workspace,
+  arrangementId,
+  allowNavigation,
+}: {
+  workspace: ChordChartWorkspace;
+  arrangementId: string;
+  /** Set right before a navigation the editor starts itself, such as after a copy. */
+  allowNavigation: RefObject<boolean>;
+}) => {
+  const unsaved = workspace.exit.kind !== "leave";
+  const blocker = useBlocker({
+    shouldBlockFn: ({ current, next }) => {
+      if (allowNavigation.current || !unsaved) {
+        return false;
+      }
+      // Staying on this arrangement (another preview key, or filling in the URL) stays in
+      // the editor.
+      const nextArrangement =
+        "arrangement" in next.search ? next.search.arrangement : undefined;
+      return !(
+        current.pathname === next.pathname && nextArrangement === arrangementId
+      );
+    },
+    enableBeforeUnload: () => unsaved,
+    withResolver: true,
+  });
+  const pendingProceed = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    pendingProceed.current =
+      blocker.status === "blocked" ? blocker.proceed : null;
+  });
+  useEffect(
+    () => () => {
+      pendingProceed.current?.();
+    },
+    []
+  );
+  if (blocker.status !== "blocked") {
+    return null;
+  }
+  const { reset, proceed } = blocker;
+  const handleStay = () => {
+    reset();
+  };
+  const handleLeave = () => {
+    proceed();
+  };
+  return (
+    <LeaveDialog
+      workspace={workspace}
+      onStay={handleStay}
+      onLeave={handleLeave}
+    />
+  );
+};
+
+/** Done, Saving… while it waits for the last save, then Keep editing if that save stalls. */
+const doneButtonLabel = (committing: boolean, stalled: boolean): string => {
+  if (stalled) {
+    return "Keep editing";
+  }
+  return committing ? "Saving…" : "Done";
 };
 
 /** Phones keep one toolbar row: the less frequent tools live in the ⋯ menu. */
@@ -1069,6 +1155,7 @@ const PhoneEditorTools = ({
         <DropdownMenuSubTrigger
           disabled={!editable || parseKey(workspace.draft.key) === null}
         >
+          <ArrowUpDown aria-hidden />
           Transpose
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent className="w-48">
@@ -1155,7 +1242,10 @@ const ChartEditor = ({
       workspace={workspace}
     />
   );
-  const doneLabel = workspace.committing ? "Saving…" : "Done";
+  // A save that stalls can be stepped past: Done becomes Keep editing.
+  const stalled = useStalled(workspace.committing, SAVE_STALL_MS);
+  const doneLabel = doneButtonLabel(workspace.committing, stalled);
+  const handleDoneTap = stalled ? workspace.handleCancelExit : handleDone;
   const openImport = () => {
     setDialog("import");
   };
@@ -1164,7 +1254,7 @@ const ChartEditor = ({
     <PageShell layout="fill">
       <h1 className="sr-only">{`Editing ${song.title}`}</h1>
       <ChartToolbar>
-        <div className="flex min-w-0 max-md:flex-1">
+        <div className="flex min-w-20 max-md:flex-1">
           <ArrangementPicker
             arrangements={arrangements}
             arrangement={arrangement}
@@ -1240,8 +1330,8 @@ const ChartEditor = ({
             variant="outline"
             size="sm"
             className="max-md:hidden"
-            disabled={workspace.committing}
-            onClick={handleDone}
+            disabled={workspace.committing && !stalled}
+            onClick={handleDoneTap}
           >
             {doneLabel}
           </Button>
@@ -1256,7 +1346,12 @@ const ChartEditor = ({
       {workspace.restored ? (
         <p className="text-muted-foreground flex shrink-0 items-center gap-1 text-xs">
           Unsaved draft restored from this browser.
-          <Button variant="link" size="xs" onClick={workspace.handleDiscard}>
+          <Button
+            variant="link"
+            size="xs"
+            touch="target"
+            onClick={workspace.handleDiscard}
+          >
             Discard
           </Button>
         </p>
@@ -1274,13 +1369,17 @@ const ChartEditor = ({
           variant="outline"
           touch="target"
           className="w-full"
-          disabled={workspace.committing}
-          onClick={handleDone}
+          disabled={workspace.committing && !stalled}
+          onClick={handleDoneTap}
         >
           {doneLabel}
         </Button>
       </PhoneBottomAction>
-      <LeaveGuard workspace={workspace} allowNavigation={allowNavigation} />
+      <LeaveGuard
+        workspace={workspace}
+        arrangementId={arrangement.id}
+        allowNavigation={allowNavigation}
+      />
       {/* The PDF loads only while the sheet is open, so typing on a phone costs no renders. */}
       <Drawer
         open={isMobile && previewOpen}

@@ -59,7 +59,8 @@ const usePdfPages = (data: string | undefined, source: string) => {
   const pagesRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [drawnSource, setDrawnSource] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  // Which chart failed to draw, so another key starts fresh.
+  const [failedSource, setFailedSource] = useState<string | null>(null);
   // Bumped to draw the same bytes again after a failed draw.
   const [attempt, setAttempt] = useState(0);
 
@@ -80,19 +81,19 @@ const usePdfPages = (data: string | undefined, source: string) => {
       : drawPages(pages, request.data, width, {
           onDrawn: () => {
             setDrawnSource(source);
-            setFailed(false);
+            setFailedSource(null);
           },
           onFailed: () => {
-            setFailed(true);
+            setFailedSource(source);
           },
         });
   }, [request, width, source]);
 
   const redraw = () => {
-    setFailed(false);
+    setFailedSource(null);
     setAttempt((current) => current + 1);
   };
-  return { pagesRef, drawnSource, failed, redraw };
+  return { pagesRef, drawnSource, failed: failedSource === source, redraw };
 };
 
 export interface PlanningCenterPdf {

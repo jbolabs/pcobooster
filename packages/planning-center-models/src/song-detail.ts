@@ -469,16 +469,19 @@ export const songPageSelection = <Arrangement extends ChartArrangementSummary>(
   };
 };
 
-const COPYRIGHT_MARK_PATTERN = /^(?:©|\(c\)|copyright\b)/iu;
-const PUBLIC_DOMAIN_PATTERN = /^public domain$/iu;
+/** Copyright text that already says what it is, or isn't a bare year and holder. */
+const SELF_DESCRIBED_COPYRIGHT =
+  /public domain|words:|music:|©|\(c\)|copyright/iu;
+const BARE_COPYRIGHT_START = /^[\p{L}\p{N}]/u;
 
 /**
- * The copyright as Planning Center has it, marked "©" unless it already says so; public-domain
- * songs stay unmarked.
+ * The copyright as Planning Center has it, marked "©" only when it is a bare year and holder
+ * ("2013 Hillsong Music"). Text that already says what it is ("Public Domain", "Words: …",
+ * "Copyright …") stays as written.
  */
 export const copyrightLabel = (copyright: string): string => {
   const text = copyright.trim();
-  if (COPYRIGHT_MARK_PATTERN.test(text) || PUBLIC_DOMAIN_PATTERN.test(text)) {
+  if (SELF_DESCRIBED_COPYRIGHT.test(text) || !BARE_COPYRIGHT_START.test(text)) {
     return text;
   }
   return `© ${text}`;
@@ -486,7 +489,7 @@ export const copyrightLabel = (copyright: string): string => {
 
 /**
  * The song's credits, each shown in full: writers, "CCLI 6605236", and the copyright. Missing
- * parts are skipped; the page joins them with " · ".
+ * and repeated parts are skipped; the page joins them with " · ".
  */
 export const songCreditParts = (song: {
   readonly author: string;
@@ -505,7 +508,8 @@ export const songCreditParts = (song: {
   if (copyright !== "") {
     parts.push(copyrightLabel(copyright));
   }
-  return parts;
+  // A writer field that repeats the copyright ("Public Domain" in both) shows once.
+  return [...new Set(parts)];
 };
 
 /** A group of files on the song page: the arrangement's own, or one key's. */

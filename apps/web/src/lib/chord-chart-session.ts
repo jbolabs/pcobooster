@@ -376,7 +376,9 @@ export type ChordChartExitBlock = "conflict" | "failed" | "manual";
 /**
  * What leaving the editor needs right now. `leave` only once the draft on screen is the one
  * Planning Center holds; while a save is out, `wait` and ask again when it lands (edits made
- * meanwhile then need another `save`). Edits that can't save on their own block leaving.
+ * meanwhile then need another `save`). Leaving is an explicit request to save, so with
+ * `attemptLeft` it saves even with Save as you type off or after a failed save; once that
+ * attempt is spent, edits that still can't save block leaving.
  */
 export type ChordChartExit =
   | { readonly kind: "leave" }
@@ -386,7 +388,11 @@ export type ChordChartExit =
 
 export const chordChartExit = (
   session: ChordChartSession | null,
-  saveAsYouType: boolean
+  options: {
+    readonly saveAsYouType: boolean;
+    /** The person's leave still has its one explicit save to spend. */
+    readonly attemptLeft: boolean;
+  }
 ): ChordChartExit => {
   if (session === null) {
     return { kind: "leave" };
@@ -400,10 +406,13 @@ export const chordChartExit = (
   if (!isDirty(session)) {
     return { kind: "leave" };
   }
+  if (options.attemptLeft) {
+    return { kind: "save" };
+  }
   if (session.paused) {
     return { kind: "blocked", reason: "failed" };
   }
-  return saveAsYouType
+  return options.saveAsYouType
     ? { kind: "save" }
     : { kind: "blocked", reason: "manual" };
 };

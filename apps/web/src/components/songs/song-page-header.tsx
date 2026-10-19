@@ -35,6 +35,7 @@ export const SongPageHeader = ({
         {credits.length === 0 ? null : (
           <p className="text-muted-foreground text-sm wrap-break-word">
             {credits.map((part, index) => (
+              // `songCreditParts` drops repeats, so each part's text is its key.
               <span key={part}>
                 {index > 0 ? " · " : null}
                 {/* Writers and copyright wrap; a CCLI number stays whole. */}
