@@ -132,9 +132,9 @@ const readEnvironment = Effect.gen(function* readEnvironment() {
 export default class Api extends Cloudflare.Worker<Api>()(
   "Api",
   Effect.gen(function* apiProps() {
-    const { stage, apiDevPort } = yield* currentStageSettings;
+    const { workerNames, apiDevPort } = yield* currentStageSettings;
     return {
-      name: `pcobooster-${stage}-api`,
+      name: workerNames.api,
       main: import.meta.url,
       workersDev: false,
       compatibility: { date: "2026-09-01", flags: ["nodejs_compat"] },

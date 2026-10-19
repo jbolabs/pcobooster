@@ -31,7 +31,26 @@ export interface StageSettings {
   readonly publicOrigin: string;
   /** Matches every preview and staging product Worker; they share production's OAuth callback. */
   readonly previewOriginPattern: string;
+  /**
+   * Each Worker's script name. `alchemy dev` registers local Workers by script name in one
+   * machine-wide registry, and service bindings resolve through it, so a checkout running on its
+   * own `DEV_PORT_BASE` carries that base in its names; otherwise its product would call whichever
+   * checkout's API registered last.
+   */
+  readonly workerNames: WorkerNames;
 }
+
+export interface WorkerNames {
+  readonly api: string;
+  readonly web: string;
+  readonly admin: string;
+}
+
+const workerNames = (prefix: string): WorkerNames => ({
+  api: `${prefix}-api`,
+  web: `${prefix}-web`,
+  admin: `${prefix}-admin`,
+});
 
 /**
  * `devPortBase` is `DEV_PORT_BASE` (`@pcobooster/config/dev-ports`), which only the `local`
@@ -49,7 +68,12 @@ export const resolveStageSettings = (
   const local = stage === "local" || stage === "test";
   const ports = devPorts(devPortBase);
   const apiDevPort = stage === "test" ? testApiPort : ports.api;
-  let publicOrigin = `https://pcobooster-${stage}-web.${workersSubdomain}.workers.dev`;
+  const names = workerNames(
+    stage === "local" && devPortBase !== DEFAULT_DEV_PORT_BASE
+      ? `pcobooster-${stage}-${devPortBase}`
+      : `pcobooster-${stage}`
+  );
+  let publicOrigin = `https://${names.web}.${workersSubdomain}.workers.dev`;
   if (production) {
     publicOrigin = "https://pcobooster.com";
   } else if (stage === "test") {
@@ -67,6 +91,7 @@ export const resolveStageSettings = (
     adminDevPort: ports.admin,
     publicOrigin,
     previewOriginPattern: `https://pcobooster-*-web.${workersSubdomain}.workers.dev`,
+    workerNames: names,
   };
 };
 
