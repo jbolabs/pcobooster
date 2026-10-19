@@ -72,6 +72,16 @@ Audited 2026-10-19 by crawling every product screen and opening every panel in a
 - Before: 4 to 11 controls under 44px on most screens (32px toolbar and card buttons, 24px item length, 17px commitment links, 31px tabs, 36px segments) and 4 floating popovers. After: none on the crawled screens except the month grid's 41px day cells (seven to a 390px row) and wide 36px tab pills inside a 44px track.
 - Guard: `lint/touch-targets.test.ts` checks every button size and field primitive for a 44px touch size and lists the only files allowed the raw popover or dialog, with why; it also rejects phone `order-*` classes and ghost or link buttons in dialog and sheet footers. It failed 11 tests on the code before this change.
 
+## File viewer
+
+Audited 2026-10-19 on a plan's song file dialog (tap a song, open a chart) at 390x844 in emulated iPhone Chromium (`hasTouch`).
+
+- **The file gets the screen on phones.** Before, a title header, a bordered card with its own file bar, 12px PDF margins, and two stacked full-width song buttons left the page about half the screen. Now one bar holds the song, the file name with the arrangement and set position, open original, and close (44px targets); the card frame, padding, and gaps start at `sm:`; the PDF runs edge to edge; previous and next song share one row. Desktop is pixel-identical.
+- **The PDF reader zooms itself.** Two fingers pinch about their midpoint and pan while they pinch; double tap toggles fit and 200%; one finger scrolls natively, so a zoomed page pans like any scroller. The +/- control reads the same zoom and snaps a pinched zoom to the next quarter step. The scroller declares `touch-pan-x touch-pan-y`, so the browser never zooms the page; the viewport meta is untouched. Gesture math lives in `apps/web/src/lib/pdf-zoom.ts` (unit tested), the listeners in `apps/web/src/hooks/use-pinch-zoom.ts`, whose two-finger `touchmove` is the one allowed non-passive touch listener.
+- Guard: `lint/file-viewer.test.ts` rejects phone-wide borders, rounding, padding, or gaps above 8px inside a `variant="viewer"` dialog, a `DialogFooter` there, and a PDF scroller without `touch-pan-x touch-pan-y` or with phone side padding. It failed on 9 offenders before this change: `plan-file-dialog.tsx` (`pt-safe-6`, `pb-safe-6`, `gap-4`, `px-6`, `rounded-xl`, `border`, the stacked footer) and `file-pdf-reader.tsx` (`px-3`, no touch-action).
+- Needs a real phone: pinch feel and frame rate on iOS Safari, and that Safari keeps its own zoom off the reader.
+- Native parity: the Expo song file screen already pinch-zooms in PDFKit (`preview-pdf-view.tsx`) but has no previous or next song step; the web dialog's song stepping is a follow-up there. Desktop trackpad pinch (ctrl+wheel) in the web reader is not handled; it still needs a non-passive wheel listener.
+
 ## Already right (verified, unchanged)
 
 - Product viewport already had `viewport-fit=cover, interactive-widget=resizes-content`; tap highlight, text-size-adjust, and `touch-action: manipulation` were already global in the product (E).

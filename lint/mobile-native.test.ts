@@ -205,6 +205,14 @@ const coarseHoverQueryPattern =
   /\(\s*hover\s*:\s*hover\s*\)(?![^"'`\]]*pointer\s*:\s*fine)/gu;
 const scrollListenerPattern =
   /addEventListener\(\s*["'](?:touchstart|touchmove|wheel)["'][^;]*/gu;
+/**
+ * The only non-passive touch listeners, and why. Each must call `preventDefault` only for a
+ * gesture it owns, never for one-finger scrolling.
+ */
+const nonPassiveTouchAllowed: Record<string, string> = {
+  "apps/web/src/hooks/use-pinch-zoom.ts":
+    "a two-finger pinch in the PDF reader zooms the page, not the scroller under it",
+};
 
 const matchLines = (contents: string, pattern: RegExp): number[] =>
   [...contents.matchAll(pattern)].map((match) => lineOf(contents, match.index));
@@ -336,9 +344,16 @@ describe("mobile-native platform layer", () => {
     expect(
       violations(
         scripts,
-        ({ contents }) =>
+        ({ path, contents }) =>
           [...contents.matchAll(scrollListenerPattern)]
             .filter(([call]) => !/passive:\s*true/u.test(call))
+            .filter(
+              ([call]) =>
+                !(
+                  path in nonPassiveTouchAllowed &&
+                  call.startsWith('addEventListener("touchmove"')
+                )
+            )
             .map((match) => lineOf(contents, match.index)),
         (path, line) =>
           `${path} line ${line}: a non-passive touch or wheel listener can block scrolling; pass { passive: true } and use overscroll-behavior to stop scroll chaining`
