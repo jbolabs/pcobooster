@@ -2,7 +2,6 @@ import { FEEDBACK_MESSAGE_MAX_LENGTH } from "@pcobooster/contracts/feedback";
 import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  InputAccessoryView,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -107,6 +106,7 @@ export const AccountFeedback = () => {
   const path = usePathname();
   const toasts = useToasts();
   const [sending, setSending] = useState(false);
+  const [editing, setEditing] = useState(false);
   const message = draft.text.trim();
   const canSend =
     message !== "" &&
@@ -150,7 +150,12 @@ export const AccountFeedback = () => {
           accessibilityLabel="What happened?"
           testID="feedback-editor"
           multiline
-          inputAccessoryViewID="feedback-keyboard"
+          onFocus={() => {
+            setEditing(true);
+          }}
+          onBlur={() => {
+            setEditing(false);
+          }}
           value={draft.text}
           onChangeText={(text) => {
             draft.setText(text);
@@ -164,6 +169,21 @@ export const AccountFeedback = () => {
           {draft.text.length}/{FEEDBACK_MESSAGE_MAX_LENGTH}
         </AppText>
       </ScrollView>
+      {editing ? (
+        <View style={styles.keyboardAccessory}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss keyboard"
+            onPress={() => {
+              Keyboard.dismiss();
+            }}
+            style={styles.dismissKeyboard}
+            testID="feedback-dismiss-keyboard"
+          >
+            <AppText font="rowTitleEmphasized">Done</AppText>
+          </Pressable>
+        </View>
+      ) : null}
       <BottomActionBar
         actions={[
           {
@@ -177,23 +197,6 @@ export const AccountFeedback = () => {
           },
         ]}
       />
-      {Platform.OS === "ios" ? (
-        <InputAccessoryView nativeID="feedback-keyboard">
-          <View style={styles.keyboardAccessory}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss keyboard"
-              onPress={() => {
-                Keyboard.dismiss();
-              }}
-              style={styles.dismissKeyboard}
-              testID="feedback-dismiss-keyboard"
-            >
-              <AppText font="rowTitleEmphasized">Done</AppText>
-            </Pressable>
-          </View>
-        </InputAccessoryView>
-      ) : null}
     </KeyboardAvoidingView>
   );
 };
