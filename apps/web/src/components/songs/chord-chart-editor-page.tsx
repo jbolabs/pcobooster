@@ -994,6 +994,11 @@ const LeaveDialog = ({
     workspace.handleCancelExit();
     onStay();
   };
+  // Drops a Done still waiting on a stalled save, so its late callback can't close the next editor.
+  const leave = () => {
+    workspace.handleCancelExit();
+    onLeave();
+  };
   return (
     <ResponsiveDialog
       open
@@ -1024,7 +1029,7 @@ const LeaveDialog = ({
               type="button"
               variant="destructive"
               touch="target"
-              onClick={onLeave}
+              onClick={leave}
             >
               Leave without saving
             </Button>
