@@ -12,6 +12,7 @@ const OVERLAY_SECTION_BORDER_CLASS = /(^|\s)border-b(\s|$)/;
 const OVERLAY_SECTION_PADDING_CLASS = /(^|\s)px-[345](\s|$)/;
 const LIST_ROW_BORDER_CLASS = /last:border-b-0/;
 const TRANSITION_COLORS_CLASS = /transition-colors|transition-plan-item/;
+const ANIMATE_SPIN_CLASS = /(?:^|[\s:!])animate-spin(?=$|[\s!])/;
 // `backdrop-blur`, `backdrop-blur-*`, and the `supports-backdrop-filter:`
 // variant, alone or behind other variants (`md:`, `data-open:`, `group-*:`).
 const BACKDROP_BLUR_CLASS =
@@ -445,6 +446,61 @@ const noTransitionColorsRule = {
           return;
         }
         reportIfTransitionColors(node.arguments[0]);
+      },
+    };
+  },
+};
+
+const noAnimateSpinRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow animate-spin so every loading indicator is the shared rocket Spinner.",
+    },
+    messages: {
+      animateSpin:
+        "Do not spin icons with `animate-spin`. Render `<Spinner />` from `@/components/ui/spinner`, the rocket loading indicator.",
+    },
+    schema: [],
+  },
+  create(context) {
+    /**
+     * @param {import("oxlint/plugins-dev").Node} node
+     */
+    const reportIfAnimateSpin = (node) => {
+      if (!ANIMATE_SPIN_CLASS.test(classNameText(node))) {
+        return;
+      }
+      context.report({
+        node,
+        messageId: "animateSpin",
+      });
+    };
+
+    return {
+      JSXOpeningElement(node) {
+        for (const attribute of node.attributes) {
+          if (
+            attribute.type !== "JSXAttribute" ||
+            attribute.name.type !== "JSXIdentifier" ||
+            attribute.name.name !== "className" ||
+            attribute.value === null
+          ) {
+            continue;
+          }
+          reportIfAnimateSpin(attribute.value);
+        }
+      },
+      CallExpression(node) {
+        if (
+          node.callee.type !== "Identifier" ||
+          node.callee.name !== "cva" ||
+          node.arguments.length === 0
+        ) {
+          return;
+        }
+        reportIfAnimateSpin(node.arguments[0]);
       },
     };
   },
@@ -1891,6 +1947,7 @@ export default {
     "no-overlay-section-border-b": noOverlaySectionBorderRule,
     "no-nudged-icon": noNudgedIconRule,
     "no-transition-colors": noTransitionColorsRule,
+    "no-animate-spin": noAnimateSpinRule,
     "menu-label-inside-group": menuLabelInsideGroupRule,
     "prefer-shared-controls": preferSharedControlsRule,
     "no-small-field-text": noSmallFieldTextRule,
@@ -1911,6 +1968,7 @@ export {
   noPopoverContentPaddingRule,
   menuLabelInsideGroupRule,
   noTransitionColorsRule,
+  noAnimateSpinRule,
   preferSharedControlsRule,
   noSmallFieldTextRule,
   scrollContainerOverscrollRule,

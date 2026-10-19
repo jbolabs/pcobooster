@@ -12,6 +12,7 @@ import {
   noOverlaySectionBorderRule,
   noPopoverContentPaddingRule,
   noTransitionColorsRule,
+  noAnimateSpinRule,
   preferSharedControlsRule,
   noSmallFieldTextRule,
   scrollContainerOverscrollRule,
@@ -206,6 +207,45 @@ ruleTester.run(
         name: "border-b section header in popover",
         code: `<div className="border-b px-3 py-2">Header</div>`,
         errors: [{ messageId: "border" }],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "no-animate-spin",
+  noAnimateSpinRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "shared spinner",
+        code: `<Spinner className="size-3.5" />`,
+      },
+      {
+        name: "other animation utility",
+        code: `<div className="animate-pulse" />`,
+      },
+    ],
+    invalid: [
+      {
+        name: "spinning icon",
+        code: `<Loader2 className="size-4 animate-spin" />`,
+        errors: [{ messageId: "animateSpin" }],
+      },
+      {
+        name: "cva base classes",
+        code: `const iconVariants = cva("size-4 animate-spin");`,
+        errors: [{ messageId: "animateSpin" }],
+      },
+      {
+        name: "variant-prefixed spin",
+        code: `<Icon className="size-4 data-[busy]:animate-spin" />`,
+        errors: [{ messageId: "animateSpin" }],
+      },
+      {
+        name: "conditional class inside cn",
+        code: `<Icon className={cn("size-4", busy && "animate-spin")} />`,
+        errors: [{ messageId: "animateSpin" }],
       },
     ],
   }

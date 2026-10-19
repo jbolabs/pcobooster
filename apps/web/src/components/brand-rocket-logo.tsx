@@ -1,7 +1,15 @@
+import {
+  ROCKET_FIN_PATHS,
+  ROCKET_HULL_PATH,
+  ROCKET_TILT,
+  ROCKET_VIEW_BOX,
+  ROCKET_WINDOW,
+} from "@/lib/rocket-geometry";
+
 export const BrandRocketLogo = ({ maskId }: { maskId: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    viewBox="46 42 168 168"
+    viewBox={ROCKET_VIEW_BOX}
     fill="none"
     aria-hidden
     className="text-chart-2 size-full overflow-visible"
@@ -21,7 +29,7 @@ export const BrandRocketLogo = ({ maskId }: { maskId: string }) => (
           fill="var(--color-pc-services-foreground)"
         />
         <path
-          d="M121 103C158 89 196 100 219 122Q225 128 219 134C196 156 158 167 121 153Q112 149 112 140V116Q112 107 121 103Z"
+          d={ROCKET_HULL_PATH}
           fill="var(--color-overlay-shadow)"
           stroke="var(--color-overlay-shadow)"
           strokeWidth="12"
@@ -41,22 +49,17 @@ export const BrandRocketLogo = ({ maskId }: { maskId: string }) => (
           height="256"
           fill="var(--color-pc-services-foreground)"
         />
-        <circle cx="176" cy="128" r="13" fill="var(--color-overlay-shadow)" />
+        <circle {...ROCKET_WINDOW} fill="var(--color-overlay-shadow)" />
       </mask>
     </defs>
     <g className="sidebar-brand-rocket-flight">
-      <g
-        transform="translate(128 128) rotate(-45) scale(1.12) translate(-128 -128)"
-        fill="currentColor"
-      >
+      <g transform={ROCKET_TILT} fill="currentColor">
         <g mask={`url(#${maskId}-fin-clearance)`}>
-          <path d="M150 104C137 90 127 83 118 82Q112 82 112 89V104Z" />
-          <path d="M150 152C137 166 127 173 118 174Q112 174 112 167V152Z" />
+          {ROCKET_FIN_PATHS.map((d) => (
+            <path key={d} d={d} />
+          ))}
         </g>
-        <path
-          d="M121 103C158 89 196 100 219 122Q225 128 219 134C196 156 158 167 121 153Q112 149 112 140V116Q112 107 121 103Z"
-          mask={`url(#${maskId}-rocket-window)`}
-        />
+        <path d={ROCKET_HULL_PATH} mask={`url(#${maskId}-rocket-window)`} />
         <g className="sidebar-brand-rocket-exhaust">
           <rect x="71" y="104" width="33" height="12" rx="6" />
           <rect x="65" y="122" width="33" height="12" rx="6" />
