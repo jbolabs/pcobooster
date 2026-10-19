@@ -67,6 +67,12 @@ interface PlanTabProps {
 /** The run sheet only reorders up and down. */
 const verticalOnly = [restrictToVerticalAxis];
 
+/**
+ * Presses here leave the details open: rows switch them to themselves, and the toolbar
+ * adds after the selection. Closing would also slide the toolbar out from under the press.
+ */
+const KEEPS_DETAILS_OPEN = "[data-plan-item-id], [data-plan-toolbar]";
+
 /** The details slide in beside the run sheet only where there is room for both. */
 const WIDE_LAYOUT_QUERY = "(min-width: 1024px)";
 
@@ -586,12 +592,11 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
         className="max-h-full"
       />
     );
-  // Like a sheet: pressing outside the card closes it and clears the selection. Rows
-  // switch it to themselves.
+  // Like a sheet: pressing outside the card closes it and clears the selection.
   useDismissOnOutsidePress({
     enabled: isWide && pane !== null,
     ref: paneRef,
-    ignoreSelector: "[data-plan-item-id]",
+    ignoreSelector: KEEPS_DETAILS_OPEN,
     onDismiss: () => {
       blurWithin(paneRef.current);
       setDetailsOpen(false);
