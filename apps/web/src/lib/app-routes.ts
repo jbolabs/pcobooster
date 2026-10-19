@@ -104,9 +104,12 @@ export interface DetailRoute {
   label: string;
   /** The person a People detail page shows, so the breadcrumb can name them. */
   personId: string | null;
+  /** The song a Songs detail page shows, so the breadcrumb can name it. */
+  songId: string | null;
 }
 
 const personDetailPattern = /^\/people\/(?<personId>[^/]+)/u;
+const songDetailPattern = /^\/songs\/(?<songId>[^/]+)/u;
 
 /** Detail pages that sit one level under a top-level section. */
 export const parseDetailRoute = (pathname: string): DetailRoute | null => {
@@ -118,14 +121,17 @@ export const parseDetailRoute = (pathname: string): DetailRoute | null => {
       parentLabel: "People",
       label: "Person",
       personId: decodeSegment(encodedPersonId),
+      songId: null,
     };
   }
-  if (/^\/songs\/[^/]+/u.test(pathname)) {
+  const encodedSongId = songDetailPattern.exec(pathname)?.groups?.songId;
+  if (encodedSongId !== undefined) {
     return {
       parentHref: "/songs",
       parentLabel: "Songs",
-      label: "Chord chart",
+      label: "Song",
       personId: null,
+      songId: decodeSegment(encodedSongId),
     };
   }
   return null;

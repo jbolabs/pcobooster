@@ -1,3 +1,18 @@
+import {
+  arrangementRows,
+  historyCountLine,
+  historyDateLabel,
+  historyNamesArrangements,
+  historyRowDetail,
+  planningCenterArrangementUrl,
+  serviceTypeLabel,
+  songFacts,
+  splitSongHistory,
+} from "@pcobooster/planning-center-models/song-detail";
+import type {
+  ArrangementRowData,
+  SongFact,
+} from "@pcobooster/planning-center-models/song-detail";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -32,19 +47,8 @@ import {
   resolveChartTarget,
 } from "./chart";
 import { ChartLines } from "./chart-lines";
-import {
-  arrangementRows,
-  historyCountLine,
-  historyDateLabel,
-  historyNamesArrangements,
-  historyRowDetail,
-  keyOptionLabel,
-  planningCenterArrangementUrl,
-  serviceTypeLabel,
-  songFacts,
-  splitSongHistory,
-} from "./detail";
-import type { ArrangementRowData, SongFact, SongHistoryEntry } from "./detail";
+import { keyOptionLabel } from "./detail";
+import type { SongHistoryEntry } from "./detail";
 import { songChartPdfHref, songFilesHref } from "./preview-reads";
 import { songChartHref } from "./reads";
 import type { SongDetailModel } from "./use-song-detail";

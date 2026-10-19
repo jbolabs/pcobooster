@@ -97,6 +97,7 @@ import {
   useAccountPanel,
   useAccountsQuery,
 } from "@/hooks/use-account-panel";
+import { useSongTitle } from "@/hooks/use-chord-chart-song";
 import { useFeatureEnabled } from "@/hooks/use-feature-enabled";
 import { usePersonName } from "@/hooks/use-people-dashboard-person";
 import { usePlanRoute } from "@/hooks/use-plan-route";
@@ -200,13 +201,14 @@ const PlanViewTabs = () => {
   );
 };
 
-/** A detail page's breadcrumb: the person's name once it is known. */
+/** A detail page's breadcrumb: the person's name or the song's title once it is known. */
 const DetailBreadcrumbLabel = ({ detail }: { detail: DetailRoute }) => {
   const personName = usePersonName(detail.personId);
+  const songTitle = useSongTitle(detail.songId);
   return (
     <span className="block max-w-56 truncate">
       {personName === null ? (
-        detail.label
+        (songTitle ?? detail.label)
       ) : (
         <ReplayMask>{personName}</ReplayMask>
       )}

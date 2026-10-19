@@ -11,9 +11,10 @@ import type {
   ChordChartUpdateInput,
   LyricsSearchResult,
 } from "@pcobooster/contracts/http/chord-charts";
+import type { SongLibrary } from "@pcobooster/contracts/http/songs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient, QueryFunctionContext } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 import { queryKeys } from "@/lib/query-keys";
 import { clearCachedSongOptionsForSong } from "@/lib/song-options-cache";
@@ -30,6 +31,34 @@ export const createChordChartSongQueryOptions = (songId: string) => ({
 
 export const useChordChartSong = (songId: string) =>
   useQuery<ChordChartSongOutput>(createChordChartSongQueryOptions(songId));
+
+const readCachedSongTitle = (
+  queryClient: QueryClient,
+  songId: string
+): string | null =>
+  queryClient.getQueryData<ChordChartSongOutput>(
+    queryKeys.chordChartSong(songId)
+  )?.song.title ??
+  queryClient
+    .getQueryData<SongLibrary>(queryKeys.songLibrary())
+    ?.songs.find((song) => song.id === songId)?.title ??
+  null;
+
+const noTitle = () => null;
+
+/** A song's title for breadcrumbs, once the song or the library has it. */
+export const useSongTitle = (songId: string | null): string | null => {
+  const queryClient = useQueryClient();
+  const subscribe = useCallback(
+    (onChange: () => void) => queryClient.getQueryCache().subscribe(onChange),
+    [queryClient]
+  );
+  const read = useCallback(
+    () => (songId === null ? null : readCachedSongTitle(queryClient, songId)),
+    [songId, queryClient]
+  );
+  return useSyncExternalStore(subscribe, read, noTitle);
+};
 
 /** A copy of the song read this recently when an arrangement opens counts as read on opening. */
 const READ_ON_OPEN_MS = 5000;

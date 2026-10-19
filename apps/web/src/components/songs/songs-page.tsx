@@ -1,6 +1,7 @@
 import { speculativeQuery } from "@pcobooster/client/query";
 import type { SongLibraryEntry } from "@pcobooster/contracts/http/songs";
 import { formatCalendarDateLabel } from "@pcobooster/planning-center-models/calendar";
+import { planningCenterSongUrl } from "@pcobooster/planning-center-models/song-detail";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ExternalLink, Plus, Search } from "lucide-react";
@@ -45,7 +46,6 @@ import {
 } from "@/lib/recent-songs";
 import type { RecentSong } from "@/lib/recent-songs";
 import {
-  planningCenterSongUrl,
   selectSongLibrary,
   songLibraryCutoff,
   songLibraryFilters,

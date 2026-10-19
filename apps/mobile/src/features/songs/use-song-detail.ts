@@ -1,3 +1,7 @@
+import {
+  activeFirst,
+  historyServiceTypeId,
+} from "@pcobooster/planning-center-models/song-detail";
 import { useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -6,12 +10,7 @@ import { useFeatures } from "../../app-shell/features";
 import { useProductClient } from "../../app-shell/queries";
 import { useVisibleQuery } from "../../app-shell/visible-queries";
 import { useClock } from "../../lib/environment";
-import {
-  activeFirst,
-  historyServiceTypeId,
-  songIdentity,
-  songScreenFailure,
-} from "./detail";
+import { songIdentity, songScreenFailure } from "./detail";
 import type { SongHistoryEntry } from "./detail";
 import type { RecentSong, SongLibraryEntry } from "./library";
 import { recentSongsQuery, rememberRecentSong, songsReads } from "./reads";

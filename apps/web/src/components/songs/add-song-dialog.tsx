@@ -165,7 +165,7 @@ export const AddSongDialog = ({
           rememberRecentSong(song);
           onOpenChange(false);
           void navigate({
-            to: "/songs/$songId",
+            to: "/songs/$songId/chart",
             params: { songId: song.id },
             search: { arrangement: arrangements[0]?.id },
           });
