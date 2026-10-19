@@ -31,3 +31,18 @@ bun scripts/cloudflare/builds-trial/manage.ts destroy-control
 Application cleanup refuses every stage outside the trial pattern. Control cleanup removes its runner, trigger, and dedicated credentials. The repository connection is shared and is retained. GitHub app authorization is also retained; removing it later requires an explicit account-level decision. Existing production/staging stacks and `.github/workflows` are not part of either cleanup stack.
 
 Do not promote this trial to production merely because a build is green. First inspect hosted check logs, deployment verification, duration, and cleanup behavior, then separately decide how to handle PR checks and production deployment ordering.
+
+## Verified result: October 19, 2026
+
+Cloudflare build `c102fab1-41c3-4cab-a7aa-7276ba15f1d0` succeeded for commit `f6bd58e94b78f480dd15a2df8f5d1231e99c0cf2`. It ran from 16:43:43 to 16:47:30 UTC (3m47s including initialization), with build caching disabled. Hosted logs recorded 3,565 passing tests, successful typechecking and frontend builds, all 13 Alchemy application resources created, and the expected SHA served through the web/API verification path.
+
+Two earlier attempts exposed configuration differences, now handled in code:
+
+- Account-owned tokens fail before checkout; use `UserApiToken` with account-scoped policies.
+- The default checkout lacked `origin/main`, and parallel package suites oversubscribed four cores. Fetch the required history and serialize package gates. All test assertions and timeouts remain unchanged.
+
+The trial application and control stack were both destroyed successfully after verification (13 and four resources respectively). Read-only checks confirmed no remaining trial Workers or registered build tokens. The repository connection and approved GitHub app installation remain available for future use. No active Builds trigger remains.
+
+No existing Actions files were changed and no trial commit was merged. An unrelated existing main workflow ran concurrently: GitHub Actions run `39285661204` deployed `def7c82fd09f9b30a3f920c2ad5849cc8a526196` to staging and production. Production's `/version` matched that main SHA, not the trial SHA. The trial only deployed `builds-trial-c102fab141c3`.
+
+This proves hosted Alchemy compatibility and teardown, not sustained availability, PR-check replacement, or production migration readiness. At roughly four minutes per run, [Workers Paid's 6,000 included monthly build minutes](https://developers.cloudflare.com/workers/ci-cd/builds/limits-and-pricing/) would cover approximately 1,500 similar runs across the account. Additional build time is $0.005/minute, about $0.02 for a similar run; this is a pricing estimate, not a measured invoice.
