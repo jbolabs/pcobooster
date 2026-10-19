@@ -428,24 +428,37 @@ const validationDiagnostic = (
       ? detail.slice(label.length + 1)
       : detail;
   return VALUE_FREE_VALIDATION_DETAIL.test(phrase)
-    ? detail.slice(0, 500)
+    ? phrase.slice(0, 500)
     : PRIVATE_VALIDATION_DETAIL;
 };
 
 /** Only value-free provider diagnostics, never reflected write text or raw response bodies. */
-export const listedValidationErrors = (body: JsonValue | undefined) =>
-  Option.match(decodeListedErrors(body), {
+export const listedValidationErrors = (
+  body: JsonValue | undefined,
+  sentAttributeNames: readonly string[]
+) => {
+  const sentNames = new Set(sentAttributeNames);
+  return Option.match(decodeListedErrors(body), {
     onNone: () => [],
     onSome: ({ errors }) =>
       errors.slice(0, 10).map(({ detail, source }) => {
         const name = rejectedAttribute(source);
         const attribute =
-          name !== undefined && DIAGNOSTIC_ATTRIBUTE.test(name)
+          name !== undefined &&
+          sentNames.has(name) &&
+          DIAGNOSTIC_ATTRIBUTE.test(name)
             ? name.slice(0, 100)
             : undefined;
-        return { attribute, detail: validationDiagnostic(detail, attribute) };
+        return {
+          attribute,
+          detail:
+            source !== undefined && attribute === undefined
+              ? PRIVATE_VALIDATION_DETAIL
+              : validationDiagnostic(detail, attribute),
+        };
       }),
   });
+};
 
 const isJsonObject = (value: JsonValue | undefined): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -500,7 +513,8 @@ const buildApiError = (
   status: number,
   responseBody: string,
   headers: ResponseHeaders,
-  method: string
+  method: string,
+  sentAttributeNames: readonly string[]
 ): PlanningCenterApiError => {
   let code: string | undefined;
   let details: JsonValue | undefined;
@@ -523,6 +537,7 @@ const buildApiError = (
     message,
     status,
     method,
+    sentAttributeNames,
     code,
     details,
     responseBody,
@@ -870,7 +885,8 @@ export class PlanningCenterCoreClient {
         response.status,
         responseBody,
         response.headers,
-        method
+        method,
+        Object.keys(context.sentAttributes ?? {})
       );
       if (error.status === 429) {
         accounting?.recordRateLimited();

@@ -33,27 +33,34 @@ const fetchMock = (): FetchMock => vi.fn<typeof globalThis.fetch>();
 describe(listedValidationErrors, () => {
   it("omits reflected church text and unknown provider wording, retaining safe field diagnostics", () => {
     expect(
-      listedValidationErrors({
-        errors: [
-          {
-            source: { parameter: "title" },
-            detail: "Private church title is already taken",
-          },
-          {
-            source: { parameter: "description" },
-            detail: "Description 'Private church notes' is invalid",
-          },
-          {
-            source: { parameter: "length" },
-            detail: "Length can not be longer than 24 hours",
-          },
-          { detail: "Unknown message with a person's name" },
-          {
-            source: { parameter: "Private church title" },
-            detail: "is invalid",
-          },
-        ],
-      })
+      listedValidationErrors(
+        {
+          errors: [
+            {
+              source: { parameter: "title" },
+              detail: "Private church title is already taken",
+            },
+            {
+              source: { parameter: "description" },
+              detail: "Description 'Private church notes' is invalid",
+            },
+            {
+              source: { parameter: "length" },
+              detail: "Length can not be longer than 24 hours",
+            },
+            { detail: "Unknown message with a person's name" },
+            {
+              source: { parameter: "Private church title" },
+              detail: "is invalid",
+            },
+            {
+              source: { parameter: "private_church_title" },
+              detail: "Private church title is invalid",
+            },
+          ],
+        },
+        ["title", "description", "length"]
+      )
     ).toStrictEqual([
       {
         attribute: "title",
@@ -63,32 +70,42 @@ describe(listedValidationErrors, () => {
         attribute: "description",
         detail: "Validation failed (detail omitted for privacy)",
       },
-      { attribute: "length", detail: "Length can not be longer than 24 hours" },
+      { attribute: "length", detail: "can not be longer than 24 hours" },
       {
         attribute: undefined,
         detail: "Validation failed (detail omitted for privacy)",
       },
-      { attribute: undefined, detail: "is invalid" },
+      {
+        attribute: undefined,
+        detail: "Validation failed (detail omitted for privacy)",
+      },
+      {
+        attribute: undefined,
+        detail: "Validation failed (detail omitted for privacy)",
+      },
     ]);
   });
 
   it("keeps only validation sources and details, with a safe missing-detail fallback", () => {
     expect(
-      listedValidationErrors({
-        errors: [
-          {
-            source: { parameter: "length" },
-            detail: "must be a number",
-            title: "ignored",
-            meta: { value: "private" },
-          },
-          {
-            source: { pointer: "/data/attributes/title" },
-            title: "private title",
-            value: "private",
-          },
-        ],
-      })
+      listedValidationErrors(
+        {
+          errors: [
+            {
+              source: { parameter: "length" },
+              detail: "must be a number",
+              title: "ignored",
+              meta: { value: "private" },
+            },
+            {
+              source: { pointer: "/data/attributes/title" },
+              title: "private title",
+              value: "private",
+            },
+          ],
+        },
+        ["title", "description", "length"]
+      )
     ).toStrictEqual([
       { attribute: "length", detail: "must be a number" },
       { attribute: "title", detail: "Validation failed" },
@@ -96,12 +113,15 @@ describe(listedValidationErrors, () => {
   });
 
   it("bounds diagnostic count and text before reporting", () => {
-    const diagnostics = listedValidationErrors({
-      errors: Array.from({ length: 12 }, () => ({
-        source: { parameter: "a".repeat(150) },
-        detail: `must be greater than ${"1".repeat(600)}`,
-      })),
-    });
+    const diagnostics = listedValidationErrors(
+      {
+        errors: Array.from({ length: 12 }, () => ({
+          source: { parameter: "a".repeat(150) },
+          detail: `must be greater than ${"1".repeat(600)}`,
+        })),
+      },
+      ["a".repeat(150)]
+    );
     expect(diagnostics).toHaveLength(10);
     expect(diagnostics[0]?.attribute).toHaveLength(100);
     expect(diagnostics[0]?.detail).toHaveLength(500);
@@ -370,6 +390,8 @@ describe(PlanningCenterCoreClient, () => {
       )
     ).resolves.toMatchObject({
       status: 422,
+      method: "POST",
+      sentAttributeNames: ["title", "song_id", "length"],
       message:
         "Planning Center API error: 422 - Length can not be longer than 24 hours",
     });

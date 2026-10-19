@@ -207,7 +207,10 @@ export const planningCenterFault = (
           return new InvalidInput({
             message,
             providerRejection: {
-              errors: listedValidationErrors(error.details),
+              errors: listedValidationErrors(
+                error.details,
+                error.sentAttributeNames ?? []
+              ),
             },
           });
         }
