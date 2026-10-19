@@ -845,3 +845,19 @@ describe("run sheet and time writes", () => {
     }
   });
 });
+
+describe("length validation regression", () => {
+  it("bounds a mobile duration draft before transport", async () => {
+    const { writer, items, bodies, calls } = await setup();
+    const item = items.find((value) => value.itemType === "item");
+    if (!item) {
+      throw new Error("Fixture needs a regular item");
+    }
+    const draft = new ItemDraft(item);
+    draft.change({ lengthText: "25:00:00" });
+    await expect(draft.commit(writer)).resolves.toBeNull();
+    expect(
+      JSON.parse(bodies[calls.indexOf("planItems.update")] ?? "{}")
+    ).toMatchObject({ length: 86_400 });
+  });
+});

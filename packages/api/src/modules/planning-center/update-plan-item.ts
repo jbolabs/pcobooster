@@ -38,17 +38,28 @@ export interface PreparedUpdatePlanItem {
 
 export const prepareUpdatePlanItem = (
   input: UpdatePlanItemInput,
-  loadSongOptions: LoadSongOptions
+  loadSongOptions: LoadSongOptions,
+  planItemsService: Pick<PlanningCenterPlanItemsService, "getPlanItem">
 ): Effect.Effect<PreparedUpdatePlanItem, PlanningCenterError> =>
-  Effect.map(
-    resolvePlanItemSongDefaults(input, loadSongOptions),
-    (resolvedInput) => ({
+  Effect.gen(function* prepareUpdate() {
+    // Existing clients omit header length. Read the provider type rather than trusting callers.
+    const current = yield* planItemsService.getPlanItem(
+      input.serviceTypeId,
+      input.planId,
+      input.itemId
+    );
+    const resolved = yield* resolvePlanItemSongDefaults(input, loadSongOptions);
+    const attributes = buildPlanItemAttributes(resolved);
+    if (current.data.attributes.item_type === "header") {
+      attributes.length = 0;
+    }
+    return {
       serviceTypeId: input.serviceTypeId,
       planId: input.planId,
       itemId: input.itemId,
-      attributes: buildPlanItemAttributes(resolvedInput),
-    })
-  );
+      attributes,
+    };
+  });
 
 export const commitUpdatePlanItem = (
   prepared: PreparedUpdatePlanItem,

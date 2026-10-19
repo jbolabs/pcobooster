@@ -4,6 +4,25 @@ import type {
   SongOptionSet,
 } from "@pcobooster/planning-center-models/types";
 
+/** Planning Center Item lengths are integer seconds, limited to 24 hours. */
+export const clampPlanItemLength = (length: number): number =>
+  Number.isFinite(length)
+    ? Math.min(86_400, Math.max(0, Math.floor(length)))
+    : 0;
+
+export const planItemLength = (
+  length: number | null | undefined,
+  itemType?: string
+): number | null | undefined => {
+  if (itemType === "header") {
+    return 0;
+  }
+  if (length === null || length === undefined) {
+    return length;
+  }
+  return clampPlanItemLength(length);
+};
+
 export interface DraftState {
   title: string;
   lengthText: string;
@@ -17,7 +36,8 @@ export const NONE_VALUE = "__none__";
 
 export const buildDraft = (item: PlanItem): DraftState => {
   const length = item.length ?? 0;
-  const normalizedLength = Math.max(0, Math.floor(length));
+  const normalizedLength =
+    item.itemType === "header" ? 0 : clampPlanItemLength(length);
   const hours = Math.floor(normalizedLength / 3600);
   const minutes = Math.floor((normalizedLength % 3600) / 60);
   const seconds = normalizedLength % 60;
@@ -69,17 +89,20 @@ export const parseLengthText = (value: string): ParsedLengthText => {
   }
 
   if (parts.length === 1) {
-    return { length: numericParts[0], error: null };
+    return { length: clampPlanItemLength(numericParts[0]), error: null };
   }
 
   if (parts.length === 2) {
     const [minutes, seconds] = numericParts;
-    return { length: minutes * 60 + seconds, error: null };
+    return { length: clampPlanItemLength(minutes * 60 + seconds), error: null };
   }
 
   if (parts.length === 3) {
     const [hours, minutes, seconds] = numericParts;
-    return { length: hours * 3600 + minutes * 60 + seconds, error: null };
+    return {
+      length: clampPlanItemLength(hours * 3600 + minutes * 60 + seconds),
+      error: null,
+    };
   }
 
   return { length: null, error: "Length must be in mm:ss or h:mm:ss format." };
