@@ -249,6 +249,73 @@ describe(PlanningCenterCoreClient, () => {
     });
   });
 
+  it("logs a rejected write with what was sent, keeping the church's text out", async () => {
+    // Planning Center's answer to a song item 86,401 seconds long (sandbox, 2026-10-18).
+    const rejection = {
+      errors: [
+        {
+          detail: "can not be longer than 24 hours",
+          status: "422",
+          title: "Validation Error",
+          source: { parameter: "length" },
+          meta: { resource: "PlanItem", associated_resources: [] },
+        },
+      ],
+    };
+    const fetch = fetchMock().mockResolvedValue(
+      jsonResponse(rejection, { status: 422 })
+    );
+    const { lines, capture: logger } = recordLogs();
+    await expect(
+      Effect.runPromise(
+        logger(
+          Effect.flip(
+            basicClient(fetch).fetch(
+              "/services/v2/service_types/1/plans/2/items",
+              {
+                method: "POST",
+                body: {
+                  data: {
+                    type: "Item",
+                    attributes: {
+                      title: "King of My Heart",
+                      song_id: "15813603",
+                      length: 86_401,
+                    },
+                  },
+                },
+              }
+            )
+          )
+        )
+      )
+    ).resolves.toMatchObject({
+      status: 422,
+      message:
+        "Planning Center API error: 422 - Length can not be longer than 24 hours",
+    });
+    expect(lines).toStrictEqual([
+      {
+        level: "warn",
+        message: "Planning Center rejected a write",
+        fields: {
+          endpoint: {
+            path: "/services/v2/service_types/1/plans/2/items",
+            queryKeys: [],
+          },
+          method: "POST",
+          status: 422,
+          errors: rejection,
+          sentAttributes: {
+            title: "<16 characters>",
+            song_id: "15813603",
+            length: 86_401,
+          },
+        },
+      },
+    ]);
+  });
+
   it("rejects an empty response where a JSON resource is required", async () => {
     const fetch = fetchMock().mockResolvedValue(
       new Response(null, { status: 204 })
