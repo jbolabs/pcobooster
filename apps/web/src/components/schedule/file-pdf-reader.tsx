@@ -5,12 +5,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { usePinchZoom } from "@/hooks/use-pinch-zoom";
 import { loadPdfDocument, PDF_PAGE_DARK_CLASS } from "@/lib/pdf-pages";
+import { MAX_PDF_ZOOM, MIN_PDF_ZOOM, stepZoom } from "@/lib/pdf-zoom";
 import { cn } from "@/lib/utils";
 
-const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 2;
-const ZOOM_STEP = 0.25;
+/** The page's CSS width at a zoom: the pane's width, up to 1000px, times the zoom. */
+const pageWidth = (paneWidth: number, zoom: number): string =>
+  `${String(Math.min(paneWidth, 1000) * zoom)}px`;
 
 export const FilePdfReader = ({ data }: { data: string }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -18,6 +20,8 @@ export const FilePdfReader = ({ data }: { data: string }) => {
   const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
   const [width, setWidth] = useState(0);
   const [zoom, setZoom] = useState(1);
+  /** The zoom under a pinch still in progress; the page is drawn at `zoom` until it ends. */
+  const [pinched, setPinched] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   useEffect((): (() => void) | undefined => {
@@ -105,8 +109,26 @@ export const FilePdfReader = ({ data }: { data: string }) => {
       rendering?.cancel();
     };
   }, [document, page, width, zoom]);
+  const shownZoom = pinched ?? zoom;
+  usePinchZoom({
+    scroller: container,
+    page: canvasRef,
+    zoom: shownZoom,
+    // Sized directly so the scroll can follow the fingers in the same frame.
+    resize: (next) => {
+      canvasRef.current?.style.setProperty(
+        "--pdf-width",
+        pageWidth(width, next)
+      );
+    },
+    onPreview: setPinched,
+    onCommit: (next) => {
+      setZoom(next);
+      setPinched(null);
+    },
+  });
   const pageStyle: CSSProperties & { "--pdf-width": string } = {
-    "--pdf-width": `${String(Math.min(width, 1000) * zoom)}px`,
+    "--pdf-width": pageWidth(width, shownZoom),
   };
   const pageCount = document?.numPages ?? null;
   return (
@@ -116,7 +138,7 @@ export const FilePdfReader = ({ data }: { data: string }) => {
           own width back into the measurement. */}
       <div
         ref={container}
-        className="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pb-16 contain-inline-size sm:px-6"
+        className="min-h-0 flex-1 touch-pan-x touch-pan-y overflow-auto overscroll-contain pb-16 contain-inline-size sm:px-6"
       >
         {state === "loading" ? (
           <div className="text-muted-foreground flex justify-center gap-2 py-12 text-sm">
@@ -175,23 +197,23 @@ export const FilePdfReader = ({ data }: { data: string }) => {
             variant="ghost"
             size="icon-sm"
             aria-label="Zoom out"
-            disabled={zoom <= MIN_ZOOM}
+            disabled={shownZoom <= MIN_PDF_ZOOM}
             onClick={() => {
-              setZoom((value) => Math.max(MIN_ZOOM, value - ZOOM_STEP));
+              setZoom((value) => stepZoom(value, "out"));
             }}
           >
             <Minus />
           </Button>
           <span className="min-w-10 text-center text-xs tabular-nums">
-            {Math.round(zoom * 100)}%
+            {Math.round(shownZoom * 100)}%
           </span>
           <Button
             variant="ghost"
             size="icon-sm"
             aria-label="Zoom in"
-            disabled={zoom >= MAX_ZOOM}
+            disabled={shownZoom >= MAX_PDF_ZOOM}
             onClick={() => {
-              setZoom((value) => Math.min(MAX_ZOOM, value + ZOOM_STEP));
+              setZoom((value) => stepZoom(value, "in"));
             }}
           >
             <Plus />

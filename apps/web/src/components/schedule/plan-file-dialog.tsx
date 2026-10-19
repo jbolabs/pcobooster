@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -72,9 +71,11 @@ const StepButton = ({
         <span className="truncate">{title}</span>
       </>
     );
+  // Phones fit both steps in one row, half each.
+  const phoneHalf = "max-sm:min-w-0 max-sm:flex-1";
   if (song === null) {
     return (
-      <Button type="button" variant="outline" disabled>
+      <Button type="button" variant="outline" className={phoneHalf} disabled>
         {content}
       </Button>
     );
@@ -87,6 +88,7 @@ const StepButton = ({
         <Button
           type="button"
           variant="outline"
+          className={phoneHalf}
           aria-label={`${shortcut.label}: ${title}`}
           onClick={() => {
             onStep(song);
@@ -174,6 +176,7 @@ export const PlanFileDialog = ({
   const position =
     index === -1 ? null : `${String(index + 1)} of ${String(songs.length)}`;
   const subtitle = subtitleOf(item, position);
+  const title = item.song?.title ?? item.title;
 
   return (
     <Dialog
@@ -188,15 +191,19 @@ export const PlanFileDialog = ({
         variant="viewer"
         finalFocus={finalFocus}
         onKeyDown={handleKeyDown}
+        // Phones close from the file's own bar, which also carries the title.
+        className="max-sm:[&>[data-slot=dialog-close]]:hidden"
       >
-        <div className="pt-safe-6 pb-safe-6 flex min-h-0 flex-1 flex-col gap-4 px-6">
-          <DialogHeader>
-            <DialogTitle>{item.song?.title ?? item.title}</DialogTitle>
+        {/* Phones give the file the screen: the header folds into the file's bar, and the
+            frame, padding, and gaps start at sm. */}
+        <div className="pt-safe pb-safe-2 sm:pt-safe-6 sm:pb-safe-6 flex min-h-0 flex-1 flex-col sm:gap-4 sm:px-6">
+          <DialogHeader className="max-sm:sr-only">
+            <DialogTitle>{title}</DialogTitle>
             {subtitle === "" ? null : (
               <DialogDescription>{subtitle}</DialogDescription>
             )}
           </DialogHeader>
-          <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border">
+          <div className="flex min-h-0 flex-1 overflow-hidden sm:rounded-xl sm:border">
             <PlanFilesWorkspace
               // A fresh workspace per item, opening on the counterpart of the file open last.
               key={item.id}
@@ -205,12 +212,16 @@ export const PlanFileDialog = ({
               items={[item]}
               item={item}
               embedded
+              heading={{ title, subtitle }}
               continueFrom={state.file}
               onChoose={remember}
             />
           </div>
           {index === -1 || songs.length < 2 ? null : (
-            <DialogFooter>
+            <nav
+              aria-label="Songs"
+              className="flex gap-2 px-2 pt-2 sm:justify-end sm:p-0"
+            >
               <StepButton
                 direction="previous"
                 song={neighbors.previous}
@@ -221,7 +232,7 @@ export const PlanFileDialog = ({
                 song={neighbors.next}
                 onStep={step}
               />
-            </DialogFooter>
+            </nav>
           )}
         </div>
       </DialogContent>

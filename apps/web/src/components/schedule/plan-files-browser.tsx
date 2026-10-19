@@ -12,7 +12,11 @@ import { useState } from "react";
 
 import { PlanFileIcon } from "@/components/schedule/plan-file-icon";
 import { paneBarClassName } from "@/components/schedule/plan-file-pane-bar";
-import { PlanFileViewer } from "@/components/schedule/plan-file-viewer";
+import {
+  PhoneHeading,
+  PlanFileViewer,
+} from "@/components/schedule/plan-file-viewer";
+import type { ViewerHeading } from "@/components/schedule/plan-file-viewer";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -65,6 +69,8 @@ interface Props {
 interface WorkspaceProps extends Props {
   /** Inside the file dialog, which owns the title and close button. */
   embedded?: boolean;
+  /** The dialog's song: phones show it, and a close button, in the pane's own bar. */
+  heading?: ViewerHeading;
   /** The file chosen on the song before, whose counterpart opens first. */
   continueFrom?: PlanFile;
   onChoose?: (file: PlanFile) => void;
@@ -81,6 +87,14 @@ const CloseButton = ({ className }: { className?: string }) => (
     <X />
   </DialogClose>
 );
+
+/** The file pane's close: always on its own, on phones only inside a dialog with a heading. */
+const paneClose = (embedded: boolean, heading: ViewerHeading | undefined) => {
+  if (!embedded) {
+    return <CloseButton />;
+  }
+  return heading ? <CloseButton className="sm:hidden" /> : null;
+};
 
 /** Desktop only: hides the list so the file fills the dialog. Phones already show one pane. */
 const ListToggle = ({
@@ -250,6 +264,7 @@ const ListSkeleton = () => (
 const FileList = ({
   title,
   embedded,
+  heading,
   files,
   items,
   item,
@@ -259,6 +274,7 @@ const FileList = ({
 }: {
   title: string;
   embedded: boolean;
+  heading: ViewerHeading | undefined;
   files: PlanFile[];
   items: PlanItem[];
   item: PlanItem | undefined;
@@ -284,6 +300,12 @@ const FileList = ({
           <CloseButton className="sm:hidden" />
         </div>
       )}
+      {embedded && heading ? (
+        <div className={cn(paneBarClassName({ atTop: false }), "sm:hidden")}>
+          <PhoneHeading heading={heading} />
+          <CloseButton />
+        </div>
+      ) : null}
       {files.length >= SEARCH_THRESHOLD ? (
         <InputGroup className="mx-3 mb-2 w-auto">
           <InputGroupAddon>
@@ -339,16 +361,24 @@ const NoFile = ({
   failed,
   empty,
   closable,
+  heading,
   onRetry,
 }: {
   failed: boolean;
   empty: boolean;
   closable: boolean;
+  heading: ViewerHeading | undefined;
   onRetry: () => void;
 }) => (
   <div className="flex flex-1 flex-col">
     {closable ? (
       <div className="flex justify-end p-2">
+        <CloseButton />
+      </div>
+    ) : null}
+    {heading ? (
+      <div className={cn(paneBarClassName({ atTop: false }), "sm:hidden")}>
+        <PhoneHeading heading={heading} />
         <CloseButton />
       </div>
     ) : null}
@@ -373,6 +403,7 @@ export const PlanFilesWorkspace = ({
   items,
   item,
   embedded = false,
+  heading,
   continueFrom,
   onChoose,
 }: WorkspaceProps) => {
@@ -425,6 +456,7 @@ export const PlanFilesWorkspace = ({
           <FileList
             title={title}
             embedded={embedded}
+            heading={heading}
             files={files}
             items={items}
             item={item}
@@ -445,6 +477,7 @@ export const PlanFilesWorkspace = ({
             failed={query.isError}
             empty={query.isSuccess}
             closable={!embedded}
+            heading={heading}
             onRetry={() => {
               void query.refetch();
             }}
@@ -458,7 +491,8 @@ export const PlanFilesWorkspace = ({
             onBack={showList ? back : undefined}
             insetStart={showList && !listOpen}
             atTop={!embedded}
-            trailing={embedded ? null : <CloseButton />}
+            heading={heading}
+            trailing={paneClose(embedded, heading)}
           />
         )}
       </div>

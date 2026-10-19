@@ -27,6 +27,34 @@ import {
   usePlanFileLink,
 } from "@/hooks/use-plan-files";
 import { planFileKind, youtubeEmbedUrl } from "@/lib/plan-files";
+import { cn } from "@/lib/utils";
+
+/** The song a viewer dialog is on, which phones show in the file's own bar. */
+export interface ViewerHeading {
+  readonly title: string;
+  /** Arrangement, key, and place in the set; may be empty. */
+  readonly subtitle: string;
+}
+
+/**
+ * Phones only: the dialog's title over the file and the song's details, so one bar holds
+ * what desktop splits between the dialog header and the file pane.
+ */
+export const PhoneHeading = ({
+  heading,
+  detail,
+}: {
+  heading: ViewerHeading;
+  /** Shown first on the second line, such as the open file's name. */
+  detail?: string;
+}) => (
+  <div aria-hidden className="min-w-0 flex-1 px-1 sm:hidden">
+    <p className="truncate text-sm font-semibold">{heading.title}</p>
+    <p className="text-muted-foreground truncate text-xs">
+      {[detail, heading.subtitle].filter(Boolean).join(" · ")}
+    </p>
+  </div>
+);
 
 const OpenOriginal = ({
   url,
@@ -237,6 +265,7 @@ export const PlanFileViewer = ({
   onBack,
   insetStart = false,
   atTop = true,
+  heading,
   trailing,
 }: {
   serviceTypeId: string;
@@ -248,6 +277,8 @@ export const PlanFileViewer = ({
   insetStart?: boolean;
   /** Whether the toolbar is the top of the screen; false below a dialog header. */
   atTop?: boolean;
+  /** The dialog's song, which phones show in this bar in place of the dialog header. */
+  heading?: ViewerHeading;
   /** Extra toolbar controls, such as the phone close button. */
   trailing?: ReactNode;
 }) => {
@@ -329,7 +360,13 @@ export const PlanFileViewer = ({
             <ArrowLeft />
           </Button>
         ) : null}
-        <h3 className="min-w-0 flex-1 truncate px-1 text-sm font-medium">
+        {heading ? <PhoneHeading heading={heading} detail={file.name} /> : null}
+        <h3
+          className={cn(
+            "min-w-0 flex-1 truncate px-1 text-sm font-medium",
+            heading && "max-sm:sr-only"
+          )}
+        >
           {file.name}
         </h3>
         {canOpen && url !== "" ? (
