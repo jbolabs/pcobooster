@@ -5,13 +5,11 @@ import {
   anchoredScrollDelta,
   doubleTapZoom,
   isDoubleTap,
+  isTap,
   pageFraction,
   pinchZoom,
 } from "@/lib/pdf-zoom";
 import type { Tap } from "@/lib/pdf-zoom";
-
-/** A finger that moves less than this between down and up still taps. */
-const TAP_SLOP_PX = 10;
 
 interface Point {
   readonly x: number;
@@ -143,15 +141,14 @@ export const usePinchZoom = ({
 
     const onMove = (event: TouchEvent) => {
       const touch = event.touches.item(0);
-      if (down !== null && touch !== null) {
-        const moved = Math.hypot(
-          touch.clientX - down.x,
-          touch.clientY - down.y
-        );
-        if (moved > TAP_SLOP_PX) {
-          down = null;
-          lastTap = null;
-        }
+      // A finger that slides is scrolling, not tapping.
+      if (
+        down !== null &&
+        touch !== null &&
+        !isTap(down, { time: down.time, ...pointOf(touch) })
+      ) {
+        down = null;
+        lastTap = null;
       }
       const pair = fingers(event.touches);
       if (pinch === null || pair === null) {
@@ -181,7 +178,13 @@ export const usePinchZoom = ({
         return;
       }
       const tap: Tap = { time: event.timeStamp, ...pointOf(touch) };
+      const tapped = isTap(down, tap);
       down = null;
+      if (!tapped) {
+        // A long hold breaks a double tap, like a scroll does.
+        lastTap = null;
+        return;
+      }
       if (!isDoubleTap(lastTap, tap)) {
         lastTap = tap;
         return;

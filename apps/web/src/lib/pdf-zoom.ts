@@ -11,6 +11,9 @@ const DOUBLE_TAP_ZOOM = 2;
 /** iOS counts taps up to 300ms apart, within a finger's width, as a double tap. */
 const DOUBLE_TAP_MS = 300;
 const DOUBLE_TAP_SLOP_PX = 24;
+/** A press held longer than this, or moved further than this, is not a tap. */
+const TAP_MS = 250;
+const TAP_SLOP_PX = 10;
 
 export const clampZoom = (zoom: number): number =>
   Math.min(MAX_PDF_ZOOM, Math.max(MIN_PDF_ZOOM, zoom));
@@ -44,6 +47,11 @@ export interface Tap {
   readonly x: number;
   readonly y: number;
 }
+
+/** Whether a finger that went down at `down` and lifted at `up` tapped. */
+export const isTap = (down: Tap, up: Tap): boolean =>
+  up.time - down.time <= TAP_MS &&
+  Math.hypot(up.x - down.x, up.y - down.y) <= TAP_SLOP_PX;
 
 export const isDoubleTap = (previous: Tap | null, next: Tap): boolean =>
   previous !== null &&

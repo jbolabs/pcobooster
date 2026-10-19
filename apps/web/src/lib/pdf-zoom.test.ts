@@ -4,6 +4,7 @@ import {
   anchoredScrollDelta,
   doubleTapZoom,
   isDoubleTap,
+  isTap,
   pageFraction,
   pinchZoom,
   stepZoom,
@@ -77,5 +78,22 @@ describe("double tap", () => {
     expect(isDoubleTap(first, { time: 1400, x: 100, y: 200 })).toBeFalsy();
     expect(isDoubleTap(first, { time: 1100, x: 160, y: 200 })).toBeFalsy();
     expect(isDoubleTap(null, { time: 1100, x: 100, y: 200 })).toBeFalsy();
+  });
+});
+
+describe(isTap, () => {
+  it("counts a quick press that stays put", () => {
+    const down = { time: 1000, x: 100, y: 200 };
+    expect(isTap(down, { time: 1120, x: 104, y: 203 })).toBeTruthy();
+  });
+
+  it("ignores a long hold, so a hold then a tap doesn't zoom", () => {
+    const down = { time: 1000, x: 100, y: 200 };
+    expect(isTap(down, { time: 3000, x: 100, y: 200 })).toBeFalsy();
+  });
+
+  it("ignores a press that slid into a scroll", () => {
+    const down = { time: 1000, x: 100, y: 200 };
+    expect(isTap(down, { time: 1100, x: 100, y: 240 })).toBeFalsy();
   });
 });
