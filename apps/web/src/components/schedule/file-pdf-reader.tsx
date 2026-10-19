@@ -106,10 +106,13 @@ export const FilePdfReader = ({ data }: { data: string }) => {
   };
   const pageCount = document?.numPages ?? null;
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* Sized by its pane alone (contain-inline-size): a zoomed page scrolls here instead of
+          widening every pane around it, which would re-center the controls and feed its
+          own width back into the measurement. */}
       <div
         ref={container}
-        className="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pb-16 sm:px-6"
+        className="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pb-16 contain-inline-size sm:px-6"
       >
         {state === "loading" ? (
           <div className="text-muted-foreground flex justify-center gap-2 py-12 text-sm">
