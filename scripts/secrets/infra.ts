@@ -8,9 +8,10 @@ const [command, ...args] = process.argv.slice(2);
 if (command === undefined) {
   throw new Error("Usage: secrets:infra <command> [arguments]");
 }
-const [preview, production] = await Promise.all([
+const [preview, production, builds] = await Promise.all([
   readKeychain("preview"),
   readKeychain("production"),
+  readKeychain("builds-control"),
 ]);
 const github = spawn("gh", ["auth", "token"], {
   stdio: ["ignore", "pipe", "pipe"],
@@ -36,6 +37,7 @@ const child = spawn(command, args, {
   stdio: "inherit",
   env: {
     ...environment,
+    BUILDS_GITHUB_APP_PRIVATE_KEY: builds.BUILDS_GITHUB_APP_PRIVATE_KEY,
     GITHUB_TOKEN: Buffer.concat(chunks).toString().trim(),
     CI_PREVIEW_ADMIN_EMAILS: preview.PCOBOOSTER_ADMIN_EMAILS,
     CI_PRODUCTION_ADMIN_EMAILS: production.PCOBOOSTER_ADMIN_EMAILS,

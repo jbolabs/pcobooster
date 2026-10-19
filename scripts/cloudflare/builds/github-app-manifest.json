@@ -1,0 +1,12 @@
+{
+  "name": "PCOBooster Cloudflare CI",
+  "url": "https://github.com/jbolabs/pcobooster",
+  "description": "Read-only repository access for Alchemy-managed Cloudflare CI freshness checks and preview lifecycle.",
+  "public": false,
+  "hook_attributes": {
+    "active": false,
+    "url": "https://pcobooster-builds-controller.jakebodea.workers.dev/webhook"
+  },
+  "default_permissions": { "contents": "read", "pull_requests": "read" },
+  "default_events": []
+}

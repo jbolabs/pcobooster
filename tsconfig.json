@@ -18,6 +18,9 @@
     "alchemy.posthog.ts",
     "alchemy.sandbox.ts",
     "alchemy.secrets.ts",
-    "packages/api/src/cloudflare.d.ts"
+    "packages/api/src/cloudflare.d.ts",
+    "alchemy.builds-trial.ts",
+    "alchemy.builds-trial-cleanup.ts",
+    "alchemy.builds.ts"
   ]
 }
