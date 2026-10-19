@@ -18,10 +18,10 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  ResponsivePopover,
+  ResponsivePopoverContent,
+  ResponsivePopoverTrigger,
+} from "@/components/ui/responsive-popover";
 
 /** The empty option: the setting inherits the organization's default in Services. */
 const DEFAULT_VALUE = "";
@@ -102,8 +102,8 @@ export const ChordChartLayoutPopover = ({
   };
 
   return (
-    <Popover>
-      <PopoverTrigger
+    <ResponsivePopover>
+      <ResponsivePopoverTrigger
         render={
           <Button
             variant="outline"
@@ -115,8 +115,12 @@ export const ChordChartLayoutPopover = ({
       >
         <Settings2 aria-hidden />
         <span className="max-sm:hidden">Formatting</span>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-80">
+      </ResponsivePopoverTrigger>
+      <ResponsivePopoverContent
+        title="Chart formatting"
+        align="end"
+        className="w-80"
+      >
         <div className="flex flex-col gap-3 p-4">
           <p className="text-sm font-medium">Text</p>
           <LayoutSelect
@@ -196,7 +200,7 @@ export const ChordChartLayoutPopover = ({
             }}
           />
         </div>
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 };

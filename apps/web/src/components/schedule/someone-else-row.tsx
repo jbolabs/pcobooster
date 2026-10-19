@@ -1,5 +1,5 @@
 import { getInitials } from "@pcobooster/planning-center-models/initials";
-import { CalendarPlus, Loader2, UserPlus } from "lucide-react";
+import { CalendarPlus, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,6 +19,7 @@ import {
   ResponsivePopoverTrigger,
 } from "@/components/ui/responsive-popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { usePeopleSearch } from "@/hooks/use-people-search";
 import type { PeopleSearchResult } from "@/hooks/use-people-search";
 import { useSchedulePlanPerson } from "@/hooks/use-schedule-plan-person";
@@ -93,7 +94,7 @@ const SomeoneElseResultRow = ({
         <ReplayMask>{person.fullName}</ReplayMask>
       </p>
       {isScheduling ? (
-        <Loader2 className="size-3.5 animate-spin" aria-hidden />
+        <Spinner className="size-3.5" aria-hidden />
       ) : (
         <CalendarPlus className="size-3.5 opacity-70" aria-hidden />
       )}

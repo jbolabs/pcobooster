@@ -1,5 +1,6 @@
 import { speculativeQuery } from "@pcobooster/client/query";
 import { isNonEmptyString } from "@pcobooster/planning-center-models/json";
+import { clampPlanItemLength } from "@pcobooster/planning-center-models/plan-item-draft";
 import type { DraftState } from "@pcobooster/planning-center-models/plan-item-draft";
 import {
   applyPlanItemDraft,
@@ -77,7 +78,7 @@ const toPlanItemServicePosition = (
 };
 
 const savedLengthOf = (length: number | null) =>
-  length !== null && !Number.isNaN(length) && length > 0 ? length : null;
+  length === null ? null : clampPlanItemLength(length) || null;
 
 const toErrorMessage = (error: Error, fallback: string) =>
   error instanceof Error ? error.message : fallback;
@@ -338,7 +339,11 @@ export const usePlanTabController = ({
             arrangementId: songOptions?.suggestedArrangementId ?? undefined,
             keyId: songOptions?.suggestedKeyId ?? undefined,
             selectedLayoutId: songOptions?.suggestedLayoutId ?? undefined,
-            length: suggestedArrangement?.length ?? undefined,
+            length:
+              suggestedArrangement?.length === undefined ||
+              suggestedArrangement.length === null
+                ? undefined
+                : clampPlanItemLength(suggestedArrangement.length),
           },
         })
       );

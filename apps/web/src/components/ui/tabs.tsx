@@ -17,7 +17,7 @@ const Tabs = ({
 );
 
 const tabsListVariants = cva(
-  "group/tabs-list text-muted-foreground inline-flex w-fit items-center justify-center rounded-full p-1 group-data-horizontal/tabs:h-9 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col group-data-vertical/tabs:rounded-2xl data-[variant=line]:rounded-none",
+  "group/tabs-list text-muted-foreground inline-flex w-fit items-center justify-center rounded-full p-1 group-data-horizontal/tabs:h-9 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col group-data-vertical/tabs:rounded-2xl data-[variant=line]:rounded-none pointer-coarse:group-data-horizontal/tabs:h-11",
   {
     variants: {
       variant: {

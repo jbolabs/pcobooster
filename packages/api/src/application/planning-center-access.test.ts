@@ -498,3 +498,66 @@ describe("PlanningCenterAccess", () => {
     ).toStrictEqual([]);
   });
 });
+
+describe("length validation regression", () => {
+  it.each(["pointer", "parameter"])(
+    "explains the provider 24 hour validation and retains only safe validation metadata (%j)",
+    (sourceKey) => {
+      expect(
+        toApplicationFault(
+          new PlanningCenterApiError({
+            status: 422,
+            message: "private title",
+            details: {
+              errors: [
+                {
+                  code: "too_long",
+                  detail: "can not be longer than 24 hours",
+                  source: {
+                    [sourceKey]:
+                      sourceKey === "pointer"
+                        ? "/data/attributes/length"
+                        : "length",
+                  },
+                },
+              ],
+            },
+          })
+        )
+      ).toMatchObject({
+        _tag: "InvalidInput",
+        message:
+          "This item's length is over 24 hours in Planning Center. Shorten it in Planning Center and try again.",
+        planningCenterValidation: {
+          code: "too_long",
+          detail: "can not be longer than 24 hours",
+          field: "length",
+        },
+      });
+    }
+  );
+});
+
+describe("Planning Center validation privacy", () => {
+  it("never exposes arbitrary provider messages or pointers as analytics metadata", () => {
+    const result = toApplicationFault(
+      new PlanningCenterApiError({
+        status: 422,
+        message: "private@example.com",
+        details: {
+          errors: [
+            {
+              code: "private@example.com",
+              detail: "Private item title",
+              source: { pointer: "/private/name" },
+            },
+          ],
+        },
+      })
+    );
+    expect(result).toMatchObject({
+      _tag: "InvalidInput",
+      planningCenterValidation: undefined,
+    });
+  });
+});

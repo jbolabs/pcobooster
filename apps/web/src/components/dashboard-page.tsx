@@ -4,7 +4,7 @@ import type { Plan } from "@pcobooster/planning-center-models/types";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -32,6 +32,7 @@ import {
 import { Item } from "@/components/ui/item";
 import { MiddleTruncate } from "@/components/ui/middle-truncate";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useDashboardController } from "@/hooks/use-dashboard-controller";
 import { useOrganizationTimeZone } from "@/hooks/use-organization-timezone";
@@ -418,7 +419,7 @@ const PlanStepButton = ({
         }}
       >
         {stepper.pending === direction ? (
-          <LoaderCircle className="size-4 animate-spin" />
+          <Spinner />
         ) : (
           <Icon className="size-4" />
         )}

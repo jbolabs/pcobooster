@@ -95,14 +95,14 @@ const setup = async (
 const PLACEHOLDER_IN_BODY = /"(?:optimistic|pending)-/u;
 
 describe("run sheet and time writes", () => {
-  it("refreshes warm song history and options after a run-sheet edit", async () => {
+  it("refreshes a warm song schedule and options after a run-sheet edit", async () => {
     const timer = makeManualTimer();
     const { writer, items, cache, context } = await setup(
       undefined,
       timer.timer
     );
     let saved = "C";
-    const observers = ["songs.history", "songs.options"].map(
+    const observers = ["songs.schedule", "songs.options"].map(
       (name) =>
         new QueryObserver(cache, {
           queryKey: [context.scope, name, "song-1"],
@@ -843,5 +843,21 @@ describe("run sheet and time writes", () => {
     for (const unsubscribe of watching) {
       unsubscribe();
     }
+  });
+});
+
+describe("length validation regression", () => {
+  it("bounds a mobile duration draft before transport", async () => {
+    const { writer, items, bodies, calls } = await setup();
+    const item = items.find((value) => value.itemType === "item");
+    if (!item) {
+      throw new Error("Fixture needs a regular item");
+    }
+    const draft = new ItemDraft(item);
+    draft.change({ lengthText: "25:00:00" });
+    await expect(draft.commit(writer)).resolves.toBeNull();
+    expect(
+      JSON.parse(bodies[calls.indexOf("planItems.update")] ?? "{}")
+    ).toMatchObject({ length: 86_400 });
   });
 });

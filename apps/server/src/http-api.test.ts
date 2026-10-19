@@ -540,7 +540,14 @@ describe("chordCharts.song (a flagged read with a path param)", () => {
 
     expect(getSong).toHaveBeenCalledExactlyOnceWith("song-1");
     expect(charts).toStrictEqual({
-      song: { id: "song-1", title: "Amazing Grace", author: "John Newton" },
+      song: {
+        id: "song-1",
+        title: "Amazing Grace",
+        author: "John Newton",
+        ccliNumber: null,
+        copyright: null,
+        notes: null,
+      },
       arrangements: [],
     });
   });

@@ -92,13 +92,16 @@ const itemVariants = cva(
         outline: "border-border dark:border-input dark:bg-card",
         muted:
           "bg-muted/50 dark:border-border/30 dark:bg-secondary border-transparent",
+        /** The row that's shown or chosen in a list of options, such as the current arrangement. */
+        selected:
+          "bg-muted [a]:hover:bg-muted [button]:hover:bg-muted border-transparent font-medium",
       },
       size: {
         default: "gap-3.5 px-4 py-3.5",
-        sm: "gap-3.5 px-3.5 py-3",
-        xs: "gap-2.5 px-3 py-2.5 in-data-[slot=dropdown-menu-content]:p-0",
+        sm: "gap-3.5 px-3.5 py-3 pointer-coarse:min-h-11",
+        xs: "gap-2.5 px-3 py-2.5 in-data-[slot=dropdown-menu-content]:p-0 pointer-coarse:min-h-11",
         /** Dense rows inside cards, such as lineup positions and people. */
-        row: "min-h-10 gap-2 rounded-lg px-1.5 py-1",
+        row: "min-h-10 gap-2 rounded-lg px-1.5 py-1 pointer-coarse:min-h-11",
       },
     },
     defaultVariants: {

@@ -1,12 +1,12 @@
 import {
   formatCalendarDateLabel,
   formatCalendarDayInTimeZone,
+  orgCalendarDaysBetween,
 } from "./calendar";
 import {
-  formatCompactAgo,
+  formatCompactDays,
   songHistoryCountLabel,
   summarizeSongHistory,
-  tempoLabel,
 } from "./song-library";
 import type { ArrangementOption, KeyOption } from "./types";
 
@@ -128,63 +128,84 @@ export const historyDateLabel = (
     sameOrgYear(date, now, timeZone) ? "weekdayMonthDay" : "monthDayYear"
   );
 
-/** One fact on the song's summary. */
-export type SongFact =
-  | {
-      readonly kind: "value";
-      readonly label: string;
-      readonly value: string;
-      readonly caption: string | null;
-      readonly accessibilityValue: string;
-    }
-  | { readonly kind: "keys"; readonly label: string; readonly keys: string[] };
+/**
+ * How long ago a service was, in the congregation's calendar days: "Today", "Yesterday", then
+ * "3d ago", "2w ago".
+ */
+export const sungAgoLabel = (
+  date: Date,
+  now: Date,
+  timeZone: string
+): string => {
+  const days = orgCalendarDaysBetween(date, now, timeZone);
+  if (days <= 0) {
+    return "Today";
+  }
+  if (days === 1) {
+    return "Yesterday";
+  }
+  return `${formatCompactDays(days)} ago`;
+};
+
+/** One line of the song's summary: a label, its value, and a muted caption. */
+export interface SongFact {
+  readonly label: string;
+  readonly value: string;
+  readonly caption: string | null;
+  readonly accessibilityValue: string;
+}
 
 /**
- * Last sung, next planned, how often in the past year (and where), and the keys it was sung in,
- * counted from `now`.
+ * Last sung, next planned (and where), and how often in the past year (and in which keys),
+ * counted from `now`. A truncated history read only its newest page, so its count is a floor:
+ * "100+ times".
  */
 export const songFacts = (
   history: readonly SongHistoryEntry[],
   now: Date,
-  timeZone: string
+  timeZone: string,
+  truncated: boolean
 ): SongFact[] => {
-  const summary = summarizeSongHistory(history, now, null);
+  // The same split as the page's Upcoming and Past year rows.
   const { upcoming, past } = splitSongHistory(history, now);
-  const counts = serviceTypeCounts(past);
-  const { last } = summary;
+  const [last] = past;
+  const [next] = upcoming;
+  // Keys it was sung in: past plans only, not ones still ahead.
+  const sungKeys = [
+    ...new Set(
+      past.flatMap((entry) =>
+        entry.startingKey === null ? [] : [entry.startingKey]
+      )
+    ),
+  ];
   const lastSung: SongFact =
-    last === null
+    last === undefined
       ? {
-          kind: "value",
           label: "Last sung",
           value: "Not in the past year",
           caption: null,
           accessibilityValue: "Not in the past year",
         }
       : {
-          kind: "value",
           label: "Last sung",
           value: compactDate(last.sortDate, now, timeZone),
-          caption: `${formatCompactAgo(last.sortDate, now)} ago`,
+          caption: sungAgoLabel(last.sortDate, now, timeZone),
           accessibilityValue: formatCalendarDateLabel(
             last.sortDate,
             timeZone,
             "weekdayMonthDayYear"
           ),
         };
-  const [next] = upcoming;
   const nextPlanned: SongFact =
     next === undefined
       ? {
-          kind: "value",
-          label: "Next planned",
+          label: "Next",
           value: "Not planned",
           caption: null,
           accessibilityValue: "Not planned",
         }
       : {
-          kind: "value",
-          label: "Next planned",
+          label: "Next",
           value: compactDate(next.sortDate, now, timeZone),
           caption: next.serviceTypeName === "" ? null : next.serviceTypeName,
           accessibilityValue: formatCalendarDateLabel(
@@ -193,36 +214,32 @@ export const songFacts = (
             "weekdayMonthDayYear"
           ),
         };
-  const times =
-    summary.timesThisYear === 1 ? "Once" : `${summary.timesThisYear} times`;
-  const caption =
-    counts.length > 1
-      ? counts
-          .slice(0, 2)
-          .map(({ name, count }) => `${count} at ${name}`)
-          .join(", ")
-      : (counts[0]?.name ?? null);
+  let times = `${past.length} times`;
+  if (truncated) {
+    times = `${past.length}+ times`;
+  } else if (past.length === 1) {
+    times = "Once";
+  }
   return [
     lastSung,
     nextPlanned,
     {
-      kind: "value",
       label: "Past year",
       value: times,
-      caption,
+      caption: sungKeys.length === 0 ? null : `Sung in ${sungKeys.join(", ")}`,
       accessibilityValue: times,
     },
-    { kind: "keys", label: "Keys", keys: summary.keys },
   ];
 };
 
 /** "Sung 12 times in the past year · 10 at Sunday Gathering, 2 at Youth Night". */
 export const historyCountLine = (
   history: readonly SongHistoryEntry[],
-  now: Date
+  now: Date,
+  truncated: boolean
 ): string => {
   const summary = summarizeSongHistory(history, now, null);
-  const label = songHistoryCountLabel(summary, null);
+  const label = songHistoryCountLabel(summary, null, truncated);
   const counts = serviceTypeCounts(splitSongHistory(history, now).past);
   if (counts.length === 0) {
     return label;
@@ -250,12 +267,58 @@ export const formatLength = (seconds: number): string | null => {
     : `${minutes}:${rest}`;
 };
 
+/** An arrangement's length, tempo, and meter, as Planning Center has them. */
+export interface ArrangementTiming {
+  /** Seconds. */
+  readonly length: number | null;
+  readonly bpm: number | null;
+  readonly meter: string | null;
+}
+
+/** One part of an arrangement's facts line: "4:13", "70" with its unit "bpm", "4/4". */
+export interface ArrangementFact {
+  readonly label: "Length" | "Tempo" | "Meter";
+  readonly value: string;
+  readonly unit: string | null;
+}
+
+/** Length, tempo, then meter; a fact Planning Center doesn't set is left out. */
+export const arrangementFacts = (
+  arrangement: ArrangementTiming
+): ArrangementFact[] => {
+  const facts: ArrangementFact[] = [];
+  const length =
+    arrangement.length === null ? null : formatLength(arrangement.length);
+  if (length !== null) {
+    facts.push({ label: "Length", value: length, unit: null });
+  }
+  if (arrangement.bpm !== null && arrangement.bpm > 0) {
+    facts.push({ label: "Tempo", value: String(arrangement.bpm), unit: "bpm" });
+  }
+  const meter = arrangement.meter?.trim() ?? "";
+  if (meter !== "") {
+    facts.push({ label: "Meter", value: meter, unit: null });
+  }
+  return facts;
+};
+
+/** "4:13 · 70 bpm · 4/4", or null when Planning Center sets none of them. */
+export const arrangementFactsLine = (
+  arrangement: ArrangementTiming
+): string | null => {
+  const facts = arrangementFacts(arrangement).map((fact) =>
+    fact.unit === null ? fact.value : `${fact.value} ${fact.unit}`
+  );
+  return facts.length === 0 ? null : facts.join(" · ");
+};
+
 /** An arrangement as the chord chart read names it, before `songs.options` answers. */
-export interface ChartArrangementSummary {
+export interface ChartArrangementSummary extends ArrangementTiming {
   readonly id: string;
   readonly name: string;
   readonly archived: boolean;
   readonly keys: readonly KeyOption[];
+  readonly sequence: readonly string[];
 }
 
 /** What an arrangement row shows, from `songs.options` or, until it loads, the chart read. */
@@ -264,7 +327,7 @@ export interface ArrangementRowData {
   readonly name: string;
   readonly archived: boolean;
   readonly keys: readonly KeyOption[];
-  /** "74 bpm · 4/4 · 5:00", or null when Planning Center sets none of them. */
+  /** "5:00 · 74 bpm · 4/4", or null when Planning Center sets none of them. */
   readonly facts: string | null;
   readonly sequence: readonly string[];
 }
@@ -272,35 +335,248 @@ export interface ArrangementRowData {
 export const arrangementDisplayName = (name: string): string =>
   name === "" ? "Untitled arrangement" : name;
 
+const toArrangementRow = (
+  arrangement: ChartArrangementSummary
+): ArrangementRowData => ({
+  id: arrangement.id,
+  name: arrangementDisplayName(arrangement.name),
+  archived: arrangement.archived,
+  keys: arrangement.keys,
+  facts: arrangementFactsLine(arrangement),
+  sequence: arrangement.sequence,
+});
+
 export const arrangementRows = (
   options?: readonly ArrangementOption[],
   charts?: readonly ChartArrangementSummary[]
-): ArrangementRowData[] => {
-  if (options !== undefined && options.length > 0) {
-    return activeFirst(options).map((option) => {
-      const length =
-        option.length === null ? null : formatLength(option.length);
-      const parts = [tempoLabel(option), length].filter(
-        (part): part is string => part !== null && part !== ""
-      );
-      return {
-        id: option.id,
-        name: arrangementDisplayName(option.name),
-        archived: option.archived,
-        keys: option.keys,
-        facts: parts.length === 0 ? null : parts.join(" · "),
-        sequence: option.sequence,
-      };
-    });
+): ArrangementRowData[] =>
+  activeFirst(
+    options !== undefined && options.length > 0 ? options : (charts ?? [])
+  ).map(toArrangementRow);
+
+/** "G", or "A · Jordan's key" when the key has its own name. */
+export const keyLabel = (key: KeyOption): string => {
+  const name = key.name.trim();
+  const start = key.startingKey ?? "";
+  if (name === "" || name === "Original" || name === start) {
+    return start === "" ? "No key" : start;
   }
-  return activeFirst(charts ?? []).map((chart) => ({
-    id: chart.id,
-    name: arrangementDisplayName(chart.name),
-    archived: chart.archived,
-    keys: chart.keys,
-    facts: null,
-    sequence: [],
-  }));
+  return start === "" ? name : `${start} · ${name}`;
+};
+
+/** "Ends in B" when the key changes by the end of the song. */
+export const keyEndingLabel = (key: KeyOption): string | null =>
+  key.endingKey === null ||
+  key.endingKey === "" ||
+  key.endingKey === key.startingKey
+    ? null
+    : `Ends in ${key.endingKey}`;
+
+/** The chosen key on the chart: "G", or "G → A" when it ends somewhere else. */
+export const keyContextLabel = (key: KeyOption): string => {
+  const start = key.startingKey ?? keyLabel(key);
+  return keyEndingLabel(key) === null ? start : `${start} → ${key.endingKey}`;
+};
+
+/** The primary chart action: "Chart in G", or "Chart" for the lyrics sheet. */
+export const chartActionLabel = (key: KeyOption | null): string => {
+  if (key === null) {
+    return "Chart";
+  }
+  const start = key.startingKey ?? "";
+  return start === "" ? `Chart in ${keyLabel(key)}` : `Chart in ${start}`;
+};
+
+/** Why a chart has no PDF yet: "No chart in G yet", or the lyrics sheet's. */
+export const missingChartLabel = (key: KeyOption | null): string =>
+  key === null
+    ? "No lyrics sheet yet"
+    : `No chart in ${key.startingKey ?? keyLabel(key)} yet`;
+
+/** "70 bpm · G, A": what tells arrangements apart in a picker. */
+export const arrangementPickerDetail = (
+  arrangement: Pick<ChartArrangementSummary, "bpm" | "keys">
+): string => {
+  const starts = [
+    ...new Set(
+      arrangement.keys.flatMap((key) =>
+        key.startingKey === null || key.startingKey === ""
+          ? []
+          : [key.startingKey]
+      )
+    ),
+  ];
+  return [
+    arrangement.bpm === null || arrangement.bpm <= 0
+      ? null
+      : `${arrangement.bpm} bpm`,
+    starts.length === 0 ? null : starts.join(", "),
+  ]
+    .filter((part) => part !== null)
+    .join(" · ");
+};
+
+/** What a song page's search asks for: `?arrangement=&key=`. */
+export interface SongPageSearch {
+  readonly arrangement?: string | undefined;
+  readonly key?: string | undefined;
+}
+
+export interface SongPageSelection<
+  Arrangement extends ChartArrangementSummary,
+> {
+  /** Active first, then archived. */
+  readonly arrangements: readonly Arrangement[];
+  /** Null when the song has no arrangements. */
+  readonly arrangement: Arrangement | null;
+  /** Null for the lyrics sheet: the arrangement has no keys. */
+  readonly key: KeyOption | null;
+  /** The search naming what is shown. */
+  readonly search: SongPageSearch;
+  /** The asked-for search names something else, so the URL should be replaced with `search`. */
+  readonly stale: boolean;
+}
+
+/**
+ * The arrangement and key a song page shows: the ones the URL names, else the first active
+ * arrangement (the first archived one when all are) and its first key.
+ */
+export const songPageSelection = <Arrangement extends ChartArrangementSummary>(
+  arrangements: readonly Arrangement[],
+  requested: SongPageSearch
+): SongPageSelection<Arrangement> => {
+  const ordered = activeFirst(arrangements);
+  const arrangement =
+    ordered.find((candidate) => candidate.id === requested.arrangement) ??
+    ordered[0] ??
+    null;
+  const key =
+    arrangement?.keys.find((candidate) => candidate.id === requested.key) ??
+    arrangement?.keys[0] ??
+    null;
+  const search: SongPageSearch = {
+    arrangement: arrangement?.id,
+    key: key?.id,
+  };
+  return {
+    arrangements: ordered,
+    arrangement,
+    key,
+    search,
+    stale:
+      search.arrangement !== requested.arrangement ||
+      search.key !== requested.key,
+  };
+};
+
+/** Copyright text that already says what it is, or isn't a bare year and holder. */
+const SELF_DESCRIBED_COPYRIGHT =
+  /public domain|words:|music:|©|\(c\)|copyright/iu;
+const BARE_COPYRIGHT_START = /^[\p{L}\p{N}]/u;
+
+/**
+ * The copyright as Planning Center has it, marked "©" only when it is a bare year and holder
+ * ("2013 Hillsong Music"). Text that already says what it is ("Public Domain", "Words: …",
+ * "Copyright …") stays as written.
+ */
+export const copyrightLabel = (copyright: string): string => {
+  const text = copyright.trim();
+  if (SELF_DESCRIBED_COPYRIGHT.test(text) || !BARE_COPYRIGHT_START.test(text)) {
+    return text;
+  }
+  return `© ${text}`;
+};
+
+/**
+ * The song's credits, each shown in full: writers, "CCLI 6605236", and the copyright. Missing
+ * and repeated parts are skipped; the page joins them with " · ".
+ */
+export const songCreditParts = (song: {
+  readonly author: string;
+  readonly ccliNumber: number | null;
+  readonly copyright: string | null;
+}): string[] => {
+  const parts: string[] = [];
+  const author = song.author.trim();
+  if (author !== "") {
+    parts.push(author);
+  }
+  if (song.ccliNumber !== null) {
+    parts.push(`CCLI ${song.ccliNumber}`);
+  }
+  const copyright = song.copyright?.trim() ?? "";
+  if (copyright !== "") {
+    parts.push(copyrightLabel(copyright));
+  }
+  // A writer field that repeats the copyright ("Public Domain" in both) shows once.
+  return [...new Set(parts)];
+};
+
+/** A group of files on the song page: the arrangement's own, or one key's. */
+export interface SongFileGroup<File> {
+  readonly id: string;
+  /** "Arrangement", a key ("G"), or "Other keys". */
+  readonly label: string;
+  readonly files: readonly File[];
+}
+
+/**
+ * The arrangement's own files first, then each key's in the arrangement's key order. With two
+ * or more keys, only the chosen key's files show beside the arrangement's, so a player sees
+ * one key's stems rather than every key's.
+ */
+export const songFileGroups = <File extends { readonly keyId: string | null }>(
+  files: readonly File[],
+  keys: readonly KeyOption[],
+  chosenKeyId: string | null
+): SongFileGroup<File>[] => {
+  const scoped = keys.length > 1;
+  const shownKeys = scoped
+    ? keys.filter((key) => key.id === chosenKeyId)
+    : keys;
+  const known = new Set(keys.map((key) => key.id));
+  const groups: SongFileGroup<File>[] = [
+    {
+      id: "arrangement",
+      label: "Arrangement",
+      files: files.filter((file) => file.keyId === null),
+    },
+    ...shownKeys.map((key) => ({
+      id: key.id,
+      label: keyLabel(key),
+      files: files.filter((file) => file.keyId === key.id),
+    })),
+    {
+      id: "other",
+      label: "Other keys",
+      files: files.filter(
+        (file) => file.keyId !== null && !known.has(file.keyId)
+      ),
+    },
+  ];
+  return groups.filter((group) => group.files.length > 0);
+};
+
+/** One of the song page's notes: the arrangement's (band directions) first, then the song's. */
+export interface SongNote {
+  readonly source: "Arrangement" | "Song";
+  readonly text: string;
+}
+
+export const songNotes = (
+  arrangement: { readonly notes: string | null } | null,
+  song: { readonly notes: string | null }
+): SongNote[] => {
+  const notes: SongNote[] = [];
+  const arrangementText = arrangement?.notes?.trim() ?? "";
+  if (arrangementText !== "") {
+    notes.push({ source: "Arrangement", text: arrangementText });
+  }
+  const songText = song.notes?.trim() ?? "";
+  if (songText !== "") {
+    notes.push({ source: "Song", text: songText });
+  }
+  return notes;
 };
 
 /**

@@ -84,7 +84,7 @@ const useRememberSong = (
 };
 
 /**
- * One song's reads (Swift `SongDetailModel`): where and when it was sung (`songs.history`), its
+ * One song's reads (Swift `SongDetailModel`): where and when it was sung (`songs.schedule`), its
  * arrangements with keys, tempo, meter, length, and sequence (`songs.options`), and with the
  * `chordCharts` flag its charts (`chordCharts.song`). The library's cached row or this device's
  * recent list names the song at once. Facts only.
@@ -98,7 +98,7 @@ export const useSongDetail = (songId: string) => {
   const now = useMemo(() => clock.now(), [clock]);
   const chartsEnabled = features.chordCharts;
 
-  const history = useVisibleQuery(songsReads.history(context, songId));
+  const history = useVisibleQuery(songsReads.schedule(context, songId));
   const chart = useVisibleQuery({
     ...songsReads.chart(context, songId),
     enabled: chartsEnabled,
@@ -116,7 +116,7 @@ export const useSongDetail = (songId: string) => {
     context,
     cache,
     songId,
-    history.data,
+    history.data?.entries,
     historySettled
   );
   const identity = songIdentity(

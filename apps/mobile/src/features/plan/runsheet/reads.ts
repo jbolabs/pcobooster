@@ -32,16 +32,14 @@ export const songReads = {
       },
       staleTime: 60_000,
     }),
-  history: ({ client, scope }: PlanReadContext, songId: string) =>
+  /** `songs.schedule`: the song's plans, and whether Planning Center had more than were read. */
+  schedule: ({ client, scope }: PlanReadContext, songId: string) =>
     queryOptions({
-      queryKey: [scope, "songs.history", songId],
-      queryFn: async (context) => {
-        const targetClientNative3 = client;
-        const inputNative3 = { songId };
-        return await callForQuery(context, targetClientNative3, (api) =>
-          api.songs.history({ params: inputNative3 })
-        );
-      },
+      queryKey: [scope, "songs.schedule", songId] as const,
+      queryFn: async (context) =>
+        await callForQuery(context, client, (api) =>
+          api.songs.schedule({ params: { songId } })
+        ),
       staleTime: 60_000,
     }),
 };

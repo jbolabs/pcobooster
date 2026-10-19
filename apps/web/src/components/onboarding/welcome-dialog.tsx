@@ -515,7 +515,7 @@ export const WelcomeDialog = ({
             {isFirst ? null : (
               <Button
                 variant="outline"
-                className="max-md:order-last max-md:h-11"
+
                 onClick={() => {
                   go(-1);
                 }}
@@ -533,14 +533,14 @@ export const WelcomeDialog = ({
               <>
                 <Button
                   variant="outline"
-                  className="max-md:order-last max-md:h-11"
+
                   onClick={close}
                 >
                   Start exploring
                 </Button>
                 <Button
                   ref={nextButtonRef}
-                  className="max-md:h-11"
+
                   onClick={() => {
                     setStep(0);
                     onStartTour();
@@ -552,7 +552,7 @@ export const WelcomeDialog = ({
             ) : (
               <Button
                 ref={nextButtonRef}
-                className="max-md:h-11"
+
                 onClick={() => {
                   go(1);
                 }}

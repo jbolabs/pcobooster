@@ -53,6 +53,7 @@ import songsAttachments from "./fixtures/songs.attachments.json";
 import songsHistory from "./fixtures/songs.history.json";
 import songsLibrary from "./fixtures/songs.library.json";
 import songsOptions from "./fixtures/songs.options.json";
+import songsSchedule from "./fixtures/songs.schedule.json";
 import songsSearch from "./fixtures/songs.search.json";
 import songsSuggestions from "./fixtures/songs.suggestions.json";
 
@@ -106,6 +107,7 @@ export const fixtureFiles = {
   "songs.history": songsHistory,
   "songs.library": songsLibrary,
   "songs.options": songsOptions,
+  "songs.schedule": songsSchedule,
   "songs.search": songsSearch,
   "songs.suggestions": songsSuggestions,
 };

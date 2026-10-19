@@ -14,14 +14,14 @@ import { createContext, use, useCallback, useMemo, useState } from "react";
 import { SidebarNavIcon } from "@/components/sidebar-nav-icon";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogClose,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { useBrowserStorage } from "@/hooks/use-browser-storage";
 import { usePlanningCenterAccess } from "@/hooks/use-planning-center-access";
 import type { PlanningCenterAccessState } from "@/hooks/use-planning-center-access";
@@ -125,41 +125,48 @@ const AccessReviewDialog = ({
 }) => {
   const restricted = hasRestrictedAccess(features);
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Your Planning Center access</DialogTitle>
-          <DialogDescription>
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>
+            Your Planning Center access
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             {restricted
               ? "pcobooster.com can only do what your Planning Center permissions allow. Some of it won't work for you yet."
               : "Your Planning Center permissions let you use everything here."}
-          </DialogDescription>
-        </DialogHeader>
-        {status === "ready" ? null : (
-          <p className="text-muted-foreground text-sm">
-            {status === "error"
-              ? "Planning Center didn’t answer, so your permissions couldn’t be checked. Try again in a moment."
-              : "Checking your permissions…"}
-          </p>
-        )}
-        {status === "ready" ? (
-          <ul className="divide-border/60 -my-1 divide-y">
-            {features.map((entry) => (
-              <FeatureAccessRow key={entry.feature} entry={entry} />
-            ))}
-          </ul>
-        ) : null}
-        {restricted ? (
-          <p className="text-muted-foreground text-xs">
-            Permissions are set in Planning Center, in each person’s Services
-            and People settings. Changes show up here within a few minutes.
-          </p>
-        ) : null}
-        <DialogFooter>
-          <DialogClose render={<Button />}>Got it</DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        {/* Phone sheets have no padding of their own; the header and footer bring theirs. */}
+        <div className="flex flex-col gap-4 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4">
+          {status === "ready" ? null : (
+            <p className="text-muted-foreground text-sm">
+              {status === "error"
+                ? "Planning Center didn’t answer, so your permissions couldn’t be checked. Try again in a moment."
+                : "Checking your permissions…"}
+            </p>
+          )}
+          {status === "ready" ? (
+            <ul className="divide-border/60 -my-1 divide-y">
+              {features.map((entry) => (
+                <FeatureAccessRow key={entry.feature} entry={entry} />
+              ))}
+            </ul>
+          ) : null}
+          {restricted ? (
+            <p className="text-muted-foreground text-xs">
+              Permissions are set in Planning Center, in each person’s Services
+              and People settings. Changes show up here within a few minutes.
+            </p>
+          ) : null}
+        </div>
+        <ResponsiveDialogFooter>
+          <ResponsiveDialogClose render={<Button />}>
+            Got it
+          </ResponsiveDialogClose>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 };
 

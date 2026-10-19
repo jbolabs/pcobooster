@@ -19,10 +19,10 @@ export const selectionPickerShellListClass = "flex flex-col gap-1.5";
 export const selectionPickerShellSegmentClass = "flex";
 
 export const selectionPickerOptionSegmentClass =
-  "flex min-w-0 flex-1 flex-col items-center gap-1.5 px-2 py-2.5 text-xs font-medium sm:text-sm";
+  "flex min-w-0 flex-1 flex-col items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-medium sm:text-sm pointer-coarse:min-h-11 pointer-coarse:text-sm";
 
 export const selectionPickerOptionRowClass =
-  "flex w-full items-start gap-3 px-3 py-2.5 text-left";
+  "flex w-full items-start gap-3 px-3 py-2.5 text-left pointer-coarse:min-h-11";
 
 export const selectionPickerOptionDisabledClass =
   "cursor-not-allowed opacity-60";

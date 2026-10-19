@@ -32,7 +32,7 @@ export const songsReads = {
         await callForQuery(context, client, (api) => api.songs.library()),
       staleTime: LIBRARY_STALE_MS,
     }),
-  history: runSheetSongReads.history,
+  schedule: runSheetSongReads.schedule,
   options: runSheetSongReads.options,
   serviceTypes: planReads.serviceTypes,
   /** `chordCharts.song`: the song's arrangements with their chart text, behind the flag. */
@@ -107,7 +107,7 @@ export const prefetchSong = async (
   await context.scheduler.runSpeculative(async () => {
     // Best effort: the song screen's own reads show any failure.
     await Promise.allSettled([
-      cache.query(speculativeQuery(songsReads.history(context, songId))),
+      cache.query(speculativeQuery(songsReads.schedule(context, songId))),
       chartsEnabled
         ? cache.query(speculativeQuery(songsReads.chart(context, songId)))
         : null,

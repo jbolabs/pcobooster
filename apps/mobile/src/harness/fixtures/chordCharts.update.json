@@ -11,6 +11,6 @@
       {"id": "550112", "name": "Jordan's key", "startingKey": "A", "endingKey": null}
     ],
     "layout": {"font": "Helvetica", "fontSize": 14, "columns": 2, "chordColor": 1, "pageSize": "Letter", "orientation": "Portrait", "margin": "0.5in"},
-    "updatedAt": "2026-09-24T03:12:45Z"
+    "updatedAt": "2026-09-24T03:12:45Z", "length": null, "bpm": null, "meter": null, "sequence": [], "notes": null
   }
 }
