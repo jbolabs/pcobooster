@@ -119,64 +119,9 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-status-confirmed: var(--status-confirmed);
-  --color-status-scheduled: var(--status-scheduled);
-  --color-status-declined: var(--status-declined);
-  --color-status-confirmed-bright: var(--status-confirmed-bright);
-  --color-status-scheduled-bright: var(--status-scheduled-bright);
-  --color-status-declined-bright: var(--status-declined-bright);
-  --color-status-confirmed-deep: var(--status-confirmed-deep);
-  --color-status-scheduled-deep: var(--status-scheduled-deep);
-  --color-status-declined-deep: var(--status-declined-deep);
-  --color-status-info: var(--status-info);
-  --color-info-surface: var(--info-surface);
-  --color-info-border: var(--info-border);
-  --color-info-foreground: var(--info-foreground);
-  --color-overlay-shadow: var(--overlay-shadow);
-  --color-pc-services-foreground: var(--pc-services-foreground);
-  --color-pc-services-gradient-start: var(--pc-services-gradient-start);
-  --color-pc-services-gradient-end: var(--pc-services-gradient-end);
   --font-heading: var(--font-sans);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
 }
 
 @keyframes status-dot-pulse {

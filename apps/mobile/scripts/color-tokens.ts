@@ -28,7 +28,7 @@ export type Variant =
   | "highContrastLight"
   | "highContrastDark";
 
-const ColorEntrySchema = Schema.Struct({
+export const ColorEntrySchema = Schema.Struct({
   appearances: Schema.optional(
     Schema.Array(
       Schema.Struct({ appearance: Schema.String, value: Schema.String })
@@ -92,7 +92,7 @@ export const displayP3ToSrgb = ([red, green, blue]: Rgb): Rgb => {
   ]);
 };
 
-const variantOf = (entry: ColorEntry): Variant => {
+export const variantOf = (entry: ColorEntry): Variant => {
   const dark =
     entry.appearances?.some(
       ({ appearance, value }) => appearance === "luminosity" && value === "dark"

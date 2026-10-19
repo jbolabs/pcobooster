@@ -2,88 +2,19 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@import "@pcobooster/design-tokens/tokens.css";
+
+/* `lib/theme.ts` puts `.dark` on <html> while the operating system is dark. */
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
   --font-heading: var(--font-sans);
 }
 
-/* Theme tokens mirror apps/web/src/styles/globals.css. */
 :root {
   /* Fontsource family imported by the root route. */
   --font-inter: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --radius: 0.625rem;
-  --card: oklch(0.972 0.006 142);
-  --card-foreground: oklch(0.27 0.018 142);
-  --popover: oklch(0.972 0.006 142);
-  --popover-foreground: oklch(0.27 0.018 142);
-  --primary: oklch(0.32 0.022 142);
-  --primary-foreground: oklch(0.958 0.007 142);
-  --secondary: oklch(0.918 0.01 142);
-  --secondary-foreground: oklch(0.32 0.022 142);
-  --muted: oklch(0.918 0.01 142);
-  --muted-foreground: oklch(0.48 0.022 142);
-  --accent: oklch(0.905 0.012 142);
-  --accent-foreground: oklch(0.32 0.022 142);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.84 0.012 142);
-  --input: oklch(0.84 0.012 142);
-  --ring: oklch(0.52 0.024 142);
-  --background: oklch(0.958 0.007 142);
-  --foreground: oklch(0.27 0.018 142);
-  --scrollbar-thumb: oklch(0.48 0.022 142 / 32%);
-  --scrollbar-thumb-hover: oklch(0.48 0.022 142 / 48%);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.245 0.012 132);
-    --foreground: oklch(0.92 0.008 132);
-    --card: oklch(0.285 0.014 132);
-    --card-foreground: oklch(0.92 0.008 132);
-    --popover: oklch(0.295 0.014 132);
-    --popover-foreground: oklch(0.92 0.008 132);
-    --primary: oklch(0.91 0.01 132);
-    --primary-foreground: oklch(0.26 0.012 132);
-    --secondary: oklch(0.325 0.016 132);
-    --secondary-foreground: oklch(0.92 0.008 132);
-    --muted: oklch(0.305 0.014 132);
-    --muted-foreground: oklch(0.67 0.018 132);
-    --accent: oklch(0.335 0.018 136);
-    --accent-foreground: oklch(0.92 0.008 132);
-    --destructive: oklch(0.66 0.17 24);
-    --border: oklch(0.48 0.018 132 / 26%);
-    --input: oklch(0.48 0.018 132 / 34%);
-    --ring: oklch(0.58 0.022 132);
-    --scrollbar-thumb: oklch(0.67 0.018 132 / 28%);
-    --scrollbar-thumb-hover: oklch(0.67 0.018 132 / 44%);
-  }
 }
 
 @utility skeleton-shimmer {
