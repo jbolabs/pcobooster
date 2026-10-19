@@ -64,6 +64,7 @@ const isSignedOutPath = (pathname: string): boolean =>
   pathname.startsWith(`${API_PREFIX}/`) ||
   pathname === UPDATE_CHECK_PATH ||
   pathname.startsWith(UPDATE_ASSETS_PREFIX) ||
+  pathname.startsWith("/ingest/") ||
   pathname === "/auth";
 
 /**

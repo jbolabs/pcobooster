@@ -45,6 +45,32 @@ describe(createAnalyticsClient, () => {
     vi.unstubAllGlobals();
   });
 
+  it.each(["/", "/auth", "/services"])(
+    "uses the same-origin ingestion proxy on %s",
+    async (pathname) => {
+      const configurations: unknown[] = [];
+      const sdk: AnalyticsSdk = {
+        ...recordingSdk([]),
+        init: (_key, config) => {
+          configurations.push(config);
+        },
+      };
+      vi.stubGlobal("window", {
+        location: { hostname: "pcobooster.com", pathname },
+      });
+      const client = createAnalyticsClient(
+        async () => await Promise.resolve(sdk)
+      );
+      client.initializeAnalytics("phc_key", true);
+      await vi.waitFor(() => {
+        expect(configurations).toHaveLength(1);
+      });
+      expect(configurations).toMatchObject([
+        { api_host: "/ingest", ui_host: "https://us.posthog.com" },
+      ]);
+    }
+  );
+
   it("sends a capture made while the SDK loads once it is ready", async () => {
     const calls: string[] = [];
     const client = createAnalyticsClient(async () => {
