@@ -539,18 +539,43 @@ describe("listing TestFlight builds", () => {
   });
 });
 
-describe("release-cli", () => {
-  const cli = (args: string[], env: Record<string, string>) =>
-    spawnSync("bun", ["run", "scripts/release/release-cli.ts", ...args], {
-      cwd: mobile,
-      encoding: "utf-8",
-      env: {
-        PATH: process.env.PATH ?? "",
-        HOME: process.env.HOME ?? "",
-        ...env,
-      },
-    });
+const cli = (args: string[], env: Record<string, string>) =>
+  spawnSync("bun", ["run", "scripts/release/release-cli.ts", ...args], {
+    cwd: mobile,
+    encoding: "utf-8",
+    env: {
+      PATH: process.env.PATH ?? "",
+      HOME: process.env.HOME ?? "",
+      ...env,
+    },
+  });
 
+const claimEnv = () => {
+  const dir = stateDir();
+  return { dir, env: { PCOB_RELEASE_STATE_DIR: dir } };
+};
+
+const choose = (env: Record<string, string>, requested: string | null) =>
+  cli(
+    [
+      "build-number",
+      "choose",
+      "--pid",
+      String(process.pid),
+      "--revision",
+      "abc",
+      ...(requested === null ? [] : ["--requested", requested]),
+    ],
+    env
+  );
+
+const lock = (env: Record<string, string>) =>
+  cli(
+    ["lock", "acquire", "--pid", String(process.pid), "--revision", "abc"],
+    env
+  );
+
+describe("release-cli", () => {
   it("refuses the local Apple account in automation, whatever the truthy CI form", () => {
     for (const ci of ["true", "1", "yes"]) {
       const result = cli(["signing"], { CI: ci });
@@ -577,11 +602,6 @@ describe("release-cli", () => {
     );
   });
 
-  const claimEnv = () => {
-    const dir = stateDir();
-    return { dir, env: { PCOB_RELEASE_STATE_DIR: dir } };
-  };
-
   it("refuses upload-number validation without an App Store Connect read key", () => {
     const result = cli(["build-number", "verify", "--build", "372"], {});
     expect(result.status).toBe(1);
@@ -589,24 +609,6 @@ describe("release-cli", () => {
       "cannot be validated without an App Store Connect read key"
     );
   });
-  const choose = (env: Record<string, string>, requested: string | null) =>
-    cli(
-      [
-        "build-number",
-        "choose",
-        "--pid",
-        String(process.pid),
-        "--revision",
-        "abc",
-        ...(requested === null ? [] : ["--requested", requested]),
-      ],
-      env
-    );
-  const lock = (env: Record<string, string>) =>
-    cli(
-      ["lock", "acquire", "--pid", String(process.pid), "--revision", "abc"],
-      env
-    );
 
   it("claims build numbers only while holding the release lock", () => {
     const { dir, env } = claimEnv();

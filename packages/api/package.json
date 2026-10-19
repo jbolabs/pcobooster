@@ -16,7 +16,7 @@
     "@pcobooster/contracts": "workspace:*",
     "@pcobooster/planning-center-models": "workspace:*",
     "@pcobooster/presentation-mode": "workspace:*",
-    "better-auth": "1.7.10",
+    "better-auth": "1.7.7",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
     "effect": "4.0.5"
   },

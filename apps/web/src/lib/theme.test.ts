@@ -60,21 +60,21 @@ describe(applyResolvedTheme, () => {
   });
 });
 
-describe("theme init script", () => {
-  const runScript = (stored: string | null, systemDark: boolean) => {
-    const { root, classes } = createRoot();
-    runInNewContext(themeInitScript, {
-      document: { documentElement: root },
-      localStorage: {
-        getItem: (key: string) => (key === THEME_STORAGE_KEY ? stored : null),
-      },
-      matchMedia: (query: string) => ({
-        matches: query === "(prefers-color-scheme: dark)" && systemDark,
-      }),
-    });
-    return { classes: [...classes], colorScheme: root.style.colorScheme };
-  };
+const runScript = (stored: string | null, systemDark: boolean) => {
+  const { root, classes } = createRoot();
+  runInNewContext(themeInitScript, {
+    document: { documentElement: root },
+    localStorage: {
+      getItem: (key: string) => (key === THEME_STORAGE_KEY ? stored : null),
+    },
+    matchMedia: (query: string) => ({
+      matches: query === "(prefers-color-scheme: dark)" && systemDark,
+    }),
+  });
+  return { classes: [...classes], colorScheme: root.style.colorScheme };
+};
 
+describe("theme init script", () => {
   it.each([
     ["dark", false, "dark"],
     ["light", true, "light"],

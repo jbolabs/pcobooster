@@ -38,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useEarlierPlansIntent } from "@/hooks/use-earlier-plans-intent";
 import type { GetIntentPrefetchProps } from "@/hooks/use-intent-prefetch";
 import { useServicePlanSelection } from "@/hooks/use-service-plan-selection";
+import { currentDate } from "@/lib/clock";
 import type { ServicePlanTableSelectorProps } from "@/lib/service-plan-selection";
 import { cn } from "@/lib/utils";
 
@@ -253,7 +254,7 @@ const PlanAgenda = ({
     );
   }
   const todayKey = formatCalendarDayInTimeZone(
-    new Date(),
+    currentDate(),
     dayProps.orgTimeZone
   );
   return groupPlansByMonthAndDay(visibleRows, dayProps.orgTimeZone).map(
@@ -299,7 +300,7 @@ const MyScheduledServiceCards = ({
     return null;
   }
 
-  const now = new Date();
+  const now = currentDate();
   return (
     <section
       data-tour="your-services"

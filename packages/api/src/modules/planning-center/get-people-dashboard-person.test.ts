@@ -229,6 +229,45 @@ describe(getPersonScheduleWindow, () => {
   });
 });
 
+const augustAndSeptemberFixture = () =>
+  dependenciesFor({
+    schedules: {
+      data: [
+        schedule({
+          id: "schedule-aug",
+          planId: "plan-aug",
+          sortDate: "2026-08-16T17:00:00Z",
+          timeIds: ["time-aug-service"],
+        }),
+        schedule({
+          id: "schedule-sep",
+          planId: "plan-1",
+          sortDate: "2026-09-13T17:00:00Z",
+          timeIds: ["time-sep-rehearsal", "time-sep-service"],
+        }),
+      ],
+      included: [
+        planTime("time-aug-service", "2026-08-16T17:00:00Z", "service"),
+        planTime("time-sep-service", "2026-09-13T17:00:00Z", "service"),
+      ],
+    },
+    rangeIncluded: [
+      planTime("time-sep-rehearsal", "2026-09-10T02:00:00Z", "rehearsal"),
+    ],
+  });
+
+const plansOf = (serviceTypeId: string) =>
+  [6, 13, 20].map((day) => ({
+    planId: `${serviceTypeId}-plan-${day}`,
+    sortDate: `2026-09-${String(day).padStart(2, "0")}T17:00:00Z`,
+    rehearsal: planTime(
+      `${serviceTypeId}-rehearsal-${day}`,
+      `2026-09-${String(day - 2).padStart(2, "0")}T17:00:00Z`,
+      "rehearsal",
+      `${serviceTypeId}-plan-${day}`
+    ),
+  }));
+
 describe(getPeopleDashboardPerson, () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -252,33 +291,6 @@ describe(getPeopleDashboardPerson, () => {
     expect(first.getPerson).toHaveBeenCalledOnce();
     expect(second.getPerson).toHaveBeenCalledOnce();
   });
-
-  const augustAndSeptemberFixture = () =>
-    dependenciesFor({
-      schedules: {
-        data: [
-          schedule({
-            id: "schedule-aug",
-            planId: "plan-aug",
-            sortDate: "2026-08-16T17:00:00Z",
-            timeIds: ["time-aug-service"],
-          }),
-          schedule({
-            id: "schedule-sep",
-            planId: "plan-1",
-            sortDate: "2026-09-13T17:00:00Z",
-            timeIds: ["time-sep-rehearsal", "time-sep-service"],
-          }),
-        ],
-        included: [
-          planTime("time-aug-service", "2026-08-16T17:00:00Z", "service"),
-          planTime("time-sep-service", "2026-09-13T17:00:00Z", "service"),
-        ],
-      },
-      rangeIncluded: [
-        planTime("time-sep-rehearsal", "2026-09-10T02:00:00Z", "rehearsal"),
-      ],
-    });
 
   it("reads the person's own schedules and one plan range per service type", async () => {
     vi.useFakeTimers({ now: NOW });
@@ -609,17 +621,6 @@ describe(getPeopleDashboardPerson, () => {
       { length: 12 },
       (_, index) => `service-type-${index}`
     );
-    const plansOf = (serviceTypeId: string) =>
-      [6, 13, 20].map((day) => ({
-        planId: `${serviceTypeId}-plan-${day}`,
-        sortDate: `2026-09-${String(day).padStart(2, "0")}T17:00:00Z`,
-        rehearsal: planTime(
-          `${serviceTypeId}-rehearsal-${day}`,
-          `2026-09-${String(day - 2).padStart(2, "0")}T17:00:00Z`,
-          "rehearsal",
-          `${serviceTypeId}-plan-${day}`
-        ),
-      }));
     const schedules = serviceTypeIds.flatMap((serviceTypeId) =>
       plansOf(serviceTypeId).map(({ planId, sortDate, rehearsal }) =>
         schedule({

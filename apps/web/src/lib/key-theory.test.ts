@@ -69,13 +69,13 @@ describe(dominantSeventhOf, () => {
   });
 });
 
-describe(pivotChords, () => {
-  const pivots = (from: string, to: string) =>
-    pivotChords(key(from), key(to)).map(
-      ({ chord, borrowed }) =>
-        `${chordName(chord)} (${chord.numeral}${borrowed ? ", borrowed" : ""})`
-    );
+const pivots = (from: string, to: string) =>
+  pivotChords(key(from), key(to)).map(
+    ({ chord, borrowed }) =>
+      `${chordName(chord)} (${chord.numeral}${borrowed ? ", borrowed" : ""})`
+  );
 
+describe(pivotChords, () => {
   it("lists setup chords both keys share, strongest first", () => {
     expect(pivots("G", "D")).toStrictEqual(["Em (ii)", "G (IV)", "Bm (vi)"]);
     expect(pivots("C", "Bb")).toStrictEqual(["Dm (iii)"]);
@@ -126,14 +126,14 @@ describe("distance between keys", () => {
   });
 });
 
-describe(commonToneChords, () => {
-  const describeTone = (from: string, to: string) => {
-    const [first] = commonToneChords(key(from), key(to));
-    return first === undefined
-      ? null
-      : `${noteName(first.fromTone)}, ${first.fromRole} of ${chordName(first.from)} -> ${first.toRole} of ${chordName(first.to)}`;
-  };
+const describeTone = (from: string, to: string) => {
+  const [first] = commonToneChords(key(from), key(to));
+  return first === undefined
+    ? null
+    : `${noteName(first.fromTone)}, ${first.fromRole} of ${chordName(first.from)} -> ${first.toRole} of ${chordName(first.to)}`;
+};
 
+describe(commonToneChords, () => {
   it("tries the home chords first", () => {
     expect(describeTone("F", "D")).toBe("A, third of F -> fifth of D");
   });

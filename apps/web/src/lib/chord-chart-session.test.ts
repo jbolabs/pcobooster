@@ -231,20 +231,17 @@ describe("saving", () => {
   });
 });
 
-describe("conflicts", () => {
-  const refused = () => {
-    const edited = typeChart(
-      startChordChartSession(version("VERSE", V1), null),
-      "VERSE mine"
-    );
-    return chordChartSaveFailed(
-      beginChordChartSave(edited, edited.draft),
-      true
-    );
-  };
+const refusedSession = () => {
+  const edited = typeChart(
+    startChordChartSession(version("VERSE", V1), null),
+    "VERSE mine"
+  );
+  return chordChartSaveFailed(beginChordChartSave(edited, edited.draft), true);
+};
 
+describe("conflicts", () => {
   it("opens a conflict when Planning Center refuses a stale save", () => {
-    const session = refused();
+    const session = refusedSession();
     expect(session.conflict).toStrictEqual({ theirs: null });
     expect(canSaveChordChart(session)).toBeFalsy();
     const theirs = version("VERSE theirs", V2);
@@ -255,7 +252,7 @@ describe("conflicts", () => {
 
   it("keeps mine by saving the current text over their version, still checked", () => {
     const withTheirs = receiveConflictVersion(
-      refused(),
+      refusedSession(),
       version("VERSE theirs", V2)
     );
     const kept = keepMyChordChart(typeChart(withTheirs, "VERSE mine, later"));
@@ -268,7 +265,7 @@ describe("conflicts", () => {
   });
 
   it("can't keep mine or use theirs before their version is known", () => {
-    const session = refused();
+    const session = refusedSession();
     expect(keepMyChordChart(session)).toBe(session);
     expect(adoptTheirChordChart(session)).toBe(session);
   });
@@ -276,7 +273,7 @@ describe("conflicts", () => {
   it("uses theirs by dropping this editor's edits", () => {
     const theirs = version("VERSE theirs", V2);
     const adopted = adoptTheirChordChart(
-      receiveConflictVersion(refused(), theirs)
+      receiveConflictVersion(refusedSession(), theirs)
     );
     expect(adopted.draft).toStrictEqual(theirs.draft);
     expect(adopted.opening).toStrictEqual(theirs.draft);

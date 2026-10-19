@@ -189,6 +189,22 @@ const heldLane = () => {
   return { schedule, open };
 };
 
+const setupWithLane = (fresh = new Set<string>()) => {
+  const calls: string[] = [];
+  const lane = heldLane();
+  const prefetcher = createIntentPrefetcher<string>({
+    dwellMs: INTENT_PREFETCH_DWELL_MS,
+    keyOf: (id) => id,
+    isFresh: (id) => fresh.has(id),
+    prefetch: async (id) => {
+      calls.push(id);
+      await Promise.resolve();
+    },
+    schedule: lane.schedule,
+  });
+  return { calls, lane, prefetcher };
+};
+
 describe("intent prefetches waiting in a lane", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -197,22 +213,6 @@ describe("intent prefetches waiting in a lane", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-
-  const setupWithLane = (fresh = new Set<string>()) => {
-    const calls: string[] = [];
-    const lane = heldLane();
-    const prefetcher = createIntentPrefetcher<string>({
-      dwellMs: INTENT_PREFETCH_DWELL_MS,
-      keyOf: (id) => id,
-      isFresh: (id) => fresh.has(id),
-      prefetch: async (id) => {
-        calls.push(id);
-        await Promise.resolve();
-      },
-      schedule: lane.schedule,
-    });
-    return { calls, lane, prefetcher };
-  };
 
   it("waits for its turn before prefetching", async () => {
     const { calls, lane, prefetcher } = setupWithLane();

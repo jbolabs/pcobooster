@@ -192,6 +192,12 @@ const authorizationUrlOf = async (response: Response): Promise<string> => {
   return url;
 };
 
+const selectedBy = async (person: PlanningCenterProfile) => {
+  const run = await signInAs(person);
+  const result = await parseExchange(await exchangeRun(handler, origin, run));
+  return result.selectedAccountId;
+};
+
 describe("native sign-in", { timeout: LOCAL_WORKER_TEST_TIMEOUT_MS }, () => {
   beforeAll(async () => {
     vi.stubGlobal("fetch", planningCenter.fetch);
@@ -400,13 +406,6 @@ describe("native sign-in", { timeout: LOCAL_WORKER_TEST_TIMEOUT_MS }, () => {
   it("selects the organization each native sign-in used", async () => {
     const graceChurch = profile("select-a", "casey-native@example.com");
     const hopeChapel = profile("select-b", "casey-native@example.com");
-    const selectedBy = async (person: PlanningCenterProfile) => {
-      const run = await signInAs(person);
-      const result = await parseExchange(
-        await exchangeRun(handler, origin, run)
-      );
-      return result.selectedAccountId;
-    };
 
     const first = await selectedBy(graceChurch);
     // Linking a second organization selects it, and signing in with the first selects it again.
