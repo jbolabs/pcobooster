@@ -30,7 +30,9 @@ export default Alchemy.Stack(
   {
     state,
     providers: trialBuildsProvider.pipe(
-      Layer.provideMerge(Cloudflare.providers())
+      Layer.provideMerge(
+        Layer.merge(Cloudflare.providers(), Alchemy.RandomProvider())
+      )
     ),
   },
   Effect.gen(function* trial() {
@@ -59,6 +61,26 @@ export default Alchemy.Stack(
       duration: "168h",
       clientSecretVersion: 1,
     });
+    const cacheToken = yield* Alchemy.Random("TrialCacheToken", {});
+    const cacheBucket = yield* Cloudflare.R2.Bucket("TrialCache", {
+      name: "pcobooster-builds-trial-turbo",
+      forceDestroy: true,
+      lifecycleRules: [
+        {
+          id: "expire-cache",
+          deleteObjectsTransition: {
+            condition: { type: "Age", maxAge: 604_800 },
+          },
+        },
+      ],
+    });
+    const cacheWorker = yield* Cloudflare.Workers.Worker("TrialCacheServer", {
+      name: "pcobooster-builds-trial-cache",
+      main: "./scripts/cloudflare/builds-trial/cache-worker.ts",
+      workersDev: true,
+      compatibility: { date: "2026-09-01" },
+      env: { CACHE: cacheBucket, TOKEN: cacheToken.text },
+    });
     const worker = yield* Cloudflare.Workers.Worker("BuildRunner", {
       name: trialWorker,
       main: "./scripts/cloudflare/builds-trial/runner.ts",
@@ -85,6 +107,14 @@ export default Alchemy.Stack(
         PCOBOOSTER_ADMIN_EMAILS: yield* Config.String(
           "PCOBOOSTER_ADMIN_EMAILS"
         ),
+        TURBO_API: Output.map((url: string | undefined) => {
+          if (url === undefined) {
+            throw new Error("Cache Worker URL unavailable");
+          }
+          return url;
+        })(cacheWorker.url),
+        TURBO_TOKEN: cacheToken.text,
+        TURBO_TEAM: "pcobooster-trial",
         BUN_VERSION: "1.4.2",
         NODE_VERSION: "24.11.1",
         LEFTHOOK: "0",

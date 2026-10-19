@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
 
+import { validationScope } from "../../ci/affected";
 import { trialContext } from "./settings";
 
 const checkout = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" });
@@ -15,10 +17,11 @@ const env = {
   ...process.env,
   GITHUB_SHA: sha,
   TURBO_FORCE: "true",
+  TURBO_CACHE: "local:rw",
   LEFTHOOK: "0",
 };
-const run = (command: string, args: string[]) => {
-  const result = spawnSync(command, args, { stdio: "inherit", env });
+const run = (command: string, args: string[], childEnv = env) => {
+  const result = spawnSync(command, args, { stdio: "inherit", env: childEnv });
   if (result.status !== 0) {
     throw new Error(`Trial step failed: ${args.join(" ")}`);
   }
@@ -36,10 +39,51 @@ if (mode === "check") {
     "origin",
     "+refs/heads/main:refs/remotes/origin/main",
   ]);
-  run("bun", ["run", "check"]);
-  run("bun", ["run", "typecheck", "--concurrency=1"]);
-  run("bun", ["run", "test:install"]);
-  run("bun", ["turbo", "run", "test", "//#test:root", "--concurrency=1"]);
+  const scope = validationScope(process.cwd(), "origin/main");
+  process.stdout.write(`${scope.reason}\n`);
+  const base = spawnSync("git", ["rev-parse", "origin/main"], {
+    encoding: "utf-8",
+  });
+  if (base.status !== 0) {
+    throw new Error("Cannot resolve validation base");
+  }
+  mkdirSync(".alchemy/trial-cache", { recursive: true });
+  writeFileSync(".alchemy/trial-cache/base", base.stdout.trim());
+  const cacheInputs = "--global-deps=.alchemy/trial-cache/base";
+  const validationEnv = {
+    ...env,
+    TURBO_FORCE: "false",
+    TURBO_CACHE: "remote:rw",
+  };
+  for (const key of Object.keys(validationEnv)) {
+    if (
+      key.startsWith("CLOUDFLARE_") ||
+      key.startsWith("PCOBOOSTER_ADMIN_") ||
+      key.startsWith("STAGING_ACCESS_")
+    ) {
+      Reflect.deleteProperty(validationEnv, key);
+    }
+  }
+  run("bun", ["turbo", "run", "//#lint:ci", cacheInputs], validationEnv);
+  run(
+    "bun",
+    ["run", "typecheck", "--concurrency=1", cacheInputs, ...scope.args],
+    validationEnv
+  );
+  run("bun", ["run", "test:install"], validationEnv);
+  run(
+    "bun",
+    [
+      "turbo",
+      "run",
+      "test",
+      "//#test:root",
+      "--concurrency=1",
+      cacheInputs,
+      ...scope.args,
+    ],
+    validationEnv
+  );
   run("bun", ["run", "build:cloudflare"]);
 } else {
   run("bun", ["alchemy", "deploy", "--stage", stage, "--no-input", "--yes"]);

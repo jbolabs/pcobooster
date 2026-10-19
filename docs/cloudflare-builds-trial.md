@@ -46,3 +46,11 @@ The trial application and control stack were both destroyed successfully after v
 No existing Actions files were changed and no trial commit was merged. An unrelated existing main workflow ran concurrently: GitHub Actions run `39285661204` deployed `def7c82fd09f9b30a3f920c2ad5849cc8a526196` to staging and production. Production's `/version` matched that main SHA, not the trial SHA. The trial only deployed `builds-trial-c102fab141c3`.
 
 This proves hosted Alchemy compatibility and teardown, not sustained availability, PR-check replacement, or production migration readiness. At roughly four minutes per run, [Workers Paid's 6,000 included monthly build minutes](https://developers.cloudflare.com/workers/ci-cd/builds/limits-and-pricing/) would cover approximately 1,500 similar runs across the account. Additional build time is $0.005/minute, about $0.02 for a similar run; this is a pricing estimate, not a measured invoice.
+
+### Affected validation and Turbo cache trial
+
+The trial reuses `validationScope` against fetched `origin/main`, including dependent packages and root guards. Shared infrastructure/configuration changes deliberately choose full validation. Missing history fails closed. The fetched main revision also participates in validation cache keys because repository guards inspect its history.
+
+`alchemy.builds-trial.ts` owns a separate authenticated Turbo cache Worker, random bearer secret, and private R2 bucket with seven-day object expiry. Only trial lint/typecheck/test tasks use remote caching. Patch-install checks always execute. Validation subprocesses have deployment credentials removed. The cache namespace pins Linux x64 and the trial toolchain; it is not shared with GitHub Actions or production. Application build and Alchemy deployment commands force fresh execution and disable remote caching.
+
+A warm measurement uses an empty commit with the same Git tree after a successful cache-populating build. Compare check-command duration and actual Turbo hit counts, not replayed test log timestamps. Native dependency caching is a separate setting and may have variable restore overhead.
