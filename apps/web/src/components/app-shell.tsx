@@ -186,7 +186,7 @@ const PlanViewTabs = () => {
           >
             <SidebarNavIcon icon={planViewIcons[view]} className="size-4" />
             {/* The hidden bold copy reserves the active width so tabs don't shift. */}
-            <span className="grid">
+            <span className="grid grid-cols-[max-content]">
               <span
                 aria-hidden
                 className="invisible col-start-1 row-start-1 font-semibold"
@@ -563,7 +563,7 @@ const ShortcutList = ({
     binding: RegisterableHotkey;
   }[];
 }) => (
-  <dl className="grid gap-3 text-sm">
+  <dl className="grid grid-cols-1 gap-3 text-sm">
     {shortcuts.map((shortcut) => (
       <div
         key={shortcut.id}

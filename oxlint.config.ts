@@ -40,6 +40,8 @@ export default defineConfig({
     "local/batch-gate-uses-batch-has-answered": "error",
     // Flush list rows keep hover backgrounds on the list's rounded border.
     "local/flush-list-rows": "error",
+    // Grid columns can shrink below their content, so long text truncates instead of overflowing.
+    "local/grid-tracks-shrink": "error",
     // Keep icons/buttons from overlapping Input/Textarea text; use InputGroup.
     "local/no-absolute-input-overlay": "error",
     // Backgrounds stay solid; no blurred/frosted backdrop-filter layers.

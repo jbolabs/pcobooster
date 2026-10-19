@@ -1640,6 +1640,180 @@ const scrollContainerOverscrollRule = {
   },
 };
 
+/** Calls whose string arguments are class names. */
+const CLASS_FUNCTION_NAMES = new Set(["cn", "cva", "clsx", "cx", "twMerge"]);
+const CLASS_BINDING_NAME = /(?:^c|C)lass(?:Name|es)?$/u;
+const GRID_TEMPLATE_TOKEN = /^grid-(?:cols|rows)-\[(.+)\]$/u;
+/** An `fr` size, unless it sits inside `minmax(...)`, which states its own minimum. */
+const BARE_FR_TRACK = /(?:^|[_,(])(?:\d*\.)?\d+fr(?=$|[_,)])/u;
+const MINMAX_TRACK = /minmax\([^()]*\)/gu;
+/** Each `minmax(...)` (kept as is) or bare `fr` size (wrapped in `minmax(0,…)`). */
+const FR_OUTSIDE_MINMAX =
+  /(minmax\([^()]*\))|((?:^|[_,(\[]))((?:\d*\.)?\d+fr)(?=$|[_,)\]])/gu;
+/** Classes that give a grid an explicit column template (or let it flow into columns). */
+const COLUMN_TEMPLATE_TOKEN =
+  /^(?:grid-cols-|auto-cols-|grid-flow-col|\[grid-template)/u;
+const SOURCE_PUNCTUATION = /["'`,{}()]/gu;
+
+/**
+ * True when the string reaches the page as class names: a `className` attribute, a
+ * `cn`/`cva` argument, or a constant named like `panelClassName`.
+ * @param {any} node
+ */
+const isClassString = (node) => {
+  let current = node;
+  while (current.parent) {
+    const { parent } = current;
+    if (parent.type === "JSXAttribute") {
+      return (
+        parent.name.type === "JSXIdentifier" && parent.name.name === "className"
+      );
+    }
+    if (
+      parent.type === "CallExpression" &&
+      parent.callee.type === "Identifier" &&
+      CLASS_FUNCTION_NAMES.has(parent.callee.name)
+    ) {
+      return true;
+    }
+    if (parent.type === "VariableDeclarator") {
+      return (
+        parent.id.type === "Identifier" &&
+        CLASS_BINDING_NAME.test(parent.id.name)
+      );
+    }
+    if (!CLASS_EXPRESSION_PARENTS.has(parent.type)) {
+      return false;
+    }
+    current = parent;
+  }
+  return false;
+};
+
+/**
+ * A grid track's minimum is its content's min-content width unless the track says
+ * otherwise. A bare `grid` (one implicit `auto` column) or a `1fr` track therefore grows to
+ * fit one long unbreakable child, such as a truncated file name, and pushes the whole grid
+ * past its container: a dialog's content spills out of its box. `grid-cols-N` and
+ * `minmax(0,1fr)` floor the track at zero so `truncate` and `min-w-0` can do their job.
+ */
+const gridTracksShrinkRule = {
+  meta: {
+    type: "problem",
+    fixable: "code",
+    docs: {
+      description:
+        "Require grids to declare columns that can shrink: no bare `grid` and no `fr` tracks without `minmax(0,…)`.",
+    },
+    messages: {
+      implicitColumn:
+        "`{{token}}` without a column template sizes its one column to its widest child, so long text pushes it past its container. Add `grid-cols-1`, or `grid-cols-[max-content]` when the grid should size to its content.",
+      bareFrTrack:
+        "`{{token}}` has an `fr` track whose minimum is its content width, so long text widens the grid past its container. Write it as `minmax(0,1fr)`.",
+    },
+    schema: [],
+  },
+  create(context) {
+    /**
+     * Grid tokens in `node` with no column template where they apply: unprefixed, or
+     * behind the same variant (`md:grid md:grid-cols-2`). `grid md:grid-cols-2` is bare
+     * below `md`.
+     * @param {any} node
+     * @param {string} text
+     */
+    const untemplatedGrids = (node, text) => {
+      const grids = classTokens(text).filter(({ base }) => base === "grid");
+      if (grids.length === 0 || !isClassString(node)) {
+        return [];
+      }
+      const templated = new Set(
+        classTokens(
+          context.sourceCode
+            .getText(classExpressionRoot(node))
+            .replaceAll(SOURCE_PUNCTUATION, " ")
+        )
+          .filter(({ base }) => COLUMN_TEMPLATE_TOKEN.test(base))
+          .map(({ variant }) => variant)
+      );
+      return templated.has("")
+        ? []
+        : grids.filter(({ variant }) => !templated.has(variant));
+    };
+    /**
+     * @param {string} text
+     * @param {Set<string>} bareGridVariants
+     */
+    const fixedText = (text, bareGridVariants) =>
+      text.replaceAll(/\S+/gu, (token) => {
+        const [{ variant, base }] = classTokens(token);
+        if (base === "grid" && bareGridVariants.has(variant)) {
+          return `${token} ${variant}grid-cols-1`;
+        }
+        if (GRID_TEMPLATE_TOKEN.test(base)) {
+          return token.replaceAll(
+            FR_OUTSIDE_MINMAX,
+            (match, inside, prefix, size) =>
+              inside === undefined ? `${prefix}minmax(0,${size})` : match
+          );
+        }
+        return token;
+      });
+    /**
+     * @param {any} node
+     * @param {string} text
+     */
+    const check = (node, text) => {
+      const bareFr = classTokens(text).filter(({ base }) => {
+        const template = GRID_TEMPLATE_TOKEN.exec(base);
+        return (
+          template !== null &&
+          BARE_FR_TRACK.test(template[1].replaceAll(MINMAX_TRACK, "minmax"))
+        );
+      });
+      const bareGrids = untemplatedGrids(node, text);
+      if (bareFr.length === 0 && bareGrids.length === 0) {
+        return;
+      }
+      const variants = new Set(bareGrids.map(({ variant }) => variant));
+      /** A string literal rewrites in place; template pieces are left to a person. */
+      const fix =
+        node.type === "Literal"
+          ? (/** @type {any} */ fixer) =>
+              fixer.replaceText(
+                node,
+                `${node.raw[0]}${fixedText(node.value, variants)}${node.raw[0]}`
+              )
+          : undefined;
+      for (const { variant, base } of bareFr) {
+        context.report({
+          node,
+          messageId: "bareFrTrack",
+          data: { token: `${variant}${base}` },
+          fix,
+        });
+      }
+      for (const { variant, base } of bareGrids) {
+        context.report({
+          node,
+          messageId: "implicitColumn",
+          data: { token: `${variant}${base}` },
+          fix,
+        });
+      }
+    };
+    return {
+      Literal(node) {
+        if (typeof node.value === "string") {
+          check(node, node.value);
+        }
+      },
+      TemplateElement(node) {
+        check(node, node.value.cooked ?? node.value.raw);
+      },
+    };
+  },
+};
+
 /** Fields whose label says they search or filter a list as you type. */
 const SEARCH_FIELD_LABEL = /^(?:search|filter)\b/iu;
 /** `CommandInput` always searches, so the primitive sets these hints itself. */
@@ -1709,6 +1883,7 @@ export default {
   rules: {
     "batch-gate-uses-batch-has-answered": batchGateUsesBatchHasAnsweredRule,
     "flush-list-rows": flushListRowsRule,
+    "grid-tracks-shrink": gridTracksShrinkRule,
     "no-absolute-input-overlay": noAbsoluteInputOverlayRule,
     "no-backdrop-blur": noBackdropBlurRule,
     "no-clipped-surface": noClippedSurfaceRule,
@@ -1727,6 +1902,7 @@ export default {
 export {
   batchGateUsesBatchHasAnsweredRule,
   flushListRowsRule,
+  gridTracksShrinkRule,
   noAbsoluteInputOverlayRule,
   noBackdropBlurRule,
   noClippedSurfaceRule,

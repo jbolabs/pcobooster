@@ -81,25 +81,25 @@ const PairPage = () => {
           });
         }}
       />
-      <section className="wrap pt-section grid gap-7 md:grid-cols-[1fr_1.45fr] md:gap-12 lg:gap-24">
+      <section className="wrap pt-section grid grid-cols-1 gap-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] md:gap-12 lg:gap-24">
         <div className="self-start md:sticky md:top-24">
           <h2 className="text-headline mb-5">More key changes</h2>
           <TextLink href={KEY_TRANSITIONS_PATH}>
             Every key change in one place
           </TextLink>
         </div>
-        <div className="grid gap-8">
+        <div className="grid grid-cols-1 gap-8">
           {from === to ? null : (
-            <div className="border-border grid gap-3 border-t pt-6">
+            <div className="border-border grid grid-cols-1 gap-3 border-t pt-6">
               <h3 className="text-lg font-medium">The other way around</h3>
               <PairLinks pairs={[{ from: to, to: from }]} />
             </div>
           )}
-          <div className="border-border grid gap-3 border-t pt-6">
+          <div className="border-border grid grid-cols-1 gap-3 border-t pt-6">
             <h3 className="text-lg font-medium">From {from} into</h3>
             <PairLinks pairs={others.filter((other) => other.from === from)} />
           </div>
-          <div className="border-border grid gap-3 border-t pt-6">
+          <div className="border-border grid grid-cols-1 gap-3 border-t pt-6">
             <h3 className="text-lg font-medium">Into {to} from</h3>
             <PairLinks pairs={others.filter((other) => other.to === to)} />
           </div>

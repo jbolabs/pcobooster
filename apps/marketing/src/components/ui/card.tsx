@@ -23,7 +23,7 @@ const CardHeader = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="card-header"
     className={cn(
-      "group/card-header grid auto-rows-min items-start gap-1.5 px-(--card-spacing)",
+      "group/card-header grid auto-rows-min grid-cols-1 items-start gap-1.5 px-(--card-spacing)",
       className
     )}
     {...props}

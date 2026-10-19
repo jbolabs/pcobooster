@@ -87,7 +87,7 @@ export const PersonMonthCalendar = ({
             return button;
           }
           const details = (
-            <div className="text-muted-foreground mt-1 grid gap-1 text-xs max-md:gap-2 max-md:text-sm">
+            <div className="text-muted-foreground mt-1 grid grid-cols-1 gap-1 text-xs max-md:gap-2 max-md:text-sm">
               {entries.map((entry) => (
                 <div key={entryKey(entry)} className="flex items-start gap-2">
                   <span aria-hidden className="flex h-lh shrink-0 items-center">

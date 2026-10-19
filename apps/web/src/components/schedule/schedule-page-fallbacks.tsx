@@ -20,7 +20,7 @@ export const SchedulePlansFallback = () => (
   <PageShell label="Loading services" busy>
     <section className="flex shrink-0 flex-col gap-2.5">
       <Skeleton variant="text" className="h-3 w-24" />
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <Skeleton className="h-[5.25rem] w-full" />
         <Skeleton className="hidden h-[5.25rem] w-full sm:block" />
         <Skeleton className="hidden h-[5.25rem] w-full lg:block" />

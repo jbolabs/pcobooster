@@ -916,7 +916,7 @@ const ChordChartWorkspaceView = ({
 export const ChordChartEditorPageSkeleton = () => (
   <PageShell layout="fill" label="Loading chord chart" busy>
     <Skeleton variant="text" className="h-6 w-56" />
-    <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2">
+    <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-2">
       <Skeleton variant="control" className="h-96" />
       <Skeleton variant="control" className="h-96 max-md:hidden" />
     </div>

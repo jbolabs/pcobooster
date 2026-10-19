@@ -17,7 +17,7 @@ export const AdminPageSkeleton = ({ label }: { label: string }) => (
         <Skeleton variant="text" className="h-4 w-80 max-w-full" />
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {statKeys.map((key) => (
           <div
             key={key}
