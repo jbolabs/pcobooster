@@ -158,6 +158,10 @@ describe("faults", () => {
                     source: { pointer: "/data/attributes/service_position" },
                     detail: "is not included in the list",
                   },
+                  {
+                    source: { parameter: "title" },
+                    detail: "Private church title is already taken",
+                  },
                 ],
                 privateData: "private provider response",
               },
@@ -188,7 +192,7 @@ describe("faults", () => {
       body: {
         _tag: "InvalidInput",
         message:
-          "Planning Center didn't accept that change: Length can not be longer than 24 hours; Service position is not included in the list",
+          "Planning Center didn't accept that change: Length can not be longer than 24 hours; Service position is not included in the list; Title Private church title is already taken",
       },
     });
     expect(outcomeLines(route)[0]?.fields).toMatchObject({
@@ -221,6 +225,10 @@ describe("faults", () => {
           {
             attribute: "service_position",
             detail: "is not included in the list",
+          },
+          {
+            attribute: "title",
+            detail: "Validation failed (detail omitted for privacy)",
           },
         ],
       },

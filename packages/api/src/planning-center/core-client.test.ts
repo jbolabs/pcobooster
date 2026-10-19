@@ -31,6 +31,47 @@ const person = { id: "1", type: "Person", attributes: { name: "Alex" } };
 const fetchMock = (): FetchMock => vi.fn<typeof globalThis.fetch>();
 
 describe(listedValidationErrors, () => {
+  it("omits reflected church text and unknown provider wording, retaining safe field diagnostics", () => {
+    expect(
+      listedValidationErrors({
+        errors: [
+          {
+            source: { parameter: "title" },
+            detail: "Private church title is already taken",
+          },
+          {
+            source: { parameter: "description" },
+            detail: "Description 'Private church notes' is invalid",
+          },
+          {
+            source: { parameter: "length" },
+            detail: "Length can not be longer than 24 hours",
+          },
+          { detail: "Unknown message with a person's name" },
+          {
+            source: { parameter: "Private church title" },
+            detail: "is invalid",
+          },
+        ],
+      })
+    ).toStrictEqual([
+      {
+        attribute: "title",
+        detail: "Validation failed (detail omitted for privacy)",
+      },
+      {
+        attribute: "description",
+        detail: "Validation failed (detail omitted for privacy)",
+      },
+      { attribute: "length", detail: "Length can not be longer than 24 hours" },
+      {
+        attribute: undefined,
+        detail: "Validation failed (detail omitted for privacy)",
+      },
+      { attribute: undefined, detail: "is invalid" },
+    ]);
+  });
+
   it("keeps only validation sources and details, with a safe missing-detail fallback", () => {
     expect(
       listedValidationErrors({
@@ -58,7 +99,7 @@ describe(listedValidationErrors, () => {
     const diagnostics = listedValidationErrors({
       errors: Array.from({ length: 12 }, () => ({
         source: { parameter: "a".repeat(150) },
-        detail: "b".repeat(600),
+        detail: `must be greater than ${"1".repeat(600)}`,
       })),
     });
     expect(diagnostics).toHaveLength(10);

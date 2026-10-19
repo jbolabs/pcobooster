@@ -407,15 +407,44 @@ export const listedErrorDetails = (body: JsonValue | undefined): string[] =>
       }),
   });
 
-/** Only provider validation diagnostics, never the sent attributes or raw response body. */
+/** Whole validation phrases with no slot for submitted text; unknown wording stays private. */
+const VALUE_FREE_VALIDATION_DETAIL =
+  /^(?:can(?: ?not|'t) be longer than \d+ (?:hours?|minutes?|seconds?)|(?:can(?: ?not|'t)|must not) be blank|is (?:invalid|not included in the list|reserved)|has already been taken|must be (?:a number|an integer|(?:greater|less) than(?: or equal to)? -?\d+(?:\.\d+)?|other than -?\d+(?:\.\d+)?)|is too (?:long|short) \((?:maximum|minimum) is \d+ characters?\))$/iu;
+const PRIVATE_VALIDATION_DETAIL =
+  "Validation failed (detail omitted for privacy)";
+const DIAGNOSTIC_ATTRIBUTE = /^[a-z][a-z0-9_]*$/u;
+
+const validationDiagnostic = (
+  detail: string | undefined,
+  attribute: string | undefined
+): string => {
+  if (detail === undefined) {
+    return "Validation failed";
+  }
+  const label = attribute === undefined ? undefined : attributeLabel(attribute);
+  const phrase =
+    label !== undefined &&
+    detail.toLowerCase().startsWith(`${label.toLowerCase()} `)
+      ? detail.slice(label.length + 1)
+      : detail;
+  return VALUE_FREE_VALIDATION_DETAIL.test(phrase)
+    ? detail.slice(0, 500)
+    : PRIVATE_VALIDATION_DETAIL;
+};
+
+/** Only value-free provider diagnostics, never reflected write text or raw response bodies. */
 export const listedValidationErrors = (body: JsonValue | undefined) =>
   Option.match(decodeListedErrors(body), {
     onNone: () => [],
     onSome: ({ errors }) =>
-      errors.slice(0, 10).map(({ detail, source }) => ({
-        attribute: rejectedAttribute(source)?.slice(0, 100),
-        detail: (detail ?? "Validation failed").slice(0, 500),
-      })),
+      errors.slice(0, 10).map(({ detail, source }) => {
+        const name = rejectedAttribute(source);
+        const attribute =
+          name !== undefined && DIAGNOSTIC_ATTRIBUTE.test(name)
+            ? name.slice(0, 100)
+            : undefined;
+        return { attribute, detail: validationDiagnostic(detail, attribute) };
+      }),
   });
 
 const isJsonObject = (value: JsonValue | undefined): value is JsonObject =>
