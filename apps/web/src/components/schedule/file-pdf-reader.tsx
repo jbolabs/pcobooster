@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { loadPdfDocument } from "@/lib/pdf-pages";
+import { loadPdfDocument, PDF_PAGE_DARK_CLASS } from "@/lib/pdf-pages";
 import { cn } from "@/lib/utils";
 
 export const FilePdfReader = ({ data }: { data: string }) => {
@@ -129,6 +129,7 @@ export const FilePdfReader = ({ data }: { data: string }) => {
           aria-label={`PDF page ${String(page)}`}
           className={cn(
             "mx-auto block h-auto w-(--pdf-width) bg-white",
+            PDF_PAGE_DARK_CLASS,
             state !== "ready" && "hidden"
           )}
           style={pageStyle}

@@ -4,8 +4,14 @@
  * pdf.js loads on first use: it needs browser APIs and is heavy.
  */
 
-const PAGE_CANVAS_CLASS =
-  "block w-full rounded-sm shadow-md ring-1 ring-black/10";
+/**
+ * Dark mode inverts a page's lightness and turns its hues back, so a white sheet lands near
+ * the dark surface while red chords stay red. The filter inverts a shadow too, so drop it.
+ */
+export const PDF_PAGE_DARK_CLASS =
+  "dark:shadow-none dark:[filter:invert(0.86)_hue-rotate(180deg)_brightness(1.05)]";
+
+const PAGE_CANVAS_CLASS = `block w-full rounded-sm shadow-md ring-1 ring-black/10 ${PDF_PAGE_DARK_CLASS}`;
 
 const loadPdfjs = async () => {
   const [pdfjs, worker] = await Promise.all([
