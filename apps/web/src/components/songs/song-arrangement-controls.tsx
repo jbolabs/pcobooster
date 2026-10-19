@@ -26,6 +26,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { HoverLabel } from "@/components/ui/hover-card";
 import { Item } from "@/components/ui/item";
+import {
+  Panel,
+  PanelBody,
+  PanelHeader,
+  PanelMeta,
+  PanelRows,
+  PanelTitle,
+} from "@/components/ui/panel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 /** The song's page and its chart, which share `?arrangement=&key=`. */
@@ -216,10 +224,10 @@ const ArrangementNavItem = ({
     .filter((part) => part !== "")
     .join(" · ");
   return (
-    <li className="shrink-0">
+    <li>
       <Item
         size="row"
-        variant={selected ? "outline" : "default"}
+        variant={selected ? "selected" : "default"}
         aria-current={selected ? "page" : undefined}
         render={
           <button
@@ -235,22 +243,28 @@ const ArrangementNavItem = ({
             });
           }
         }}
-        className="w-60 flex-col items-start justify-center gap-0 px-3 @4xl:w-full"
       >
-        <span className="w-full truncate font-medium">{name}</span>
-        {detail === "" ? null : (
-          <span className="text-muted-foreground w-full truncate text-xs tabular-nums">
-            {detail}
-          </span>
-        )}
+        <span className="flex min-w-0 flex-1 flex-col px-1.5">
+          <span className="truncate">{name}</span>
+          {detail === "" ? null : (
+            <span className="text-muted-foreground truncate text-xs font-normal tabular-nums">
+              {detail}
+            </span>
+          )}
+        </span>
+        <Check
+          className={selected ? "size-4 shrink-0" : "invisible size-4 shrink-0"}
+          aria-hidden
+        />
       </Item>
     </li>
   );
 };
 
 /**
- * Every arrangement, always in view: a column beside the page from wide screens up, a row that
- * scrolls sideways on phones. Active ones first, archived last. Choosing one shows its first key.
+ * Every arrangement in a panel beside the page, the shown one marked. On phones a song with one
+ * arrangement skips it, since there's nothing to choose. Active first, archived last; choosing
+ * one shows its first key.
  */
 export const ArrangementNav = ({
   arrangements,
@@ -262,21 +276,27 @@ export const ArrangementNav = ({
   arrangement: ChordChartArrangement;
   onShow: (search: SongPageSearch) => void;
 }) => (
-  <nav aria-label="Arrangements" className="min-w-0">
-    <h2 className="text-muted-foreground sr-only mb-1.5 px-1 text-xs font-medium @4xl:not-sr-only">
-      Arrangements
-    </h2>
-    <ul className="flex gap-1 overflow-x-auto overscroll-x-contain @4xl:flex-col @4xl:overflow-visible">
-      {arrangements.map((candidate) => (
-        <ArrangementNavItem
-          key={candidate.id}
-          arrangement={candidate}
-          selected={candidate.id === arrangement.id}
-          onShow={onShow}
-        />
-      ))}
-    </ul>
-  </nav>
+  <Panel
+    render={<nav aria-label="Arrangements" />}
+    className={arrangements.length < 2 ? "max-md:hidden" : undefined}
+  >
+    <PanelHeader>
+      <PanelTitle>Arrangements</PanelTitle>
+      <PanelMeta>{arrangements.length}</PanelMeta>
+    </PanelHeader>
+    <PanelBody>
+      <PanelRows render={<ul />}>
+        {arrangements.map((candidate) => (
+          <ArrangementNavItem
+            key={candidate.id}
+            arrangement={candidate}
+            selected={candidate.id === arrangement.id}
+            onShow={onShow}
+          />
+        ))}
+      </PanelRows>
+    </PanelBody>
+  </Panel>
 );
 
 /**

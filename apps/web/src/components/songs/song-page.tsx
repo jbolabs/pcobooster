@@ -55,7 +55,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { Item, ItemList, ItemMedia } from "@/components/ui/item";
+import { Item, ItemMedia } from "@/components/ui/item";
+import {
+  Panel,
+  PanelBody,
+  PanelEmpty,
+  PanelHeader,
+  PanelMeta,
+  PanelRows,
+  PanelTitle,
+} from "@/components/ui/panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChordChartSong } from "@/hooks/use-chord-chart-song";
 import { useOrganizationTimeZone } from "@/hooks/use-organization-timezone";
@@ -119,8 +128,8 @@ const ChartLink = ({
   </Link>
 );
 
-/** A titled block of the page: Files, Schedule, Notes. */
-const Panel = ({
+/** A titled part of the page (Files, Schedule, Notes) over its panels. */
+const PageSection = ({
   label,
   action,
   children,
@@ -427,20 +436,25 @@ const PlanningCenterLink = ({
   </a>
 );
 
-/** A bordered panel's quiet one line, for a section with nothing to list. */
+/** A panel's quiet one line, for a section with nothing to list. */
 const PanelMessage = ({ children }: { children: ReactNode }) => (
-  <ItemList>
-    <p className="text-muted-foreground px-3 py-3 text-sm">{children}</p>
-  </ItemList>
+  <Panel render={<div />}>
+    <PanelEmpty>{children}</PanelEmpty>
+  </Panel>
 );
 
 const FilesSkeleton = () => (
-  <ItemList aria-busy aria-label="Loading files">
-    <div className="flex flex-col gap-2 px-3 py-3">
-      <Skeleton variant="text" className="h-3.5 w-40" />
-      <Skeleton variant="text" className="h-3.5 w-28" />
-    </div>
-  </ItemList>
+  <Panel render={<div aria-busy aria-label="Loading files" />}>
+    <PanelHeader>
+      <Skeleton variant="text" className="mx-1.5 h-3.5 w-24" />
+    </PanelHeader>
+    <PanelBody>
+      <PanelRows>
+        <Skeleton variant="text" className="m-1.5 h-3.5 w-40" />
+        <Skeleton variant="text" className="m-1.5 h-3.5 w-28" />
+      </PanelRows>
+    </PanelBody>
+  </Panel>
 );
 
 /**
@@ -465,8 +479,8 @@ const FilesSection = ({
   if (files.data === undefined) {
     if (files.isError) {
       body = (
-        <ItemList>
-          <div className="px-3 py-2">
+        <Panel render={<div />}>
+          <PanelRows>
             <SectionRetry
               message="Files didn’t load."
               busy={files.isFetching}
@@ -474,8 +488,8 @@ const FilesSection = ({
                 void files.refetch();
               }}
             />
-          </div>
-        </ItemList>
+          </PanelRows>
+        </Panel>
       );
     }
   } else {
@@ -498,30 +512,31 @@ const FilesSection = ({
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-1 items-start gap-3 @3xl:grid-cols-2">
             {groups.map((group) => (
-              <ItemList key={group.id}>
-                <h3 className="px-3 py-2 text-sm font-medium">
-                  {group.label}
-                  {group.id === "arrangement" ? (
-                    <span className="text-muted-foreground font-normal">
-                      {" "}
-                      · every key
-                    </span>
-                  ) : null}
-                </h3>
-                <div className="p-1.5">
-                  <FileList
-                    files={group.files}
-                    renderFile={(attachment) => (
-                      <AttachmentRow
-                        songId={songId}
-                        arrangementId={arrangement.id}
-                        attachment={attachment}
-                        onOpen={openAttachment}
-                      />
-                    )}
-                  />
-                </div>
-              </ItemList>
+              <Panel key={group.id} aria-label={`${group.label} files`}>
+                <PanelHeader>
+                  <PanelTitle>{group.label}</PanelTitle>
+                  <PanelMeta>
+                    {group.id === "arrangement"
+                      ? "Every key"
+                      : `${group.files.length}`}
+                  </PanelMeta>
+                </PanelHeader>
+                <PanelBody>
+                  <PanelRows>
+                    <FileList
+                      files={group.files}
+                      renderFile={(attachment) => (
+                        <AttachmentRow
+                          songId={songId}
+                          arrangementId={arrangement.id}
+                          attachment={attachment}
+                          onOpen={openAttachment}
+                        />
+                      )}
+                    />
+                  </PanelRows>
+                </PanelBody>
+              </Panel>
             ))}
           </div>
           {files.data.truncated ? (
@@ -538,7 +553,7 @@ const FilesSection = ({
       );
   }
   return (
-    <Panel
+    <PageSection
       label="Files"
       action={
         <KeyTabs
@@ -549,7 +564,7 @@ const FilesSection = ({
       }
     >
       {body}
-    </Panel>
+    </PageSection>
   );
 };
 
@@ -619,26 +634,32 @@ const NotesSection = ({
 }) => {
   const notes = songNotes(arrangement, song);
   return (
-    <Panel label="Notes">
+    <PageSection label="Notes">
       {notes.length === 0 ? (
         <PanelMessage>No notes</PanelMessage>
       ) : (
-        <ItemList>
+        <div className="flex flex-col gap-3">
           {notes.map((note) => (
             // Keyed by the text too, so new text is measured afresh.
-            <div
+            <Panel
               key={`${note.source}-${note.text}`}
-              className="flex flex-col gap-0.5 px-3 py-2.5"
+              aria-label={`${note.source} notes`}
             >
-              {notes.length > 1 ? (
-                <h3 className="text-muted-foreground text-xs">{note.source}</h3>
-              ) : null}
-              <NoteText note={note} />
-            </div>
+              <PanelHeader>
+                <PanelTitle>{note.source}</PanelTitle>
+              </PanelHeader>
+              <PanelBody>
+                <PanelRows>
+                  <div className="px-1.5 py-1">
+                    <NoteText note={note} />
+                  </div>
+                </PanelRows>
+              </PanelBody>
+            </Panel>
           ))}
-        </ItemList>
+        </div>
       )}
-    </Panel>
+    </PageSection>
   );
 };
 
@@ -749,41 +770,41 @@ const ScheduleList = ({
   }
   const shown = showAll ? entries : entries.slice(0, previewRows);
   return (
-    <ItemList render={<section aria-label={label} />}>
-      <h3 className="px-3 py-2 text-sm font-medium">
-        {label}
-        <span className="text-muted-foreground font-normal tabular-nums">
-          {` · ${entries.length}`}
-        </span>
-      </h3>
-      <div className="flex flex-col items-start p-1.5">
-        <ul className="flex w-full flex-col">
-          {shown.map((entry) => (
-            <li key={scheduleRowKey(entry)}>
-              <ScheduleRow
-                entry={entry}
-                detail={historyRowDetail(entry, namesArrangement)}
-                now={now}
-                timeZone={timeZone}
-              />
-            </li>
-          ))}
-        </ul>
-        {entries.length > previewRows ? (
-          <Button
-            type="button"
-            variant="link"
-            size="xs"
-            touch="target"
-            onClick={() => {
-              setShowAll((current) => !current);
-            }}
-          >
-            {showAll ? "Show less" : `Show all ${entries.length}`}
-          </Button>
-        ) : null}
-      </div>
-    </ItemList>
+    <Panel aria-label={label}>
+      <PanelHeader>
+        <PanelTitle>{label}</PanelTitle>
+        <PanelMeta>{entries.length}</PanelMeta>
+      </PanelHeader>
+      <PanelBody>
+        <PanelRows className="items-start">
+          <ul className="flex w-full flex-col">
+            {shown.map((entry) => (
+              <li key={scheduleRowKey(entry)}>
+                <ScheduleRow
+                  entry={entry}
+                  detail={historyRowDetail(entry, namesArrangement)}
+                  now={now}
+                  timeZone={timeZone}
+                />
+              </li>
+            ))}
+          </ul>
+          {entries.length > previewRows ? (
+            <Button
+              type="button"
+              variant="link"
+              size="xs"
+              touch="target"
+              onClick={() => {
+                setShowAll((current) => !current);
+              }}
+            >
+              {showAll ? "Show less" : `Show all ${entries.length}`}
+            </Button>
+          ) : null}
+        </PanelRows>
+      </PanelBody>
+    </Panel>
   );
 };
 
@@ -870,7 +891,7 @@ const ScheduleSection = ({ songId, now }: { songId: string; now: Date }) => {
       </div>
     );
   }
-  return <Panel label="Schedule">{body}</Panel>;
+  return <PageSection label="Schedule">{body}</PageSection>;
 };
 
 /**
@@ -907,9 +928,9 @@ export const SongPageSkeleton = () => (
       nav={null}
       main={<MainColumnSkeleton />}
       schedule={
-        <Panel label="Schedule">
+        <PageSection label="Schedule">
           <ScheduleSkeleton />
-        </Panel>
+        </PageSection>
       }
       notes={null}
     />
