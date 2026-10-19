@@ -1,4 +1,4 @@
-import { Check, Loader2, Trash2 } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
 import { isSavedPlanPersonId } from "@/hooks/use-schedule-cache-optimism";
 import { useUnschedulePlanPerson } from "@/hooks/use-unschedule-plan-person";
 import { useUpdatePlanPersonStatus } from "@/hooks/use-update-plan-person-status";
@@ -78,7 +79,7 @@ export const PlanPersonStatusMenu = ({
           }
         >
           {isBusy ? (
-            <Loader2 className="size-3.5 animate-spin" />
+            <Spinner className="size-3.5" />
           ) : (
             <ScheduleStatusDot status={currentItem.status} aria-hidden />
           )}

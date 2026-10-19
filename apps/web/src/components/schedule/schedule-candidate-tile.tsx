@@ -6,7 +6,7 @@ import {
 } from "@pcobooster/planning-center-models/plan-assignment-labels";
 import { preferenceConflicts } from "@pcobooster/planning-center-models/ranking-reasons";
 import type { PersonWithAvailability } from "@pcobooster/planning-center-models/types";
-import { CalendarPlus, Loader2 } from "lucide-react";
+import { CalendarPlus } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
 import { PlanPersonStatusMenu } from "@/components/schedule/plan-person-status-menu";
@@ -19,6 +19,7 @@ import { UnsentNotificationMark } from "@/components/schedule/scheduling-notific
 import { Button } from "@/components/ui/button";
 import { Item } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { useOrganizationTimeZone } from "@/hooks/use-organization-timezone";
 import { useSchedulePlanPerson } from "@/hooks/use-schedule-plan-person";
 import { ReplayMask } from "@/lib/replay-mask";
@@ -165,7 +166,7 @@ const ScheduleCandidateAction = ({
       >
         {isScheduling ? (
           <>
-            <Loader2 className="size-3.5 animate-spin" />
+            <Spinner className="size-3.5" />
             <span className="hidden sm:inline">Adding</span>
           </>
         ) : (

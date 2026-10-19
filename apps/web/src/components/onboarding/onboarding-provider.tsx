@@ -4,6 +4,7 @@ import { createContext, use, useCallback, useMemo, useState } from "react";
 
 import { useAccessReview } from "@/components/access/access-review";
 import { GuidedTour } from "@/components/onboarding/guided-tour";
+import { LaunchOverlay } from "@/components/onboarding/launch-overlay";
 import {
   appTourSteps,
   planTourSteps,
@@ -47,10 +48,17 @@ export const useOnboarding = (): OnboardingContextValue =>
 
 /**
  * Whose progress the guides record, and whether one may open now: never before the page
- * hydrates, during presentation mode (screenshots and projector demos), or while the access
- * review is still deciding whether to open. `null` until a guide may open.
+ * hydrates or during presentation mode (screenshots and projector demos), and not while the
+ * access review is still deciding whether to open. `null` until the account is known.
  */
-const useGuideAccount = (): { account: string; demo: boolean } | null => {
+const useGuideAccount = (): {
+  account: string;
+  demo: boolean;
+  /** Access has settled, so whatever the app first loads has arrived. */
+  settled: boolean;
+  /** A guide may open now. */
+  ready: boolean;
+} | null => {
   const hydrated = useHydrated();
   const { data: accounts } = useAccountsQuery();
   const { reviewOpen, accessSettled, noServicesAccess } = useAccessReview();
@@ -58,25 +66,61 @@ const useGuideAccount = (): { account: string; demo: boolean } | null => {
   const account = demo
     ? DEMO_ONBOARDING_ACCOUNT
     : (accounts?.selectedAccountId ?? null);
-  const ready =
-    hydrated &&
-    !presentationMode &&
-    accessSettled &&
-    !reviewOpen &&
-    !noServicesAccess;
-  return ready && account !== null ? { account, demo } : null;
+  if (!hydrated || presentationMode || account === null) {
+    return null;
+  }
+  return {
+    account,
+    demo,
+    settled: accessSettled,
+    ready: accessSettled && !reviewOpen && !noServicesAccess,
+  };
 };
 
 /**
- * First-run guides for the signed-in app. The welcome opens once per account, after the
- * access review has had its turn, so a new person never gets two dialogs at once. It
+ * The launch overlay before an account's first welcome. It is decided once, when the
+ * account is known: it shows only if the app is still getting ready then, so it never
+ * covers an app that has nothing left to load.
+ */
+type LaunchState = "undecided" | "showing" | "done";
+
+const useFirstVisitLaunch = (
+  guideAccount: ReturnType<typeof useGuideAccount>,
+  progressRaw: string | null
+) => {
+  const [launch, setLaunch] = useState<LaunchState>("undecided");
+  if (launch === "undecided" && guideAccount !== null) {
+    const firstVisit = !hasSeenGuide(
+      progressRaw,
+      guideAccount.account,
+      "welcome"
+    );
+    setLaunch(firstVisit && !guideAccount.settled ? "showing" : "done");
+  }
+  const finishLaunch = useCallback(() => {
+    setLaunch("done");
+  }, []);
+  return { launch, finishLaunch };
+};
+
+/**
+ * First-run guides for the signed-in app. On an account's first visit the launch overlay
+ * covers the app while it loads; the welcome opens once per account after that, and after
+ * the access review has had its turn, so a new person never gets two dialogs at once. It
  * sits inside the sidebar provider so the tour can open the sidebar it points at.
  */
 export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
-  const guide = useGuideAccount();
+  const guideAccount = useGuideAccount();
   const [progressRaw, setProgressRaw] = useBrowserStorage(
     ONBOARDING_PROGRESS_KEY
   );
+  const { launch, finishLaunch } = useFirstVisitLaunch(
+    guideAccount,
+    progressRaw
+  );
+  // No guide opens until the launch has cleared the screen.
+  const guide =
+    guideAccount?.ready === true && launch === "done" ? guideAccount : null;
   const [welcomeRequested, setWelcomeRequested] = useState(false);
   const [appTourActive, setAppTourActive] = useState(false);
   const [planTourRequested, setPlanTourRequested] = useState(false);
@@ -144,6 +188,12 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   return (
     <OnboardingContext value={value}>
       {children}
+      {launch === "showing" ? (
+        <LaunchOverlay
+          ready={guideAccount?.settled === true}
+          onLaunched={finishLaunch}
+        />
+      ) : null}
       <WelcomeDialog
         open={welcomeOpen}
         onOpenChange={handleWelcomeOpenChange}
