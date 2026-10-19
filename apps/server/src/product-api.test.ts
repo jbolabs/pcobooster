@@ -286,6 +286,49 @@ describe("faults", () => {
     expect(reports).toStrictEqual([]);
   });
 
+  it("keeps a provider POST used to open a file quiet as a read", async () => {
+    const { reports, report } = recordingReporter();
+    const providerMethods: string[] = [];
+    const route = serve({
+      report,
+      httpClient: httpClientFor(async (input, init) => {
+        const request = new Request(input, init);
+        providerMethods.push(request.method);
+        return await Promise.resolve(
+          request.method === "POST"
+            ? Response.json(
+                { errors: [{ detail: "is invalid" }] },
+                { status: 422 }
+              )
+            : Response.json({
+                data: {
+                  type: "Attachment",
+                  id: "3",
+                  attributes: { filename: "chart.pdf", downloadable: true },
+                },
+              })
+        );
+      }),
+    });
+    const response = await route.fetch(
+      rawGet("/api/v1/service-types/1/plans/2/files/3/link")
+    );
+    expect({ status: response.status, providerMethods }).toStrictEqual({
+      status: 400,
+      providerMethods: ["GET", "POST"],
+    });
+    await expect(response.json()).resolves.toStrictEqual({
+      _tag: "InvalidInput",
+      message: "Planning Center didn't accept that change: is invalid",
+    });
+    expect(reports).toStrictEqual([]);
+    expect(
+      route.logs.filter(
+        ({ message }) => message === "Planning Center rejected a write"
+      )
+    ).toHaveLength(0);
+  });
+
   it("answers a product fault with its status and code, logs it at info, and never reports it", async () => {
     const { reports, report } = recordingReporter();
     const route = serve({

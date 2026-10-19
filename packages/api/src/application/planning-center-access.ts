@@ -200,10 +200,7 @@ export const planningCenterFault = (
       }
       if (error.status === PLANNING_CENTER_VALIDATION_STATUS) {
         const message = rejectedChangeMessage(error);
-        if (
-          error.method !== undefined &&
-          ["POST", "PUT", "PATCH", "DELETE"].includes(error.method)
-        ) {
+        if (error.isWrite === true) {
           return new InvalidInput({
             message,
             providerRejection: {

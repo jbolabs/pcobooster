@@ -195,6 +195,7 @@ interface AttemptContext {
   readonly attempt: number;
   /** A write's attributes as `describeSentAttributes` logs them. */
   readonly sentAttributes?: JsonObject;
+  readonly readAction?: true;
 }
 
 export const buildPlanningCenterUrl = (
@@ -514,6 +515,7 @@ const buildApiError = (
   responseBody: string,
   headers: ResponseHeaders,
   method: string,
+  isWrite: boolean,
   sentAttributeNames: readonly string[]
 ): PlanningCenterApiError => {
   let code: string | undefined;
@@ -537,6 +539,7 @@ const buildApiError = (
     message,
     status,
     method,
+    isWrite,
     sentAttributeNames,
     code,
     details,
@@ -830,6 +833,7 @@ export class PlanningCenterCoreClient {
   ): Effect.Effect<SentResponse, AttemptError> {
     const { cacheScope, httpClient } = this;
     const { method } = request;
+    const isWrite = !isReadMethod(method) && context.readAction !== true;
     const { accounting, endpoint, pacer } = context;
     const execute = Effect.gen(function* sendRequest() {
       const startedAt = yield* Clock.currentTimeMillis;
@@ -886,6 +890,7 @@ export class PlanningCenterCoreClient {
         responseBody,
         response.headers,
         method,
+        isWrite,
         Object.keys(context.sentAttributes ?? {})
       );
       if (error.status === 429) {
@@ -898,7 +903,7 @@ export class PlanningCenterCoreClient {
           rateLimit: error.rateLimit,
           willRetry: willRetryRateLimit(method, context.attempt, error),
         });
-      } else if (!isReadMethod(method)) {
+      } else if (isWrite) {
         // The toast shows only Planning Center's words; this keeps what was sent beside them.
         yield* log.warn("Planning Center rejected a write", {
           endpoint,
@@ -944,7 +949,11 @@ export class PlanningCenterCoreClient {
           );
     const sentAttributes = describeSentAttributes(options.body);
     const attemptRequest = (context: AttemptContext) =>
-      this.attempt(request, { ...context, sentAttributes });
+      this.attempt(request, {
+        ...context,
+        sentAttributes,
+        readAction: options.readAction,
+      });
     return Effect.gen(function* sendWithRetries() {
       const pacer = Option.getOrUndefined(
         yield* Effect.serviceOption(PlanningCenterPacing)

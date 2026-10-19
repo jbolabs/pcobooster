@@ -348,6 +348,28 @@ describe(PlanningCenterCoreClient, () => {
     });
   });
 
+  it("marks an attachment-opening POST rejection as a read", async () => {
+    const fetch = fetchMock().mockResolvedValue(
+      jsonResponse({ errors: [{ detail: "is invalid" }] }, { status: 422 })
+    );
+    const error = await failureOf(
+      basicClient(fetch).fetch(
+        "/services/v2/service_types/1/plans/2/attachments/3/open",
+        {
+          method: "POST",
+          body: {},
+          readAction: true,
+        }
+      )
+    );
+    expect(error).toMatchObject({
+      status: 422,
+      method: "POST",
+      isWrite: false,
+      sentAttributeNames: [],
+    });
+  });
+
   it("logs a rejected write with what was sent, keeping the church's text out", async () => {
     // Planning Center's answer to a song item 86,401 seconds long (sandbox, 2026-10-18).
     const rejection = {
@@ -392,6 +414,7 @@ describe(PlanningCenterCoreClient, () => {
       status: 422,
       method: "POST",
       sentAttributeNames: ["title", "song_id", "length"],
+      isWrite: true,
       message:
         "Planning Center API error: 422 - Length can not be longer than 24 hours",
     });
