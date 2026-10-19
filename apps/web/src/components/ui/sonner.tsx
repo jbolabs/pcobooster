@@ -26,7 +26,8 @@ const toasterStyle: SonnerStyle = {
   "--normal-bg": "var(--popover)",
   "--normal-text": "var(--popover-foreground)",
   "--normal-border": "var(--border)",
-  "--border-radius": "var(--radius)",
+  "--border-radius": "var(--radius-3xl, 1.5rem)",
+  "--width": "356px",
 };
 
 const Toaster = ({ ...props }: ToasterProps) => {
@@ -77,7 +78,19 @@ const Toaster = ({ ...props }: ToasterProps) => {
       mobileOffset={safeOffset("16px")}
       toastOptions={{
         classNames: {
-          toast: "cn-toast",
+          toast:
+            "!rounded-3xl !border-0 !bg-popover !px-4 !py-3 !text-sm !text-popover-foreground !shadow-lg !ring-1 !ring-foreground/5 dark:!ring-foreground/10",
+          title: "!font-medium",
+          description: "!text-muted-foreground",
+          icon: "!mr-0.5",
+          success: "[&_[data-icon]]:text-status-confirmed",
+          error: "[&_[data-icon]]:text-status-declined",
+          warning: "[&_[data-icon]]:text-status-scheduled",
+          info: "[&_[data-icon]]:text-status-info",
+          actionButton:
+            "!rounded-2xl !bg-primary !font-medium !text-primary-foreground",
+          cancelButton:
+            "!rounded-2xl !bg-secondary !font-medium !text-secondary-foreground",
         },
       }}
       {...props}

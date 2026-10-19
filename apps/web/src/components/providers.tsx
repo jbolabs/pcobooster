@@ -19,7 +19,7 @@ export const Providers = ({ children }: { children: ReactNode }) => {
             buttonPosition="bottom-right"
           />
         ) : null}
-        <Toaster richColors position={isMobile ? "top-center" : undefined} />
+        <Toaster position={isMobile ? "top-center" : undefined} />
       </ThemeProvider>
     </HotkeysProvider>
   );
