@@ -63,6 +63,31 @@ const toTextOrNull = (value: JsonValue | undefined): string | null =>
 const toNumberOrNull = (value: JsonValue | undefined): number | null =>
   isNumber(value) && Number.isFinite(value) ? value : null;
 
+/** A positive number, such as a tempo or length; Services reports unset ones as 0 or null. */
+const toPositiveOrNull = (value: JsonValue | undefined): number | null => {
+  const number = toNumberOrNull(value);
+  return number !== null && number > 0 ? number : null;
+};
+
+/** Text with its surrounding whitespace removed; blank text reads as unset. */
+const toTrimmedOrNull = (value: JsonValue | undefined): string | null => {
+  const text = isString(value) ? value.trim() : "";
+  return text === "" ? null : text;
+};
+
+const toSequence = (value: JsonValue | undefined): string[] =>
+  Array.isArray(value)
+    ? value.flatMap((label) => {
+        const text = isString(label) ? label.trim() : "";
+        return text === "" ? [] : [text];
+      })
+    : [];
+
+const toCcliNumber = (value: JsonValue | undefined): number | null => {
+  const number = toPositiveOrNull(value);
+  return number !== null && Number.isSafeInteger(number) ? number : null;
+};
+
 /** Values outside what the editor offers read as unset rather than failing the response. */
 const oneOf = <Value extends string | number>(
   allowed: readonly Value[],
@@ -137,14 +162,25 @@ export const normalizeChordChartArrangement = (
       margin: oneOf(CHORD_CHART_MARGINS, attributes.print_margin),
     },
     updatedAt: toTextOrNull(attributes.updated_at),
+    length: toPositiveOrNull(attributes.length),
+    bpm: toPositiveOrNull(attributes.bpm),
+    meter: toTrimmedOrNull(attributes.meter),
+    sequence: toSequence(attributes.sequence),
+    notes: toTrimmedOrNull(attributes.notes),
   };
 };
 
-const normalizeChordChartSong = (resource: PCResource): ChordChartSong => ({
-  id: resource.id,
-  title: toText(resource.attributes.title),
-  author: toText(resource.attributes.author),
-});
+const normalizeChordChartSong = (resource: PCResource): ChordChartSong => {
+  const { attributes } = resource;
+  return {
+    id: resource.id,
+    title: toText(attributes.title),
+    author: toText(attributes.author),
+    ccliNumber: toCcliNumber(attributes.ccli_number),
+    copyright: toTrimmedOrNull(attributes.copyright),
+    notes: toTrimmedOrNull(attributes.notes),
+  };
+};
 
 const normalizeArrangementResponse = (response: ArrangementResponse) =>
   normalizeChordChartArrangement(response.data, response.included);

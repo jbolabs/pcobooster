@@ -72,6 +72,6 @@ describe("song cache freshness", () => {
     const refreshed = await Effect.runPromise(
       songs.getSongSchedules("20", "2025-10-18")
     );
-    expect(refreshed[0].attributes.key_name).toBe("D");
+    expect(refreshed.data[0]?.attributes.key_name).toBe("D");
   });
 });

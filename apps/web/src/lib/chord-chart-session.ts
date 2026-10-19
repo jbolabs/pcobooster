@@ -346,19 +346,12 @@ export const chordChartCopy = (session: ChordChartSession) => ({
 });
 
 /** A save can go out now: there is something to save and no conflict waits on the person. */
-export const canSaveChordChart = (
-  session: ChordChartSession,
-  canEdit: boolean
-): boolean =>
-  canEdit &&
-  session.saving === null &&
-  session.conflict === null &&
-  isDirty(session);
+export const canSaveChordChart = (session: ChordChartSession): boolean =>
+  session.saving === null && session.conflict === null && isDirty(session);
 
 export interface SaveAsYouTypeOptions {
   /** The person's Save as you type setting. */
   readonly enabled: boolean;
-  readonly canEdit: boolean;
   /** Something on screen holds saves, such as copying to a new arrangement. */
   readonly held: boolean;
 }
@@ -375,7 +368,54 @@ export const savesAsYouType = (
   !options.held &&
   session.edited &&
   !session.paused &&
-  canSaveChordChart(session, options.canEdit);
+  canSaveChordChart(session);
+
+/** Why the editor can't be left with every edit saved. */
+export type ChordChartExitBlock = "conflict" | "failed" | "manual";
+
+/**
+ * What leaving the editor needs right now. `leave` only once the draft on screen is the one
+ * Planning Center holds; while a save is out, `wait` and ask again when it lands (edits made
+ * meanwhile then need another `save`). Leaving is an explicit request to save, so with
+ * `attemptLeft` it saves even with Save as you type off or after a failed save; once that
+ * attempt is spent, edits that still can't save block leaving.
+ */
+export type ChordChartExit =
+  | { readonly kind: "leave" }
+  | { readonly kind: "wait" }
+  | { readonly kind: "save" }
+  | { readonly kind: "blocked"; readonly reason: ChordChartExitBlock };
+
+export const chordChartExit = (
+  session: ChordChartSession | null,
+  options: {
+    readonly saveAsYouType: boolean;
+    /** The person's leave still has its one explicit save to spend. */
+    readonly attemptLeft: boolean;
+  }
+): ChordChartExit => {
+  if (session === null) {
+    return { kind: "leave" };
+  }
+  if (session.saving !== null) {
+    return { kind: "wait" };
+  }
+  if (session.conflict !== null) {
+    return { kind: "blocked", reason: "conflict" };
+  }
+  if (!isDirty(session)) {
+    return { kind: "leave" };
+  }
+  if (options.attemptLeft) {
+    return { kind: "save" };
+  }
+  if (session.paused) {
+    return { kind: "blocked", reason: "failed" };
+  }
+  return options.saveAsYouType
+    ? { kind: "save" }
+    : { kind: "blocked", reason: "manual" };
+};
 
 export type ChordChartSaveStatus = "saved" | "saving" | "unsaved";
 

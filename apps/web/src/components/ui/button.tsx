@@ -8,11 +8,12 @@ const Button = ({
   className,
   variant = "default",
   size = "default",
+  touch = "none",
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) => (
   <ButtonPrimitive
     data-slot="button"
-    className={cn(buttonVariants({ variant, size, className }))}
+    className={cn(buttonVariants({ variant, size, touch, className }))}
     {...props}
   />
 );

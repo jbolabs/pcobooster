@@ -1,0 +1,652 @@
+{
+  "default": {"entries": [], "truncated": false},
+  "cases": [
+    {
+      "match": {"songId": "5501"},
+      "output": {
+        "entries": [
+          {"planId": "883261106", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-11-07T03:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881261101", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-01T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881261004", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-04T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260816", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-16T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260719", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-19T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260621", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-21T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260524", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-24T16:00:00.000Z", "keyName": "Jordan's key", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260426", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-26T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260329", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-29T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260301", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-01T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260125", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-25T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881251221", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-21T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881251109", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-09T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881251005", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-05T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5502"},
+      "output": {
+        "entries": [
+          {"planId": "881261101", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-01T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881261004", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-04T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260920", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-20T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260823", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-23T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260726", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-26T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260705", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-05T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260607", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-07T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260517", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-17T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260426", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-26T16:00:00.000Z", "keyName": "Low", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260329", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-29T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260308", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-08T16:00:00.000Z", "keyName": "Low", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260208", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-08T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260111", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-11T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881251207", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-07T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881251109", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-09T17:00:00.000Z", "keyName": "Low", "startingKey": "C", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5503"},
+      "output": {
+        "entries": [
+          {"planId": "883261018", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-10-19T01:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881261018", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-18T16:00:00.000Z", "keyName": "Low", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881261004", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-04T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260906", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-06T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260809", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-09T16:00:00.000Z", "keyName": "Low", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260705", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-05T16:00:00.000Z", "keyName": "Low", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260531", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-31T16:00:00.000Z", "keyName": "Low", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260510", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-10T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260405", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-05T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260308", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-08T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260208", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-08T17:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260104", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-04T17:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881251130", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-30T17:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881251102", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-02T17:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5504"},
+      "output": {
+        "entries": [
+          {"planId": "881261115", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-15T17:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "883261018", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-10-19T01:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881261018", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-18T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881261004", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-04T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260906", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-06T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260816", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-16T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260726", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-26T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260705", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-05T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260607", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-07T16:00:00.000Z", "keyName": "Riley", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260517", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-17T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260419", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-19T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260322", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-22T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260222", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-22T17:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260215", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-15T17:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260125", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-25T17:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881251228", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-28T17:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "883251224", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2025-12-25T01:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881251123", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-23T17:00:00.000Z", "keyName": "Riley", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881251026", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-26T16:00:00.000Z", "keyName": "Riley", "startingKey": "D", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5505"},
+      "output": {
+        "entries": [
+          {"planId": "883261125", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-11-26T03:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881261108", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-08T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260913", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-13T16:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260830", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-30T16:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260712", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-12T16:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260531", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-31T16:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260412", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-12T16:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260215", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-15T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881251228", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-28T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881251026", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-26T16:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5506"},
+      "output": {
+        "entries": [
+          {"planId": "883261106", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-11-07T03:00:00.000Z", "keyName": "Original", "startingKey": "Bb", "arrangementName": "Default Arrangement"},
+          {"planId": "881261018", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-18T16:00:00.000Z", "keyName": "Jordan's key", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260913", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-13T16:00:00.000Z", "keyName": "Jordan's key", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260830", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-30T16:00:00.000Z", "keyName": "Original", "startingKey": "Bb", "arrangementName": "Default Arrangement"},
+          {"planId": "881260802", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-02T16:00:00.000Z", "keyName": "Jordan's key", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260628", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-28T16:00:00.000Z", "keyName": "Jordan's key", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260524", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-24T16:00:00.000Z", "keyName": "Jordan's key", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260419", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-19T16:00:00.000Z", "keyName": "Original", "startingKey": "Bb", "arrangementName": "Default Arrangement"},
+          {"planId": "881260315", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-15T16:00:00.000Z", "keyName": "Original", "startingKey": "Bb", "arrangementName": "Default Arrangement"},
+          {"planId": "881260208", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-08T17:00:00.000Z", "keyName": "Jordan's key", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260104", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-04T17:00:00.000Z", "keyName": "Jordan's key", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881251123", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-23T17:00:00.000Z", "keyName": "Original", "startingKey": "Bb", "arrangementName": "Default Arrangement"},
+          {"planId": "881251019", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-19T16:00:00.000Z", "keyName": "Original", "startingKey": "Bb", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5507"},
+      "output": {
+        "entries": [
+          {"planId": "881261011", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-11T16:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881260913", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-13T16:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881260830", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-30T16:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881260802", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-02T16:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881260628", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-28T16:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881260524", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-24T16:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881260419", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-19T16:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881260315", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-15T16:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881260208", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-08T17:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881260104", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-04T17:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881251116", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-16T17:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881251012", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-12T16:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5508"},
+      "output": {
+        "entries": [
+          {"planId": "881261108", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-08T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881261011", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-11T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260913", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-13T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260823", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-23T16:00:00.000Z", "keyName": "Morgan", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260726", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-26T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260628", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-28T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260531", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-31T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260426", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-26T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260322", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-22T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260222", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-22T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260125", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-25T17:00:00.000Z", "keyName": "Morgan", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881251221", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-21T17:00:00.000Z", "keyName": "Morgan", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881251109", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-09T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881251012", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-12T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5509"},
+      "output": {
+        "entries": [
+          {"planId": "883261106", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-11-07T03:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260920", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-20T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260823", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-23T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260628", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-28T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260503", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-03T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260301", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-01T17:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881251228", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-28T17:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881251012", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-12T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5510"},
+      "output": {
+        "entries": [
+          {"planId": "882261118", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-11-19T03:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881261108", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-08T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882261028", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-29T02:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882261007", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-08T02:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260930", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-01T02:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260927", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-27T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260909", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-10T02:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260906", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-06T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "883260823", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-08-24T01:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260802", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-02T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260621", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-21T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260527", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-28T02:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260520", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-21T02:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260517", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-17T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260429", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-30T02:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260412", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-12T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260408", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-09T02:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260401", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-02T02:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260311", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-12T02:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260301", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-01T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260218", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-19T03:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260211", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-12T03:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "882260121", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-22T03:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260111", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-11T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881251116", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-16T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881251005", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-05T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5511"},
+      "output": {
+        "entries": [
+          {"planId": "881261025", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-25T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "883261018", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-10-19T01:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260719", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-19T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260517", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-17T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260308", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-08T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260104", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-04T17:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881251005", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-05T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5512"},
+      "output": {
+        "entries": [
+          {"planId": "883261125", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-11-26T03:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881261122", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-22T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881261018", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-18T16:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260823", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-23T16:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260614", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-14T16:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260412", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-12T16:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881260201", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-01T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881251123", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-23T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881251102", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-02T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5513"},
+      "output": {
+        "entries": [
+          {"planId": "882261118", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-11-19T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882261111", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-11-12T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "883261106", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-11-07T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881261101", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-01T17:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882261021", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-22T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260930", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-01T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260923", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-24T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260920", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-20T16:00:00.000Z", "keyName": "Low", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260902", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-03T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260816", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-16T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260712", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-12T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260607", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-07T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260520", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-21T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260513", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-14T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260510", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-10T16:00:00.000Z", "keyName": "Low", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260422", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-23T02:00:00.000Z", "keyName": "Low", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260405", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-05T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260401", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-02T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260325", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-26T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260304", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-05T03:00:00.000Z", "keyName": "Low", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260301", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-01T17:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260211", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-12T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260204", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-05T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260125", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-25T17:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260114", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-15T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881251214", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-14T17:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881251102", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-02T17:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5514"},
+      "output": {
+        "entries": [
+          {"planId": "881261025", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-25T16:00:00.000Z", "keyName": "Original", "startingKey": "Eb", "arrangementName": "Default Arrangement"},
+          {"planId": "881260705", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-05T16:00:00.000Z", "keyName": "Original", "startingKey": "Eb", "arrangementName": "Default Arrangement"},
+          {"planId": "881260412", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-12T16:00:00.000Z", "keyName": "Original", "startingKey": "Eb", "arrangementName": "Default Arrangement"},
+          {"planId": "881260118", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-18T17:00:00.000Z", "keyName": "Original", "startingKey": "Eb", "arrangementName": "Default Arrangement"},
+          {"planId": "881251026", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-26T16:00:00.000Z", "keyName": "Original", "startingKey": "Eb", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5515"},
+      "output": {
+        "entries": [
+          {"planId": "882261118", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-11-19T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882261028", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-29T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882261021", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-22T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260930", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-01T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260909", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-10T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260902", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-03T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "883260823", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-08-24T01:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260520", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-21T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260429", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-30T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260422", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-23T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260405", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-05T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260401", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-02T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260311", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-12T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260304", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-05T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260211", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-12T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260121", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-22T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260114", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-15T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5516"},
+      "output": {
+        "entries": [
+          {"planId": "881261115", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-15T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260927", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-27T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260802", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-02T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260614", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-14T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260503", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-03T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260315", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-15T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260201", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-01T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881251214", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-14T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881251019", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-19T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5517"},
+      "output": {
+        "entries": [
+          {"planId": "883251224", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2025-12-25T01:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881251221", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-21T17:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881251214", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-14T17:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881251207", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-07T17:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"},
+          {"planId": "881251130", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-30T17:00:00.000Z", "keyName": "Original", "startingKey": "F", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5518"},
+      "output": {
+        "entries": [
+          {"planId": "883261125", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-11-26T03:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881261122", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-22T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881251123", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-23T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5519"},
+      "output": {
+        "entries": [
+          {"planId": "881261025", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-25T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260712", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-12T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260419", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-19T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881260118", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-18T17:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "881251012", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-12T16:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5520"},
+      "output": {
+        "entries": [
+          {"planId": "881261108", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-08T17:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "883261106", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-11-07T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882261104", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-11-05T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882261028", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-29T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882261007", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-08T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260927", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-27T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260916", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-17T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260909", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-10T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260830", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-30T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260719", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-19T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260614", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-14T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260527", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-28T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260510", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-10T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260506", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-07T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260429", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-30T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260408", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-09T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260329", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-29T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260318", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-19T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260311", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-12T02:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260218", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-19T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260215", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-15T17:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260128", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-29T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "882260121", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-22T03:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881260111", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-11T17:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881251116", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-16T17:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"},
+          {"planId": "881251005", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-05T16:00:00.000Z", "keyName": "Original", "startingKey": "B", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5521"},
+      "output": {
+        "entries": [
+          {"planId": "883261106", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-11-07T03:00:00.000Z", "keyName": "Original", "startingKey": "Db", "arrangementName": "Default Arrangement"},
+          {"planId": "881261011", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-11T16:00:00.000Z", "keyName": null, "startingKey": null, "arrangementName": "Default Arrangement"},
+          {"planId": "881260809", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-09T16:00:00.000Z", "keyName": "Original", "startingKey": "Db", "arrangementName": "Default Arrangement"},
+          {"planId": "881260621", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-21T16:00:00.000Z", "keyName": "Original", "startingKey": "Db", "arrangementName": "Default Arrangement"},
+          {"planId": "881260503", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-03T16:00:00.000Z", "keyName": "Original", "startingKey": "Db", "arrangementName": "Default Arrangement"},
+          {"planId": "881260308", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-08T16:00:00.000Z", "keyName": "Original", "startingKey": "Db", "arrangementName": "Default Arrangement"},
+          {"planId": "881260118", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-18T17:00:00.000Z", "keyName": "Original", "startingKey": "Db", "arrangementName": "Default Arrangement"},
+          {"planId": "881251109", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-09T17:00:00.000Z", "keyName": "Original", "startingKey": "Db", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5522"},
+      "output": {
+        "entries": [
+          {"planId": "883251224", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2025-12-25T01:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881251221", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-21T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881251214", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-14T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881251207", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-07T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"},
+          {"planId": "881251130", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-30T17:00:00.000Z", "keyName": "Original", "startingKey": "C", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5523"},
+      "output": {
+        "entries": [
+          {"planId": "881261101", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-01T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260809", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-09T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260531", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-31T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260329", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-29T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260118", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-18T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881251102", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-02T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5524"},
+      "output": {
+        "entries": [
+          {"planId": "881261115", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-15T17:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882261111", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-11-12T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882261021", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-22T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "883261018", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-10-19T01:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882261014", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-15T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881261011", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-11T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260923", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-24T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260902", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-03T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260809", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-09T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260712", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-12T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260607", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-07T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260603", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-06-04T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260513", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-14T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260510", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-10T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260422", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-23T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260415", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-16T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260405", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-05T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260325", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-26T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260322", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-22T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260304", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-05T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260225", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-26T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260215", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-15T17:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260204", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-05T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260114", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-15T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881260111", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-01-11T17:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260107", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-08T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881251130", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-30T17:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "881251026", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-26T16:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5525"},
+      "output": {
+        "entries": [
+          {"planId": "881261025", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-10-25T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260920", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-20T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260816", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-08-16T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260719", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-19T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260621", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-21T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260524", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-24T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260426", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-04-26T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260322", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-22T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260222", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-22T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881260201", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-01T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881251228", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-28T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881251116", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-11-16T17:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"},
+          {"planId": "881251019", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-19T16:00:00.000Z", "keyName": "Original", "startingKey": "G", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5526"},
+      "output": {
+        "entries": [
+          {"planId": "881261115", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-11-15T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "883261018", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-10-19T01:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260927", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-27T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260906", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-09-06T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "883260823", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2026-08-24T01:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260726", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-07-26T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260614", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-06-14T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260503", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-05-03T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260315", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-03-15T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881260201", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-01T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "883251224", "serviceTypeId": "1103", "serviceTypeName": "Special Events", "sortDate": "2025-12-25T01:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881251207", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-12-07T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"},
+          {"planId": "881251019", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2025-10-19T16:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5527"},
+      "output": {
+        "entries": [
+          {"planId": "882261104", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-11-05T03:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882261014", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-15T02:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882261007", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-08T02:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260916", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-17T02:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260603", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-06-04T02:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260527", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-28T02:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260506", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-07T02:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260415", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-16T02:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260408", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-09T02:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260318", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-19T02:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260225", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-26T03:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260218", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-19T03:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260128", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-29T03:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"},
+          {"planId": "882260107", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-08T03:00:00.000Z", "keyName": "Original", "startingKey": "E", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5528"},
+      "output": {
+        "entries": [
+          {"planId": "882261111", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-11-12T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882261104", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-11-05T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882261014", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-10-15T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260923", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-24T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260916", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-09-17T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260603", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-06-04T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260513", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-14T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260506", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-05-07T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260415", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-04-16T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260325", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-26T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260318", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-03-19T02:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260225", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-26T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260204", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-02-05T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260128", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-29T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"},
+          {"planId": "882260107", "serviceTypeId": "1102", "serviceTypeName": "Youth Night", "sortDate": "2026-01-08T03:00:00.000Z", "keyName": "Original", "startingKey": "A", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5529"},
+      "output": {
+        "entries": [
+          {"planId": "881260222", "serviceTypeId": "1101", "serviceTypeName": "Sunday Gathering", "sortDate": "2026-02-22T17:00:00.000Z", "keyName": "Original", "startingKey": "D", "arrangementName": "Default Arrangement"}
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5530"},
+      "output": {
+        "entries": [
+
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5531"},
+      "output": {
+        "entries": [
+
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5532"},
+      "output": {
+        "entries": [
+
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5533"},
+      "output": {
+        "entries": [
+
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5534"},
+      "output": {
+        "entries": [
+
+        ],
+        "truncated": false
+      }
+    },
+    {
+      "match": {"songId": "5535"},
+      "output": {
+        "entries": [
+
+        ],
+        "truncated": false
+      }
+    }
+  ]
+}

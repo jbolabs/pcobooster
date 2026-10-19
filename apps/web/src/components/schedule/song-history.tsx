@@ -93,12 +93,17 @@ export const SongHistory = ({
       </div>
     );
   }
-  const summary = summarizeSongHistory(history.data, planDate, serviceTypeId);
-  const rows = showAll ? history.data : history.data.slice(0, previewRows);
+  const { entries } = history.data;
+  const summary = summarizeSongHistory(entries, planDate, serviceTypeId);
+  const rows = showAll ? entries : entries.slice(0, previewRows);
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-muted-foreground text-xs tabular-nums">
-        {songHistoryCountLabel(summary, serviceTypeName)}
+        {songHistoryCountLabel(
+          summary,
+          serviceTypeName,
+          history.data.truncated
+        )}
       </p>
       {rows.length === 0 ? (
         <p className="text-muted-foreground text-sm">
@@ -117,7 +122,7 @@ export const SongHistory = ({
           ))}
         </ul>
       )}
-      {history.data.length > previewRows ? (
+      {entries.length > previewRows ? (
         <Button
           type="button"
           variant="link"
@@ -127,7 +132,7 @@ export const SongHistory = ({
             setShowAll((current) => !current);
           }}
         >
-          {showAll ? "Show less" : `Show all ${history.data.length}`}
+          {showAll ? "Show less" : `Show all ${entries.length}`}
         </Button>
       ) : null}
     </div>

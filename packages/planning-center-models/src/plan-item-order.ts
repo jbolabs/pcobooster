@@ -1,3 +1,4 @@
+import { planItemLength } from "@pcobooster/planning-center-models/plan-item-draft";
 import type {
   PlanItem,
   PlanItemArrangement,
@@ -80,6 +81,14 @@ export const replacePlanItemById = (
   updatedItem: PlanItem
 ): PlanItem[] => items.map((item) => (item.id === itemId ? updatedItem : item));
 
+const draftItemLength = (
+  length: number | null,
+  itemType: string
+): number | null => {
+  const normalized = planItemLength(length, itemType);
+  return normalized === 0 ? null : (normalized ?? null);
+};
+
 export const applyPlanItemDraft = (
   item: PlanItem,
   draft: {
@@ -98,7 +107,7 @@ export const applyPlanItemDraft = (
   servicePosition: isPlanItemServicePosition(draft.servicePosition)
     ? draft.servicePosition
     : item.servicePosition,
-  length: length !== null && length > 0 ? length : null,
+  length: draftItemLength(length, item.itemType),
   description: draft.description,
   arrangement,
   key,
@@ -115,7 +124,7 @@ export const planItemDraftChangesItem = (
   },
   length: number | null
 ): boolean => {
-  const normalizedLength = length !== null && length > 0 ? length : null;
+  const normalizedLength = draftItemLength(length, item.itemType);
   const normalizedArrangementId = draft.arrangementId ?? null;
   const normalizedKeyId = draft.keyId ?? null;
 
@@ -125,7 +134,7 @@ export const planItemDraftChangesItem = (
   if (draft.servicePosition !== item.servicePosition) {
     return true;
   }
-  if (normalizedLength !== item.length) {
+  if (normalizedLength !== draftItemLength(item.length, item.itemType)) {
     return true;
   }
   if (draft.description !== item.description) {

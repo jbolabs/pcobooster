@@ -36,6 +36,11 @@ const arrangement = (
   ],
   layout,
   updatedAt: null,
+  length: null,
+  bpm: null,
+  meter: null,
+  sequence: [],
+  notes: null,
   ...overrides,
 });
 

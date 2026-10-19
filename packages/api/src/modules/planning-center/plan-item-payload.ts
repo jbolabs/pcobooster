@@ -4,6 +4,7 @@ import type {
   JsonObject,
   JsonValue,
 } from "@pcobooster/planning-center-models/json";
+import { planItemLength } from "@pcobooster/planning-center-models/plan-item-draft";
 import type {
   PlanItemServicePosition,
   SongOptionSet,
@@ -93,7 +94,7 @@ export const resolvePlanItemSongDefaults = (
       arrangementId,
       keyId,
       selectedLayoutId,
-      length,
+      length: planItemLength(length, input.itemType),
     };
   });
 
@@ -107,7 +108,7 @@ export const buildPlanItemAttributes = (
     title: toOptionalTrimmedText(input.title),
     item_type: input.itemType === "header" ? "header" : undefined,
     service_position: input.servicePosition ?? options?.defaultServicePosition,
-    length: input.length === undefined ? undefined : input.length,
+    length: planItemLength(input.length, input.itemType),
     description: toOptionalTrimmedText(input.description),
     html_details: toOptionalTrimmedText(input.htmlDetails),
     song_id: input.songId,

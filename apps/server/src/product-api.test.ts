@@ -197,6 +197,11 @@ describe("faults", () => {
         _tag: "InvalidInput",
         message:
           "Planning Center didn't accept that change: Length can not be longer than 24 hours; Service position is not included in the list; Title Private church title is already taken; Private church title is invalid",
+        planningCenterValidation: {
+          code: null,
+          detail: "can not be longer than 24 hours",
+          field: "length",
+        },
       },
     });
     expect(outcomeLines(route)[0]?.fields).toMatchObject({
@@ -320,6 +325,7 @@ describe("faults", () => {
     await expect(response.json()).resolves.toStrictEqual({
       _tag: "InvalidInput",
       message: "Planning Center didn't accept that change: is invalid",
+      planningCenterValidation: null,
     });
     expect(reports).toStrictEqual([]);
     expect(

@@ -68,6 +68,13 @@ import { HoverLabel } from "@/components/ui/hover-card";
 import { Input } from "@/components/ui/input";
 import { Item } from "@/components/ui/item";
 import {
+  Panel,
+  PanelBody,
+  PanelHeader,
+  PanelRows,
+  PanelTitle,
+} from "@/components/ui/panel";
+import {
   ResponsivePopover,
   ResponsivePopoverContent,
   ResponsivePopoverTrigger,
@@ -130,14 +137,6 @@ const layoutClassNames = {
   row: "flex flex-col gap-3 pt-1 md:flex-row md:items-start md:*:w-80 md:*:shrink-0",
   stack: "flex flex-col gap-3",
 } satisfies Record<TeamRosterLayout, string>;
-const teamPanelClassName =
-  "bg-background text-foreground shadow-xs ring-foreground/5 dark:ring-foreground/10 flex flex-col rounded-xl ring-1";
-const teamHeaderClassName =
-  "group/team-header bg-muted/40 flex items-stretch gap-0.5 rounded-t-xl px-1.5 py-1.5";
-const rosterClassName =
-  "border-border/60 divide-border/60 flex flex-col divide-y border-t";
-const rosterPositionClassName =
-  "flex flex-col px-1.5 py-1.5 last:rounded-b-xl data-active:bg-muted";
 /** People sit under the position's name, past its icon. */
 const rosterPeopleClassName = "flex min-w-0 flex-col pl-6";
 const rosterRowClassName = "min-h-10";
@@ -324,9 +323,8 @@ const PositionRows = ({
   }, [active]);
 
   return (
-    <li
-      ref={rowRef}
-      className={rosterPositionClassName}
+    <PanelRows
+      render={<li ref={rowRef} />}
       data-active={active || undefined}
       aria-current={active || undefined}
     >
@@ -434,7 +432,7 @@ const PositionRows = ({
           </li>
         ) : null}
       </ul>
-    </li>
+    </PanelRows>
   );
 };
 
@@ -476,7 +474,7 @@ const AddPositionRow = ({
   };
 
   return (
-    <li className="px-1.5 py-1 last:rounded-b-xl">
+    <PanelRows render={<li />}>
       <ResponsivePopover open={open} onOpenChange={setOpen}>
         <ResponsivePopoverTrigger
           render={
@@ -519,7 +517,7 @@ const AddPositionRow = ({
           </form>
         </ResponsivePopoverContent>
       </ResponsivePopover>
-    </li>
+    </PanelRows>
   );
 };
 
@@ -569,20 +567,14 @@ const TeamPanel = ({
   );
 
   return (
-    <section className={teamPanelClassName}>
+    <Panel>
       <Collapsible
         open={open}
         onOpenChange={() => {
           onToggle(group.teamId);
         }}
       >
-        <div
-          className={cn(
-            teamHeaderClassName,
-            // Nothing below a collapsed header, so it rounds the panel's bottom too.
-            collapsed && !selectedWhileCollapsed && "rounded-b-xl"
-          )}
-        >
+        <PanelHeader className="group/team-header items-stretch">
           {dragHandleListeners ? (
             <DragHandle
               size="sm"
@@ -634,14 +626,14 @@ const TeamPanel = ({
               )}
             />
           </CollapsibleTrigger>
-        </div>
+        </PanelHeader>
         {selectedWhileCollapsed ? (
-          <ul className={rosterClassName}>
+          <PanelBody render={<ul />}>
             {renderPosition(selectedWhileCollapsed)}
-          </ul>
+          </PanelBody>
         ) : null}
         <CollapsibleContent>
-          <ul className={rosterClassName}>
+          <PanelBody render={<ul />}>
             {group.positions.map(renderPosition)}
             {handleAddPosition ? (
               <AddPositionRow
@@ -650,10 +642,10 @@ const TeamPanel = ({
                 onSelectPosition={handleSelect}
               />
             ) : null}
-          </ul>
+          </PanelBody>
         </CollapsibleContent>
       </Collapsible>
-    </section>
+    </Panel>
   );
 };
 
@@ -705,14 +697,12 @@ const SortableTeamPanel = ({
 };
 
 const TeamPanelOverlay = ({ group }: { group: TeamPositionGroup }) => (
-  <section className={cn(teamPanelClassName, "bg-muted/80 shadow-2xl")}>
-    <div className="flex items-center gap-2 px-3 py-2.5">
-      <GripVertical className="text-muted-foreground size-4 shrink-0" />
-      <h3 className="truncate text-sm font-semibold tracking-tight">
-        {group.teamName}
-      </h3>
-    </div>
-  </section>
+  <Panel variant="lifted">
+    <PanelHeader>
+      <GripVertical className="text-muted-foreground mx-1.5 size-4 shrink-0" />
+      <PanelTitle>{group.teamName}</PanelTitle>
+    </PanelHeader>
+  </Panel>
 );
 
 const skeletonTeams = [
@@ -730,16 +720,13 @@ export const TeamRosterSkeleton = ({
 }) => (
   <div className={layoutClassNames[layout]}>
     {skeletonTeams.map((team) => (
-      <div key={team.key} className={teamPanelClassName}>
-        <div className="flex h-12 items-center px-3.5">
-          <Skeleton variant="text" className="h-3.5" width={team.title} />
-        </div>
-        <div className="border-border/60 divide-border/60 divide-y border-t">
+      <Panel key={team.key} render={<div />}>
+        <PanelHeader>
+          <Skeleton variant="text" className="mx-2 h-3.5" width={team.title} />
+        </PanelHeader>
+        <PanelBody>
           {team.positions.map((people, positionIndex) => (
-            <div
-              key={`${team.key}-${positionIndex}`}
-              className="flex flex-col px-1.5 py-1.5"
-            >
+            <PanelRows key={`${team.key}-${positionIndex}`}>
               <div className="flex h-9 items-center gap-2 px-1.5">
                 <Skeleton variant="text" className="size-4" />
                 <Skeleton variant="text" className="h-3 w-20" />
@@ -761,10 +748,10 @@ export const TeamRosterSkeleton = ({
                   />
                 </div>
               ))}
-            </div>
+            </PanelRows>
           ))}
-        </div>
-      </div>
+        </PanelBody>
+      </Panel>
     ))}
   </div>
 );

@@ -46,7 +46,7 @@ export const SongHistory = ({
 }) => {
   const context = useProductClient();
   const zone = useOrgTimeZone();
-  const history = useQuery(songReads.history(context, songId));
+  const history = useQuery(songReads.schedule(context, songId));
   const serviceTypes = useQuery(planReads.serviceTypes(context));
   const [showsAll, setShowsAll] = useState(false);
   if (history.data === undefined) {
@@ -61,19 +61,16 @@ export const SongHistory = ({
       </EditorSection>
     );
   }
-  const summary = summarizeSongHistory(
-    history.data,
-    planDate,
-    ids.serviceTypeId
-  );
+  const { entries, truncated } = history.data;
+  const summary = summarizeSongHistory(entries, planDate, ids.serviceTypeId);
   const serviceTypeName =
     serviceTypes.data?.find((type) => type.id === ids.serviceTypeId)?.name ??
     null;
-  const rows = showsAll ? history.data : history.data.slice(0, previewRows);
+  const rows = showsAll ? entries : entries.slice(0, previewRows);
   return (
     <EditorSection title="History">
       <AppText font="meta" color={colors.inkSecondary} tabular>
-        {songHistoryCountLabel(summary, serviceTypeName)}
+        {songHistoryCountLabel(summary, serviceTypeName, truncated)}
       </AppText>
       {rows.length === 0 ? (
         <AppText font="rowDetail" color={colors.inkSecondary}>
@@ -121,7 +118,7 @@ export const SongHistory = ({
           );
         })
       )}
-      {history.data.length > previewRows ? (
+      {entries.length > previewRows ? (
         <Pressable
           accessibilityRole="button"
           testID="song-history-toggle"
@@ -130,7 +127,7 @@ export const SongHistory = ({
           }}
         >
           <AppText font="meta" weight="medium">
-            {showsAll ? "Show Less" : `Show All ${history.data.length}`}
+            {showsAll ? "Show Less" : `Show All ${entries.length}`}
           </AppText>
         </Pressable>
       ) : null}

@@ -3,8 +3,12 @@ import type {
   PlanningCenterCoreClient,
   PlanningCenterError,
 } from "@pcobooster/api/planning-center/core-client";
-import { isNonEmptyString } from "@pcobooster/planning-center-models/json";
+import {
+  isNonEmptyString,
+  isNumber,
+} from "@pcobooster/planning-center-models/json";
 import type { JsonObject } from "@pcobooster/planning-center-models/json";
+import { clampPlanItemLength } from "@pcobooster/planning-center-models/plan-item-draft";
 import type { PCResource } from "@pcobooster/planning-center-models/types";
 import { Effect } from "effect";
 
@@ -21,13 +25,21 @@ interface PlanItemResponse {
   included: PCResource[];
 }
 
-const buildItemPayload = (attributes: JsonObject, id?: string) => ({
-  data: {
-    type: "Item",
-    ...(isNonEmptyString(id) ? { id } : undefined),
-    attributes,
-  },
-});
+const buildItemPayload = (attributes: JsonObject, id?: string) => {
+  const safeAttributes = { ...attributes };
+  if (attributes.item_type === "header") {
+    safeAttributes.length = 0;
+  } else if (isNumber(attributes.length)) {
+    safeAttributes.length = clampPlanItemLength(attributes.length);
+  }
+  return {
+    data: {
+      type: "Item",
+      ...(isNonEmptyString(id) ? { id } : undefined),
+      attributes: safeAttributes,
+    },
+  };
+};
 
 export class PlanningCenterPlanItemsService {
   private readonly core: PlanningCenterCoreClient;

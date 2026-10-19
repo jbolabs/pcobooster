@@ -1,5 +1,6 @@
 import type { captureAnalytics } from "@pcobooster/analytics/client";
 import { TransportFailure } from "@pcobooster/client/product-client";
+import { InvalidInput } from "@pcobooster/contracts/faults/invalid-input";
 import { PositionMismatch } from "@pcobooster/contracts/faults/position-mismatch";
 import { describe, expect, it, vi } from "vitest";
 
@@ -85,5 +86,35 @@ describe("workflow analytics", () => {
       operation: "schedule.assign",
       error_code: "NETWORK_ERROR",
     });
+  });
+});
+
+describe("length validation regression", () => {
+  it("records safe Planning Center validation detail on workflow failure", async () => {
+    const capture = vi.fn<typeof captureAnalytics>();
+    const error = new InvalidInput({
+      message: "private title",
+      planningCenterValidation: {
+        code: "too_long",
+        detail: "can not be longer than 24 hours",
+        field: "length",
+      },
+    });
+    await expect(
+      measureWorkflow(async (named) => {
+        named("planItems.update");
+        return await Promise.reject(error);
+      }, capture)
+    ).rejects.toBe(error);
+    expect(capture.mock.calls[0]).toStrictEqual([
+      "workflow failed",
+      {
+        operation: "planItems.update",
+        error_code: "BAD_REQUEST",
+        pco_validation_code: "too_long",
+        pco_validation_detail: "can not be longer than 24 hours",
+        pco_validation_field: "length",
+      },
+    ]);
   });
 });

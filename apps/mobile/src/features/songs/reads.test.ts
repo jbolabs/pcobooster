@@ -66,19 +66,20 @@ describe("songs reads through the product client", () => {
     expect(newMorning?.createdAt).toBeInstanceOf(Date);
   });
 
-  it("reads a song's chart, history, and options at their declared paths", async () => {
+  it("reads a song's chart, schedule, and options at their declared paths", async () => {
     const { context, cache, requests } = setup();
     const chart = await cache.query(songsReads.chart(context, "5501"));
-    await cache.query(songsReads.history(context, "5501"));
+    const schedule = await cache.query(songsReads.schedule(context, "5501"));
     await cache.query(songsReads.options(context, "1101", "5501"));
     expect(
       requests.map((request) => new URL(request.url).pathname)
     ).toStrictEqual([
       "/api/v1/songs/5501/chord-charts",
-      "/api/v1/songs/5501/history",
+      "/api/v1/songs/5501/schedule",
       "/api/v1/service-types/1101/songs/5501/options",
     ]);
     expect(chart.song.title).toBe("Morning Light");
+    expect(schedule.truncated).toBeFalsy();
     expect(chart.arrangements.map((row) => row.archived)).toStrictEqual([
       false,
       true,
@@ -145,17 +146,17 @@ describe("songs reads through the product client", () => {
     expect(cache.getQueryData(options.queryKey)).toBeUndefined();
   });
 
-  it("prefetches history and, with the flag, the chart in the speculative lane", async () => {
+  it("prefetches the schedule and, with the flag, the chart in the speculative lane", async () => {
     const { context, cache, requests } = setup();
     await prefetchSong(cache, context, "5501", false);
     expect(
       requests.map((request) => new URL(request.url).pathname)
-    ).toStrictEqual(["/api/v1/songs/5501/history"]);
+    ).toStrictEqual(["/api/v1/songs/5501/schedule"]);
     await prefetchSong(cache, context, "5502", true);
     expect(
       requests.slice(1).map((request) => new URL(request.url).pathname)
     ).toStrictEqual([
-      "/api/v1/songs/5502/history",
+      "/api/v1/songs/5502/schedule",
       "/api/v1/songs/5502/chord-charts",
     ]);
     expect(

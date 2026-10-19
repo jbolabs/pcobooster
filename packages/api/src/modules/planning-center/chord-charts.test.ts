@@ -31,6 +31,8 @@ const arrangement = (attributes: PCResource["attributes"]): PCResource => ({
     print_margin: "0.5in",
     bpm: 72,
     meter: "4/4",
+    length: 253,
+    notes: "Capo 2 for acoustic.\n",
     sequence: ["Verse 1", "Chorus 1"],
     sequence_short: ["V1", "C"],
     lyrics: "Amazing grace",
@@ -59,6 +61,7 @@ const createSongs = () => {
           author: "John Newton",
           copyright: "Public Domain",
           ccli_number: 22_025,
+          notes: "  ",
         },
       })
     ),
@@ -102,6 +105,9 @@ describe(getChordChartSong, () => {
         id: "song-1",
         title: "Amazing Grace",
         author: "John Newton",
+        ccliNumber: 22_025,
+        copyright: "Public Domain",
+        notes: null,
       },
       arrangements: [
         {
@@ -124,9 +130,65 @@ describe(getChordChartSong, () => {
             margin: "0.5in",
           },
           updatedAt: "2026-09-01T12:00:00Z",
+          length: 253,
+          bpm: 72,
+          meter: "4/4",
+          sequence: ["Verse 1", "Chorus 1"],
+          notes: "Capo 2 for acoustic.",
         },
       ],
     });
+  });
+
+  it("reads unset tempo, length, meter, sequence, and notes as absent", async () => {
+    const songs = createSongs();
+    songs.getSong.mockReturnValue(
+      Effect.succeed({
+        id: "song-1",
+        type: "Song",
+        attributes: { title: "Untitled", ccli_number: 0, copyright: "" },
+      })
+    );
+    songs.getSongArrangementsForEditing.mockReturnValue(
+      Effect.succeed({
+        data: [
+          arrangement({
+            bpm: 0,
+            length: null,
+            meter: " ",
+            sequence: ["", "  ", "Bridge"],
+            notes: null,
+          }),
+        ],
+        included: [],
+      })
+    );
+    const { song, arrangements } = await Effect.runPromise(
+      getChordChartSong("song-1", songs)
+    );
+    expect([
+      song.ccliNumber,
+      song.copyright,
+      arrangements.map(({ bpm, length, meter, sequence, notes }) => ({
+        bpm,
+        length,
+        meter,
+        sequence,
+        notes,
+      })),
+    ]).toStrictEqual([
+      null,
+      null,
+      [
+        {
+          bpm: null,
+          length: null,
+          meter: null,
+          sequence: ["Bridge"],
+          notes: null,
+        },
+      ],
+    ]);
   });
 
   it("reads print settings the editor does not offer as unset", async () => {
@@ -264,6 +326,9 @@ describe(createChordChartSong, () => {
       id: "song-2",
       title: "New Song",
       author: "",
+      ccliNumber: 7,
+      copyright: null,
+      notes: null,
     });
     expect(result.arrangements.map((item) => item.id)).toStrictEqual(["arr-1"]);
     expect(songs.createArrangement).not.toHaveBeenCalled();

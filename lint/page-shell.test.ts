@@ -76,8 +76,8 @@ const panelScrollers = new Map([
     "a fixed-height results box",
   ],
   [
-    "apps/web/src/components/songs/planning-center-pdf-preview.tsx",
-    "the boxed PDF preview pane",
+    "apps/web/src/components/songs/chord-chart-editor-page.tsx",
+    "the boxed PDF preview pane beside the chart editor",
   ],
   [
     "apps/web/src/components/onboarding/welcome-dialog.tsx",
