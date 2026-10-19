@@ -12,6 +12,7 @@ const request = {
   path: "/api/v1/service-types/:serviceTypeId/plans/:planId/items",
   method: "POST",
   requestId: "request-1",
+  procedure: "items.create",
 };
 
 const planningCenterFailure = (): ExternalServiceFailure => {
@@ -79,6 +80,8 @@ describe(toPostHogExceptionCapture, () => {
         path: "/api/v1/service-types/:serviceTypeId/plans/:planId/items",
         method: "POST",
         request_id: "request-1",
+        procedure: "items.create",
+        operation: "items.create",
       },
     });
   });

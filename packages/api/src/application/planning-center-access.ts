@@ -8,6 +8,7 @@ import { PlanningCenterApiError } from "@pcobooster/api/planning-center/api-erro
 import {
   isPlanningCenterError,
   listedErrorDetails,
+  listedValidationErrors,
 } from "@pcobooster/api/planning-center/core-client";
 import type {
   PlanningCenterError,
@@ -198,7 +199,19 @@ export const planningCenterFault = (
         return new Forbidden({ message: NO_APP_ACCESS_MESSAGE });
       }
       if (error.status === PLANNING_CENTER_VALIDATION_STATUS) {
-        return new InvalidInput({ message: rejectedChangeMessage(error) });
+        const message = rejectedChangeMessage(error);
+        if (error.isWrite === true) {
+          return new InvalidInput({
+            message,
+            providerRejection: {
+              errors: listedValidationErrors(
+                error.details,
+                error.sentAttributeNames ?? []
+              ),
+            },
+          });
+        }
+        return new InvalidInput({ message });
       }
       return new ExternalServiceFailure({
         message: "Planning Center request failed.",

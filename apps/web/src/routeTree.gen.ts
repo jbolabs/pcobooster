@@ -21,6 +21,7 @@ import { Route as VersionRouteImport } from './routes/version'
 import { Route as AdminSplatRouteImport } from './routes/admin/$'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as DemoKeyRouteImport } from './routes/demo/$key'
+import { Route as IngestSplatRouteImport } from './routes/ingest/$'
 import { Route as KeyTransitionsSlugRouteImport } from './routes/key-transitions_.$slug'
 import { Route as AppPeopleIndexRouteImport } from './routes/_app/people/index'
 import { Route as AppPeoplePersonIdRouteImport } from './routes/_app/people/$personId'
@@ -90,6 +91,11 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
 const DemoKeyRoute = DemoKeyRouteImport.update({
   id: '/demo/$key',
   path: '/demo/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IngestSplatRoute = IngestSplatRouteImport.update({
+  id: '/ingest/$',
+  path: '/ingest/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KeyTransitionsSlugRoute = KeyTransitionsSlugRouteImport.update({
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/admin/$': typeof AdminSplatRoute
   '/api/$': typeof ApiSplatRoute
   '/demo/$key': typeof DemoKeyRoute
+  '/ingest/$': typeof IngestSplatRoute
   '/key-transitions/$slug': typeof KeyTransitionsSlugRoute
   '/songs/$songId': typeof AppSongsSongIdRouteRouteWithChildren
   '/people/$personId': typeof AppPeoplePersonIdRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/admin/$': typeof AdminSplatRoute
   '/api/$': typeof ApiSplatRoute
   '/demo/$key': typeof DemoKeyRoute
+  '/ingest/$': typeof IngestSplatRoute
   '/key-transitions/$slug': typeof KeyTransitionsSlugRoute
   '/people/$personId': typeof AppPeoplePersonIdRoute
   '/people': typeof AppPeopleIndexRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/admin/$': typeof AdminSplatRoute
   '/api/$': typeof ApiSplatRoute
   '/demo/$key': typeof DemoKeyRoute
+  '/ingest/$': typeof IngestSplatRoute
   '/key-transitions_/$slug': typeof KeyTransitionsSlugRoute
   '/_app/songs/$songId': typeof AppSongsSongIdRouteRouteWithChildren
   '/_app/people/$personId': typeof AppPeoplePersonIdRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/admin/$'
     | '/api/$'
     | '/demo/$key'
+    | '/ingest/$'
     | '/key-transitions/$slug'
     | '/songs/$songId'
     | '/people/$personId'
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/admin/$'
     | '/api/$'
     | '/demo/$key'
+    | '/ingest/$'
     | '/key-transitions/$slug'
     | '/people/$personId'
     | '/people'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/admin/$'
     | '/api/$'
     | '/demo/$key'
+    | '/ingest/$'
     | '/key-transitions_/$slug'
     | '/_app/songs/$songId'
     | '/_app/people/$personId'
@@ -310,6 +322,7 @@ export interface RootRouteChildren {
   AdminSplatRoute: typeof AdminSplatRoute
   ApiSplatRoute: typeof ApiSplatRoute
   DemoKeyRoute: typeof DemoKeyRoute
+  IngestSplatRoute: typeof IngestSplatRoute
   KeyTransitionsSlugRoute: typeof KeyTransitionsSlugRoute
 }
 
@@ -397,6 +410,13 @@ declare module '@tanstack/react-router' {
       path: '/demo/$key'
       fullPath: '/demo/$key'
       preLoaderRoute: typeof DemoKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ingest/$': {
+      id: '/ingest/$'
+      path: '/ingest/$'
+      fullPath: '/ingest/$'
+      preLoaderRoute: typeof IngestSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/key-transitions_/$slug': {
@@ -544,6 +564,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminSplatRoute: AdminSplatRoute,
   ApiSplatRoute: ApiSplatRoute,
   DemoKeyRoute: DemoKeyRoute,
+  IngestSplatRoute: IngestSplatRoute,
   KeyTransitionsSlugRoute: KeyTransitionsSlugRoute,
 }
 export const routeTree = rootRouteImport

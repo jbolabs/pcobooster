@@ -195,6 +195,7 @@ interface AttemptContext {
   readonly attempt: number;
   /** A write's attributes as `describeSentAttributes` logs them. */
   readonly sentAttributes?: JsonObject;
+  readonly readAction?: true;
 }
 
 export const buildPlanningCenterUrl = (
@@ -407,6 +408,59 @@ export const listedErrorDetails = (body: JsonValue | undefined): string[] =>
       }),
   });
 
+/** Whole validation phrases with no slot for submitted text; unknown wording stays private. */
+const VALUE_FREE_VALIDATION_DETAIL =
+  /^(?:can(?: ?not|'t) be longer than \d+ (?:hours?|minutes?|seconds?)|(?:can(?: ?not|'t)|must not) be blank|is (?:invalid|not included in the list|reserved)|has already been taken|must be (?:a number|an integer|(?:greater|less) than(?: or equal to)? -?\d+(?:\.\d+)?|other than -?\d+(?:\.\d+)?)|is too (?:long|short) \((?:maximum|minimum) is \d+ characters?\))$/iu;
+const PRIVATE_VALIDATION_DETAIL =
+  "Validation failed (detail omitted for privacy)";
+const DIAGNOSTIC_ATTRIBUTE = /^[a-z][a-z0-9_]*$/u;
+
+const validationDiagnostic = (
+  detail: string | undefined,
+  attribute: string | undefined
+): string => {
+  if (detail === undefined) {
+    return "Validation failed";
+  }
+  const label = attribute === undefined ? undefined : attributeLabel(attribute);
+  const phrase =
+    label !== undefined &&
+    detail.toLowerCase().startsWith(`${label.toLowerCase()} `)
+      ? detail.slice(label.length + 1)
+      : detail;
+  return VALUE_FREE_VALIDATION_DETAIL.test(phrase)
+    ? phrase.slice(0, 500)
+    : PRIVATE_VALIDATION_DETAIL;
+};
+
+/** Only value-free provider diagnostics, never reflected write text or raw response bodies. */
+export const listedValidationErrors = (
+  body: JsonValue | undefined,
+  sentAttributeNames: readonly string[]
+) => {
+  const sentNames = new Set(sentAttributeNames);
+  return Option.match(decodeListedErrors(body), {
+    onNone: () => [],
+    onSome: ({ errors }) =>
+      errors.slice(0, 10).map(({ detail, source }) => {
+        const name = rejectedAttribute(source);
+        const attribute =
+          name !== undefined &&
+          sentNames.has(name) &&
+          DIAGNOSTIC_ATTRIBUTE.test(name)
+            ? name.slice(0, 100)
+            : undefined;
+        return {
+          attribute,
+          detail:
+            source !== undefined && attribute === undefined
+              ? PRIVATE_VALIDATION_DETAIL
+              : validationDiagnostic(detail, attribute),
+        };
+      }),
+  });
+};
+
 const isJsonObject = (value: JsonValue | undefined): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -459,7 +513,10 @@ const parseErrorBody = (responseBody: string): ErrorBody | null =>
 const buildApiError = (
   status: number,
   responseBody: string,
-  headers: ResponseHeaders
+  headers: ResponseHeaders,
+  method: string,
+  isWrite: boolean,
+  sentAttributeNames: readonly string[]
 ): PlanningCenterApiError => {
   let code: string | undefined;
   let details: JsonValue | undefined;
@@ -481,6 +538,9 @@ const buildApiError = (
   return new PlanningCenterApiError({
     message,
     status,
+    method,
+    isWrite,
+    sentAttributeNames,
     code,
     details,
     responseBody,
@@ -773,6 +833,7 @@ export class PlanningCenterCoreClient {
   ): Effect.Effect<SentResponse, AttemptError> {
     const { cacheScope, httpClient } = this;
     const { method } = request;
+    const isWrite = !isReadMethod(method) && context.readAction !== true;
     const { accounting, endpoint, pacer } = context;
     const execute = Effect.gen(function* sendRequest() {
       const startedAt = yield* Clock.currentTimeMillis;
@@ -827,7 +888,10 @@ export class PlanningCenterCoreClient {
       const error = buildApiError(
         response.status,
         responseBody,
-        response.headers
+        response.headers,
+        method,
+        isWrite,
+        Object.keys(context.sentAttributes ?? {})
       );
       if (error.status === 429) {
         accounting?.recordRateLimited();
@@ -839,7 +903,7 @@ export class PlanningCenterCoreClient {
           rateLimit: error.rateLimit,
           willRetry: willRetryRateLimit(method, context.attempt, error),
         });
-      } else if (!isReadMethod(method)) {
+      } else if (isWrite) {
         // The toast shows only Planning Center's words; this keeps what was sent beside them.
         yield* log.warn("Planning Center rejected a write", {
           endpoint,
@@ -885,7 +949,11 @@ export class PlanningCenterCoreClient {
           );
     const sentAttributes = describeSentAttributes(options.body);
     const attemptRequest = (context: AttemptContext) =>
-      this.attempt(request, { ...context, sentAttributes });
+      this.attempt(request, {
+        ...context,
+        sentAttributes,
+        readAction: options.readAction,
+      });
     return Effect.gen(function* sendWithRetries() {
       const pacer = Option.getOrUndefined(
         yield* Effect.serviceOption(PlanningCenterPacing)

@@ -177,7 +177,7 @@ export const createAnalyticsClient = (
   ): void => {
     if (posthog === undefined) {
       sdk.init(key, {
-        api_host: "https://us.i.posthog.com",
+        api_host: "/ingest",
         ui_host: "https://us.posthog.com",
         defaults: "2026-01-30",
         person_profiles: "identified_only",
