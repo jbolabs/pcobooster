@@ -10,6 +10,7 @@ import {
 } from "./github";
 import { allowedGitHubPath, installationToken } from "./github-app";
 import type { GitHubAppCredentials } from "./github-app";
+import { githubReadRequest, repositoryReadResult } from "./github-request";
 import {
   DispatchRejectedError,
   reconcileBuild,
@@ -372,21 +373,10 @@ export default {
         return new Response("Unsupported repository read", { status: 403 });
       }
       const access = await githubAccess(env);
-      const response = await fetch(`${access.baseUrl}${path}`, {
-        headers: {
-          Authorization: `Bearer ${access.token}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "pcobooster-cloudflare-builds",
-        },
-        redirect: "error",
-      });
-      return new Response(response.body, {
-        status: response.status,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      });
+      const response = await fetch(
+        githubReadRequest(`${access.baseUrl}${path}`, access.token)
+      );
+      return repositoryReadResult(response);
     }
     const preview = /^\/preview\/(?<number>[1-9]\d*)$/u.exec(url.pathname)
       ?.groups?.number;
