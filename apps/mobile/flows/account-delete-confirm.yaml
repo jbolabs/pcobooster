@@ -1,0 +1,24 @@
+appId: com.pcobooster.ios
+---
+- tapOn:
+    id: "account-button"
+- scrollUntilVisible:
+    element:
+      id: "delete-account-row"
+    centerElement: true
+- tapOn:
+    id: "delete-account-row"
+- assertVisible: "Delete your pcobooster.com account?"
+- assertVisible:
+    id: "confirm-destructive"
+- scrollUntilVisible:
+    element:
+      text: ".*You can sign in with Planning Center again later as a new account.*"
+    centerElement: true
+- takeScreenshot: account-delete-confirm
+- assertVisible:
+    id: "confirm-destructive"
+- tapOn:
+    id: "cancel-destructive"
+- assertVisible:
+    id: "account-sheet"

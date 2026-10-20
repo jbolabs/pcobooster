@@ -156,7 +156,7 @@ describe("release artifact provenance", () => {
     }).toThrow("does not describe");
   });
 
-  it("a clean smoke reuse reaches the dedicated simulator operation under set -e", () => {
+  it("a clean smoke reuse reaches the shared simulator boot under set -e", () => {
     const { repo } = fixture();
     const mobile = path.join(repo, "apps/mobile");
     const scripts = path.join(mobile, "scripts");
@@ -169,6 +169,11 @@ describe("release artifact provenance", () => {
     cpSync(
       path.join(original, "scripts/release"),
       path.join(scripts, "release"),
+      { recursive: true }
+    );
+    cpSync(
+      path.join(original, "scripts/simulator"),
+      path.join(scripts, "simulator"),
       { recursive: true }
     );
     symlinkSync(
@@ -202,7 +207,7 @@ describe("release artifact provenance", () => {
     const bin = temporary();
     writeFileSync(
       path.join(bin, "xcrun"),
-      '#!/bin/sh\ncase "$*" in\n "simctl list devices available -j") echo \'{"devices":{"runtime":[{"name":"pcob-release-smoke","udid":"fixture"}]}}\';;\n "simctl erase fixture") echo ERASE_REACHED >&2; exit 1;;\n *) exit 0;;\nesac\n',
+      '#!/bin/sh\ncase "$*" in\n "simctl list devices available -j") echo \'{"devices":{"runtime":[{"name":"agent-sim-1","udid":"fixture","state":"Shutdown"}]}}\';;\n "simctl boot fixture") echo BOOT_REACHED >&2; exit 1;;\n *) exit 0;;\nesac\n',
       { mode: 0o755 }
     );
     const result = spawnSync("bash", [path.join(scripts, "release-smoke.sh")], {
@@ -214,7 +219,7 @@ describe("release artifact provenance", () => {
       },
     });
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("ERASE_REACHED");
+    expect(result.stderr).toContain("BOOT_REACHED");
     expect(
       readFileSync(path.join(mobile, "build/release-smoke/build.json"), "utf-8")
     ).toContain('"dirty":false');

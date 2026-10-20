@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   commandEnvironment,
+  runtimeSecretPurpose,
   selectScopeValues,
   storedRuntimeKeys,
   storeSecretName,
@@ -119,5 +120,22 @@ describe("secret ownership boundaries", () => {
       "PLANNING_CENTER_OAUTH_CLIENT_ID",
       "PLANNING_CENTER_OAUTH_CLIENT_SECRET",
     ]);
+  });
+
+  it("stores the analytics erasure key for production alone, under its own purpose", () => {
+    expect({
+      production: storedRuntimeKeys(true).includes("POSTHOG_ERASURE_API_KEY"),
+      preview: storedRuntimeKeys(false).includes("POSTHOG_ERASURE_API_KEY"),
+      name: storeSecretName(
+        "pcobooster",
+        "prod",
+        runtimeSecretPurpose("POSTHOG_ERASURE_API_KEY"),
+        "POSTHOG_ERASURE_API_KEY"
+      ),
+    }).toStrictEqual({
+      production: true,
+      preview: false,
+      name: "pcobooster__prod__analytics__POSTHOG_ERASURE_API_KEY",
+    });
   });
 });

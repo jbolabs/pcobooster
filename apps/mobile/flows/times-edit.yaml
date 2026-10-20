@@ -33,7 +33,10 @@ appId: com.pcobooster.ios
     id: "time-name-field"
 - eraseText
 - inputText: "Extra rehearsal"
+- pressKey: Enter
 - tapOn:
+    id: "time-create"
+- assertNotVisible:
     id: "time-create"
 - assertVisible: ".*Extra rehearsal.*"
 - takeScreenshot: times-duplicate

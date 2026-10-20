@@ -95,7 +95,7 @@ const MILLISECONDS_PER_SECOND = 1000;
  */
 const MARKER_MAX_AGE_SECONDS = 600;
 const MARKER_COOKIE = "native_sign_in";
-const HANDOFF_IDENTIFIER_PREFIX = "native-sign-in:";
+export const HANDOFF_IDENTIFIER_PREFIX = "native-sign-in:";
 /** 256 bits: 43 base64url characters. */
 const HANDOFF_CODE_BYTES = 32;
 /** The verifier Better Auth sends Planning Center, unrelated to the app's own PKCE pair. */

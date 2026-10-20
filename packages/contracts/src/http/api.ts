@@ -25,12 +25,14 @@ import type { ProcedureRoute } from "@pcobooster/contracts/http/route";
 import { schedule } from "@pcobooster/contracts/http/schedule";
 import { session } from "@pcobooster/contracts/http/session";
 import { songs } from "@pcobooster/contracts/http/songs";
+import { user } from "@pcobooster/contracts/http/user";
 import { HttpApi } from "effect/http-api";
 
 const groups = [
   health,
   session,
   accounts,
+  user,
   features,
   demo,
   feedback,

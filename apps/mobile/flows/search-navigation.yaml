@@ -5,10 +5,12 @@ appId: com.pcobooster.ios
 - tapOn:
     id: "search-input"
 - inputText: "morning light"
-- extendedWaitUntil:
-    visible:
+- tapOn:
+    id: "search-filter-Songs"
+- scrollUntilVisible:
+    element:
       id: "search-result-5501"
-    timeout: 30000
+    centerElement: true
 - takeScreenshot: search-keyboard
 - tapOn:
     id: "search-result-5501"
@@ -20,3 +22,12 @@ appId: com.pcobooster.ios
 - tapOn: "Search"
 - assertVisible:
     id: "search-input"
+# One-character People searches show guidance rather than an empty loading state.
+- tapOn:
+    id: "search-input"
+- eraseText
+- inputText: "m"
+- tapOn:
+    id: "search-filter-People"
+- assertVisible: "Type at least two characters to search people."
+- takeScreenshot: search-short-query

@@ -517,7 +517,7 @@ const ScopedSearch = () => {
                 onOpen={open}
               />
             ) : null}
-            {showPeople ? (
+            {showPeople && query.length >= 2 ? (
               <SearchSection
                 title="People"
                 rows={(people.data ?? []).map((person) => ({
@@ -532,11 +532,7 @@ const ScopedSearch = () => {
                     detail: "Person",
                   },
                 }))}
-                loading={
-                  (searching || waiting) &&
-                  query.length >= 2 &&
-                  people.isPending
-                }
+                loading={(searching || waiting) && people.isPending}
                 error={people.error}
                 onRetry={() => {
                   void people.refetch();
@@ -559,13 +555,13 @@ const ScopedSearch = () => {
                         {
                           key: song.id,
                           title: song.title,
-                          detail: song.author,
+                          detail: song.author || "Song",
                           route: resultRoute("songs", song.id),
                           recent: {
                             kind: "songs" as const,
                             id: song.id,
                             title: song.title,
-                            detail: song.author ?? "Song",
+                            detail: song.author || "Song",
                           },
                         },
                       ]

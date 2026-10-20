@@ -5,6 +5,7 @@ import { boundaryLog } from "@pcobooster/api/logging";
 import { createPostHogActivityForwarder } from "@pcobooster/api/modules/analytics/posthog-activity";
 import type { PostHogPersonProperties } from "@pcobooster/api/modules/analytics/posthog-capture";
 import type { JsonObject } from "@pcobooster/planning-center-models/json";
+import { sql } from "drizzle-orm";
 
 const analyticsLog = boundaryLog("analytics/posthog");
 
@@ -111,7 +112,7 @@ export const recordActivityEvent = async (
   input: ActivityEventInput,
   person: PostHogPersonProperties | null = null
 ): Promise<void> => {
-  await database.insert(activityEvents).values({
+  const values = {
     eventType: input.eventType,
     actorUserId: toNullableString(input.actorUserId),
     actorAccountId: toNullableString(input.actorAccountId),
@@ -129,7 +130,31 @@ export const recordActivityEvent = async (
     teamId: toNullableString(input.teamId),
     positionId: toNullableString(input.positionId),
     metadata: input.metadata ?? {},
-  });
+  };
+  if (values.actorUserId === null) {
+    await database.insert(activityEvents).values(values);
+  } else {
+    // A provider operation can finish after account deletion. Keep its result successful,
+    // but never recreate personal audit data (or forward it) once that user is gone.
+    const inserted = await database.all<{ id: number }>(sql`
+      insert into activity_events (
+        event_type, actor_user_id, actor_account_id, request_id, path, method,
+        ip_address, user_agent, success, status_code, error_code, service_type_id,
+        person_id, plan_id, team_id, position_id, metadata
+      )
+      select ${values.eventType}, ${values.actorUserId}, ${values.actorAccountId},
+        ${values.requestId}, ${values.path}, ${values.method}, ${values.ipAddress},
+        ${values.userAgent}, ${values.success === null ? null : Number(values.success)},
+        ${values.statusCode}, ${values.errorCode}, ${values.serviceTypeId},
+        ${values.personId}, ${values.planId}, ${values.teamId}, ${values.positionId},
+        ${JSON.stringify(values.metadata)}
+      where exists (select 1 from user where id = ${values.actorUserId})
+      returning id
+    `);
+    if (inserted.length === 0) {
+      return;
+    }
+  }
   try {
     await createPostHogActivityForwarder({
       apiKey: config.postHogProjectKey ?? undefined,

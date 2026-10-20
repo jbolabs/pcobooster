@@ -22,7 +22,9 @@ import type { SFSymbol } from "sf-symbols-typescript";
 
 import { resolvedTokenColor, useColorVariant } from "../design/colors";
 import type { ColorVariant } from "../design/colors";
+import { actionButtonStyle } from "../design/glass-capability";
 import { Spacing } from "../design/metrics";
+import { hasLiquidGlass } from "../design/native-glass";
 
 export interface GlassAction {
   readonly title: string;
@@ -94,14 +96,17 @@ const GlassActionButton = ({
       );
     }
     return action.systemImage === undefined ? null : (
-      <Image systemName={action.systemImage} />
+      <Image
+        modifiers={[foregroundStyle(label)]}
+        systemName={action.systemImage}
+      />
     );
   })();
   return (
     <Button
       modifiers={[
         // Glass button styles are capsules by default.
-        buttonStyle(isProminent ? "glassProminent" : "glass"),
+        buttonStyle(actionButtonStyle(hasLiquidGlass, isProminent)),
         controlSize(size),
         tint(isProminent ? resolvedTokenColor("inkFill", variant) : label),
         disabledModifier(action.disabled === true || action.isBusy === true),

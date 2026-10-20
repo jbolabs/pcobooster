@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cold-launches a Release smoke build on a dedicated simulator and records whether each startup
+# Cold-launches a Release smoke build on an idle shared simulator and records whether each startup
 # path reaches its first screen without a fatal JS or native error.
 #
 # Usage: scripts/release-smoke.sh [--build] [--simulator <name>] [--allow-dirty]
@@ -9,9 +9,9 @@
 #   lost connection, while the Keychain, app storage, and cache restoration stay real
 #   (src/harness/release-smoke.ts). Without --build, the last smoke app is reused only if it was
 #   built from this exact revision.
-# - --simulator names a simulator used only for this (default pcob-release-smoke). It is erased
-#   first, so the first launch is a fresh install. Create it once with
-#   xcrun simctl create pcob-release-smoke "iPhone 17 Pro"
+# - --simulator selects an existing Shutdown shared simulator (agent-sim-1/2/3 or
+#   agent-sim-ipad). Otherwise the first idle shared simulator is selected. Only this app is
+#   uninstalled; the simulator is never erased. Cleanup shuts down the simulator we booted.
 # - Paths, in order: fresh-install (signed out, fixtures), signed-out-offline, sign-in (fixture
 #   sign-in saved to the Keychain), restored-session, restored-offline.
 # - Evidence (manifest.json, per-path logs and screenshots) lands in
@@ -25,7 +25,7 @@ mobile="$PWD"
 repo="$(cd ../.. && pwd)"
 
 build=0
-simulator=pcob-release-smoke
+simulator=""
 allow_dirty=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -47,7 +47,8 @@ if [[ -n "$(git -C "$repo" status --porcelain --untracked-files=all)" ]]; then
 fi
 revision="$(git -C "$repo" rev-parse HEAD)"
 
-udid="$(xcrun simctl list devices available -j | python3 -I -c 'import json,sys; name=sys.argv[1]; data=json.load(sys.stdin); matches=[d["udid"] for devices in data["devices"].values() for d in devices if d["name"]==name]; sys.exit(f"Expected exactly one {name} simulator; create it with: xcrun simctl create {name} \"iPhone 17 Pro\"") if len(matches)!=1 else print(matches[0])' "$simulator")"
+selection="$(xcrun simctl list devices available -j | python3 -I scripts/simulator/select_shared.py "$simulator")"
+IFS=$'\t' read -r simulator udid <<< "$selection"
 if [ -z "${JAVA_HOME:-}" ] && [ -d /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ]; then
   export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 fi
@@ -95,12 +96,33 @@ log_pid=""
 stop_log() {
   if [ -n "$log_pid" ]; then kill "$log_pid" 2>/dev/null || true; wait "$log_pid" 2>/dev/null || true; log_pid=""; fi
 }
-trap 'stop_log; terminate' EXIT
+booted_here=0
+cleanup() {
+  local status=$?
+  stop_log
+  if [[ "$booted_here" == 1 ]]; then
+    terminate
+    if ! xcrun simctl shutdown "$udid"; then
+      echo "Could not shut down shared simulator $simulator ($udid)." >&2
+      if [[ "$status" == 0 ]]; then status=1; fi
+    fi
+  fi
+  return "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
-xcrun simctl shutdown "$udid" >/dev/null 2>&1 || true
-xcrun simctl erase "$udid"
+# A build may take minutes: refuse if another task has since booted this device.
+xcrun simctl list devices available -j | python3 -I scripts/simulator/select_shared.py "$simulator" >/dev/null
 xcrun simctl boot "$udid"
+booted_here=1
 xcrun simctl bootstatus "$udid" -b >/dev/null
+# Uninstall removes only our container. The first-install marker then makes the app delete
+# its own surviving Keychain session before loading it (clearIfFreshInstall).
+if xcrun simctl get_app_container "$udid" com.pcobooster.ios app >/dev/null 2>&1; then
+  xcrun simctl uninstall "$udid" com.pcobooster.ios
+fi
 xcrun simctl install "$udid" "$app"
 
 fatal_pattern='Unhandled JS Exception|RCTFatal|Terminating app due to uncaught exception|EXC_BAD_ACCESS|EXC_CRASH|Fatal error:'

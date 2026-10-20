@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
+import { Unauthenticated } from "@pcobooster/contracts/faults/unauthenticated";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeFixtureFetch } from "../harness/fixture-transport";
@@ -13,7 +14,7 @@ const REQUEST_ID =
   /^[\da-f]{8}-[\da-f]{4}-7[\da-f]{3}-[\da-f]{4}-[\da-f]{12}$/u;
 
 vi.stubGlobal("__DEV__", true);
-const { makeLiveRuntime, makeReleaseSmokeRuntime } =
+const { makeFixtureRuntime, makeLiveRuntime, makeReleaseSmokeRuntime } =
   await import("./app-runtime");
 
 const testCrypto = {
@@ -158,5 +159,88 @@ describe("demo.start's request", () => {
       request?.headers.get("x-pcobooster-app"),
       REQUEST_ID.test(request?.headers.get("x-request-id") ?? ""),
     ]).toStrictEqual(["expo;api=2", "0.1.0(372)+1a2b3c4", true]);
+  });
+});
+
+describe("fixture feature overrides", () => {
+  beforeEach(() => {
+    vi.stubGlobal("__DEV__", true);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ["all", { people: true, chordCharts: true, practice: true }],
+    ["none", { people: false, chordCharts: false, practice: false }],
+    ["people", { people: true, chordCharts: false, practice: false }],
+    ["songs", { people: false, chordCharts: true, practice: false }],
+  ] as const)(
+    "decodes the complete %s feature response",
+    async (features, expected) => {
+      const runtime = makeFixtureRuntime(
+        { ...noLaunchOptions, mock: true, features, mockLatencyMs: 0 },
+        smokeNow
+      );
+      await runtime.start();
+      await expect(
+        runtime.client.run((api) => api.features.status())
+      ).resolves.toStrictEqual(expected);
+    }
+  );
+});
+
+describe("account deletion credentials across a queued account switch", () => {
+  it("attributes A's rejected deletion to A while keeping B signed in", async () => {
+    vi.stubGlobal("__DEV__", true);
+    const seen: string[] = [];
+    const runtime = makeLiveRuntime(noLaunchOptions, {
+      ...smokeDevice(),
+      productFetch: async (input, init) => {
+        const request = new Request(input, init);
+        seen.push(request.headers.get("authorization") ?? "");
+        return await Promise.resolve(
+          Response.json(
+            { _tag: "Unauthenticated", message: "Expired A" },
+            { status: 401 }
+          )
+        );
+      },
+    });
+    await runtime.session.restore();
+    await runtime.session.completeSignIn({
+      token: "token-B",
+      user: { id: "B", name: "B", email: "b@example.test" },
+      selectedAccountId: null,
+    });
+    await runtime.session.completeSignIn({
+      token: "token-A",
+      user: { id: "A", name: "A", email: "a@example.test" },
+      selectedAccountId: null,
+    });
+    const gate = Promise.withResolvers<null>();
+    const { track } = runtime.scheduler;
+    runtime.scheduler.track = async (priority, call, signal) => {
+      await gate.promise;
+      return await track(priority, call, signal);
+    };
+    const deletion = runtime.session.deleteAccount();
+    runtime.session.switchAccount("B");
+    gate.resolve(null);
+    await expect(deletion).rejects.toBeInstanceOf(Unauthenticated);
+    const snapshot = runtime.session.getSnapshot();
+    expect({
+      phase: snapshot.phase.kind,
+      active: snapshot.stored.activeUserId,
+      rejected: snapshot.stored.accounts
+        .filter((account) => account.needsSignIn)
+        .map((account) => account.userId),
+      seen,
+    }).toStrictEqual({
+      phase: "signedIn",
+      active: "B",
+      rejected: [],
+      seen: ["Bearer token-A"],
+    });
   });
 });

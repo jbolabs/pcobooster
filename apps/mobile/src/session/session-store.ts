@@ -1,3 +1,6 @@
+import { AccountDeletedWithLeftoversError } from "./account-deleted-with-leftovers";
+import type { DeletionLeftover } from "./account-deleted-with-leftovers";
+import { AccountDeletionUnavailableError } from "./account-deletion-unavailable";
 import type { CredentialStore } from "./credential-store";
 /**
  * Who the app is signed in as, kept in the Keychain, and the credentials every request carries
@@ -88,6 +91,11 @@ export interface SessionApi {
   readonly exitDemo: () => Promise<void>;
   /** `session.status` with no credentials: does the API sign requests in on its own? */
   readonly isSignedInWithoutCredentials: () => Promise<boolean>;
+  /**
+   * `user.delete`, sent with exactly this bearer token and no demo credential: deletes that
+   * token's own pcobooster.com account. Throws the API's fault.
+   */
+  readonly deleteAccount: (bearerToken: string) => Promise<void>;
 }
 
 export interface SessionStoreDependencies {
@@ -99,7 +107,11 @@ export interface SessionStoreDependencies {
   readonly credentialIdentity: (token: string) => Promise<string>;
   /** Called with people this device forgot, so their cached reads go too. */
   readonly beforeRestore?: () => Promise<void>;
-  readonly onForget?: (userIds: readonly string[]) => void;
+  /**
+   * Clears what the device keeps for people it forgot (cached reads, previews). Resolves once
+   * cleared; a rejection means something stayed behind.
+   */
+  readonly onForget?: (userIds: readonly string[]) => Promise<void>;
   /** Failures nobody needs to see (a revoke, a Keychain write); logged by the caller. */
   readonly onBackgroundFailure?: (error: Error) => void;
 }
@@ -287,16 +299,23 @@ export class SessionStore {
       account
     );
     const revoked = dropped.map((entry) => entry.token);
+    // Started before the new session applies, so the old token's cache writes are dropped first.
+    const forgetting =
+      existing !== undefined && existing.token !== result.token
+        ? this.forgetLocally([existing.userId])
+        : Promise.resolve(true);
     if (existing !== undefined && existing.token !== result.token) {
       revoked.push(existing.token);
-      this.dependencies.onForget?.([existing.userId]);
     }
     this.development = false;
     this.apply({ ...session, activeUserId: account.userId });
-    if (dropped.length > 0) {
-      this.dependencies.onForget?.(dropped.map((entry) => entry.userId));
-    }
-    await this.revoke(revoked);
+    await Promise.all([
+      forgetting,
+      dropped.length > 0
+        ? this.forgetLocally(dropped.map((entry) => entry.userId))
+        : true,
+      this.revoke(revoked),
+    ]);
   };
 
   /** Makes a remembered person active, without a server call. */
@@ -311,8 +330,50 @@ export class SessionStore {
       return;
     }
     this.apply(session);
-    this.dependencies.onForget?.([userId]);
-    await this.revoke([removed.token]);
+    await Promise.all([
+      this.forgetLocally([userId]),
+      this.revoke([removed.token]),
+    ]);
+  };
+
+  /**
+   * Deletes the active person's pcobooster.com account on the server, then forgets them here
+   * like a removal: their Keychain entry and cached reads go, and in-flight cache writes for
+   * them are dropped. The server already ended every session, so nothing is revoked.
+   *
+   * The person and token are captured before the call, so switching people while it runs still
+   * deletes and forgets the right one. If the server fails, nothing local changes and its fault
+   * is thrown (an `Unauthenticated` answer marks the person `needsSignIn` through the client, as
+   * for any call). Once the server has deleted, the person leaves memory at once; a Keychain
+   * write is tried twice, and anything still left behind is thrown as
+   * `AccountDeletedWithLeftoversError`, never reported as a clean deletion.
+   */
+  readonly deleteAccount = async (): Promise<void> => {
+    const { phase } = this.snapshot;
+    if (phase.kind !== "signedIn") {
+      throw new AccountDeletionUnavailableError();
+    }
+    const { userId, token } = phase.account;
+    await this.dependencies.api.deleteAccount(token);
+    const leftovers: DeletionLeftover[] = [];
+    const forgetting = this.forgetLocally([userId]);
+    const { session, removed } = removeAccount(this.stored, userId);
+    if (removed !== null) {
+      this.stored = session;
+      this.publish();
+      // The retry saves whatever is current then, which still lacks this person.
+      const saved =
+        (await this.save(session)) || (await this.save(this.stored));
+      if (!saved) {
+        leftovers.push("keychain");
+      }
+    }
+    if (!(await forgetting)) {
+      leftovers.push("cache");
+    }
+    if (leftovers.length > 0) {
+      throw new AccountDeletedWithLeftoversError(leftovers);
+    }
   };
 
   /** Signs the active person out of this device, or ends the demo or development phase. */
@@ -525,21 +586,46 @@ export class SessionStore {
   ): void {
     this.stored = next;
     this.publish();
-    if (!persist) {
-      return;
+    if (persist) {
+      void this.save(next);
     }
-    // Writes run in order, so a slow earlier save never overwrites a later change.
+  }
+
+  /**
+   * Queues a Keychain write after every earlier one, so a slow earlier save never overwrites a
+   * later change. Resolves whether it was saved; a failure is reported, never thrown.
+   */
+  private async save(next: StoredSession): Promise<boolean> {
     const previous = this.writes;
-    this.writes = (async () => {
+    const saved = (async () => {
       await previous;
       try {
         await this.dependencies.store.save(next);
+        return true;
       } catch (error) {
         this.dependencies.onBackgroundFailure?.(
           error instanceof Error ? error : new Error("Session storage failed")
         );
+        return false;
       }
     })();
+    this.writes = (async () => {
+      await saved;
+    })();
+    return await saved;
+  }
+
+  /** Clears forgotten people's device data; resolves whether it all went. Failures are reported. */
+  private async forgetLocally(userIds: readonly string[]): Promise<boolean> {
+    try {
+      await this.dependencies.onForget?.(userIds);
+      return true;
+    } catch (error) {
+      this.dependencies.onBackgroundFailure?.(
+        error instanceof Error ? error : new Error("Forgetting failed")
+      );
+      return false;
+    }
   }
 
   /** Failures are reported, never shown: the session ages out after 7 days regardless. */

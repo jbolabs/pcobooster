@@ -36,10 +36,14 @@ export const createSubmitFeedbackDependencies = ({
     if (config.devAuthBypass) {
       return { kind: "user", userId: getDevBypassSession().user.id };
     }
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await auth.api.getSession({
+      headers: request.headers,
+      query: { disableCookieCache: true },
+    });
     return session === null ? null : { kind: "user", userId: session.user.id };
   },
-  save: async (submission) => await saveFeedback(database, submission),
+  save: async (submission) =>
+    await saveFeedback(database, submission, config.devAuthBypass),
   loadPerson: async (userId) =>
     await getPostHogPersonProperties(userId, database),
   forward: createPostHogFeedbackForwarder({

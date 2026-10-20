@@ -1,0 +1,41 @@
+appId: com.pcobooster.ios
+---
+# Phone fixture: action panes stay hidden until swiped; a long leading swipe schedules.
+- extendedWaitUntil:
+    visible:
+      id: "candidate-4100111"
+    timeout: 60000
+- assertNotVisible:
+    id: "assign-swipe-add-4100102"
+- assertNotVisible:
+    id: "assign-swipe-unschedule-4100104"
+- swipe:
+    start: "10%, 52%"
+    end: "95%, 52%"
+    duration: 500
+- extendedWaitUntil:
+    visible:
+      id: "assign-status-4100111-pending"
+    timeout: 10000
+- takeScreenshot: assign-swipe-added
+- swipe:
+    from:
+      id: "candidate-4100111"
+    direction: RIGHT
+- tapOn:
+    id: "assign-swipe-confirm-4100111"
+- assertVisible:
+    id: "assign-status-4100111-confirmed"
+- takeScreenshot: assign-swipe-confirmed
+- swipe:
+    from:
+      id: "candidate-4100111"
+    direction: LEFT
+- tapOn:
+    id: "assign-swipe-unschedule-4100111"
+- assertVisible: "Unschedule Avery Woods?"
+- tapOn:
+    id: "confirm-destructive"
+- assertVisible:
+    id: "assign-add-4100111"
+- takeScreenshot: assign-swipe-removed

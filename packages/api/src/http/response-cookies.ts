@@ -46,6 +46,10 @@ export const demoSessionCookie = (
   secure: boolean
 ): Cookies.Cookie => sessionCookie(DEMO_SESSION_COOKIE, sessionToken, secure);
 
+/** Expires a cookie set for the whole site. */
+export const expiredCookie = (name: string, secure: boolean): Cookies.Cookie =>
+  sessionCookie(name, null, secure);
+
 /** Sets the cookie `make` builds for this stage on the procedure's response. */
 export const setResponseCookie = (
   make: (secure: boolean) => Cookies.Cookie

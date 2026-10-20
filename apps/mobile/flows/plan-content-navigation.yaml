@@ -12,9 +12,9 @@ appId: com.pcobooster.ios
 - tapOn: "Overview"
 - scrollUntilVisible:
     element:
-      text: ".*9:00.*AM.*"
+      text: ".*9 AM Gathering.*"
     centerElement: true
-- tapOn: ".*9:00.*AM.*"
+- tapOn: ".*9 AM Gathering.*"
 - assertVisible:
     id: "time-row-8812610041"
 - tapOn: "Plan"

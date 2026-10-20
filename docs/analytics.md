@@ -93,6 +93,41 @@ The Slack message carries the failure type, stable operation name, bounded error
 - **iPhone app:** JavaScript fatals (from startup on), uncaught errors, unhandled rejections, render errors, and terminal API failures, under the "Share usage analytics and error reports" switch, never in demo, with release and source revision on every event and Hermes source maps uploaded per build. API 5xx failures are `api request failed` events joined to the Worker's `rpc` line by `request_id` rather than a second `$exception`. See [Mobile diagnostics](mobile-diagnostics.md).
 - **Browser:** exception autocapture (unhandled errors and promise rejections, not console errors) covers authenticated Services, People, and Songs routes, including Overview. Its gate is independent of replay, so recording eligibility and sampling remain unchanged. Errors React catches in an error boundary are reported from `onCaughtError` in `apps/web/src/client.tsx`. The QueryCache reports every terminal failed query once after automatic retries, including unobserved background queries, 4xx errors, and rejected aborts. Its synthetic `DataLoadError` carries a safe query family and error code, never query IDs, provider messages, or bodies; SDK identity and session properties link it to the affected person. Unknown query families use `unknown-read`. The privacy guard drops `$exception` elsewhere and keeps type, message (truncated), mechanism, and stack frames plus allowlisted diagnostic properties; frame URLs outside `/assets/` are scrubbed like page URLs, and source context lines are dropped.
 
+## Erasing deleted accounts
+
+Deleting an account (`DELETE /api/v1/user`) queues a row in `analytics_erasure_requests` in the same D1 batch, so the erasure owed to PostHog can't be lost. `packages/api/src/modules/account-deletion/analytics-erasure.ts` carries it out: it calls PostHog's `persons/bulk_delete` with the user id as distinct id and `delete_events` and `delete_recordings`, twice per account:
+
+1. No sooner than one hour after the deletion, so captures already in flight (a feedback forward, a phone's queued events) have landed. PostHog only deletes events captured before each request.
+2. No sooner than seven days after it, to catch late arrivals.
+
+A failed pass is retried with backoff (15 minutes, doubling, at most a day) and never skipped; updates are conditional on the pass count, so overlapping runs never double-advance a request. After the second accepted pass the distinct id is cleared and the row stays as a receipt with no personal data. "Completed" means PostHog accepted both requests; PostHog removes events in the background during off-peak hours (weekends on PostHog Cloud), so check `deletion_status` in PostHog if you need to confirm storage is clean.
+
+### Schedule
+
+The production API Worker runs the queue from a Cron Trigger (`17 * * * *`, hourly, UTC; `apps/server/src/analytics-erasure-schedule.ts`), declared with `Cloudflare.Workers.cron` in `apps/server/src/worker.ts`. It reads D1 through the Worker's own binding, so no D1 API token exists in the Worker. Each run handles at most 25 due requests (inside the 80-subrequest limit) and logs counts only (`module: analytics-erasure`, message `Analytics erasure run`) in Workers Logs. Previews, staging, local, and tests declare no cron and read no erasure key.
+
+Overlapping runs (a slow hour, or an operator's manual run) are safe: every update is conditional on the pass count it read, and PostHog treats a repeated deletion as done.
+
+Failures alert through production's existing PostHog error tracking: each run that needs a person sends one `$exception` per problem with `path` `cron:analytics-erasure` and an `error_code` of:
+
+- `ANALYTICS_ERASURE_PASS_FAILED`: PostHog refused or was unreachable for at least one pass (rescheduled with backoff).
+- `ANALYTICS_ERASURE_OVERDUE`: a request is still open nine days after its deletion (the confirmation pass is due at seven). The privacy policy promises two weeks, so treat it as an incident.
+- `ANALYTICS_ERASURE_RUN_FAILED`: D1 or the queue itself failed. No row details are logged or reported.
+- `ANALYTICS_ERASURE_NOT_CONFIGURED`: the erasure key is unreadable or empty.
+
+A cron that never fires sends nothing; the Worker's Cron Triggers and past events are listed under the Worker's Settings → Triggers in the Cloudflare dashboard, and `bun run analytics:erase` shows the queue's counts.
+
+Prerequisite: `POSTHOG_ERASURE_API_KEY`, a PostHog personal API key limited to **person:write** on project 614621, stored as `pcobooster__prod__analytics__POSTHOG_ERASURE_API_KEY` by `alchemy.secrets.ts` (production tier only). It must be stored before the API Worker that consumes it deploys; see [rollout](ci-cd.md#analytics-erasure-cron).
+
+### Inspecting or running by hand
+
+```sh
+bun run analytics:erase -- --database-id <production D1 UUID>            # counts only
+bun run analytics:erase -- --database-id <production D1 UUID> --process  # erase what is due
+```
+
+`scripts/analytics/erase-deleted-accounts.ts` runs the same code over the D1 HTTP API. It prints counts only (waiting, due, failing, completed, oldest open request), never ids, and exits 1 when a pass failed. It is optional: the cron does the work. It needs the `analytics-erasure` Keychain scope (`bun run secrets:set analytics-erasure <KEY> --stdin`): `CLOUDFLARE_D1_API_TOKEN` (limited to **D1 Edit**; required) and `POSTHOG_ERASURE_API_KEY` (for `--process`), plus the production D1 database id (the `databaseId` output of the production stack).
+
 ## Privacy and cost boundaries
 
 - No marketing, auth, or demo recordings. No heatmaps, automatic click/form capture, rage clicks, console logs, surveys, web experiments, or web-vitals capture. Exception capture is limited to authenticated product routes (see [Error tracking](#error-tracking)).

@@ -10,9 +10,9 @@ import type { RequestScheduler } from "@pcobooster/client/request-scheduler";
  * sign-in. Fixture mode (`-PCOBMock YES`, development builds) swaps the network and the Keychain
  * for the fixture transport and memory, and keeps everything else.
  */
+import type { enabledFeaturesSchema } from "@pcobooster/contracts/http/features";
 import { APP_RELEASE_HEADER } from "@pcobooster/contracts/http/request-diagnostics";
 import { Effect, Schema } from "effect";
-import type { Json } from "effect/Schema";
 
 import type { ReportOrigin } from "../diagnostics/diagnostics-client";
 import { makeFixtureFetch } from "../harness/fixture-transport";
@@ -67,12 +67,12 @@ export const API_ORIGIN: string = __DEV__
 export const isLocalOrigin = (origin: string): boolean =>
   LOCAL_ORIGIN.test(origin);
 
-const featureOverrides: Record<FeatureOverride, Json> = {
-  all: { people: true, chordCharts: true },
-  none: { people: false, chordCharts: false },
-  people: { people: true, chordCharts: false },
-  songs: { people: false, chordCharts: true },
-};
+const featureOverrides = {
+  all: { people: true, chordCharts: true, practice: true },
+  none: { people: false, chordCharts: false, practice: false },
+  people: { people: true, chordCharts: false, practice: false },
+  songs: { people: false, chordCharts: true, practice: false },
+} satisfies Record<FeatureOverride, typeof enabledFeaturesSchema.Type>;
 
 export interface AppRuntime {
   readonly origin: string;
@@ -143,6 +143,18 @@ const buildRuntime = (
       },
       exitDemo: async () => {
         await run((api) => api.demo.exit());
+      },
+      deleteAccount: async (bearerToken) => {
+        if (client === null) {
+          throw new Error("The product client is not ready");
+        }
+        await client
+          .forCredentials({
+            bearerToken,
+            accountId: null,
+            demoToken: null,
+          })
+          .run((api) => api.user.delete());
       },
       isSignedInWithoutCredentials: async () => {
         const result = await run((api) => api.session.status());

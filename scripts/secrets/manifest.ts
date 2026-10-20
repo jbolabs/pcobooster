@@ -9,6 +9,7 @@ export const secretScopeSchema = Schema.Literals([
   "apple",
   "mobile-updates",
   "posthog",
+  "analytics-erasure",
   "recovery",
 ]);
 export type SecretScope = typeof secretScopeSchema.Type;
@@ -29,6 +30,9 @@ export const runtimeSecretKeys = [
   "DEMO_ACCESS_KEY",
   "DEMO_PLANNING_CENTER_CLIENT",
   "DEMO_PLANNING_CENTER_PAT",
+  // Production only: the API Worker's analytics erasure cron. A PostHog personal API key limited
+  // to `person:write` on project 614621.
+  "POSTHOG_ERASURE_API_KEY",
 ] as const;
 export type RuntimeSecretKey = (typeof runtimeSecretKeys)[number];
 
@@ -79,6 +83,10 @@ export const scopeKeys: Record<SecretScope, readonly string[]> = {
   // Only the update signing key: publishing reaches Cloudflare with the operator's Alchemy login.
   "mobile-updates": ["UPDATES_SIGNING_KEY_PEM_BASE64"],
   posthog: ["POSTHOG_PERSONAL_API_KEY"],
+  // Inspecting or hand-running the analytics erasure queue (`analytics:erase`) that the production
+  // API Worker's cron runs: a PostHog key limited to `person:write` and a Cloudflare token limited
+  // to D1 edit, nothing else.
+  "analytics-erasure": ["POSTHOG_ERASURE_API_KEY", "CLOUDFLARE_D1_API_TOKEN"],
   recovery: ["DATABASE_URL", "BETTER_AUTH_SECRET"],
 };
 
@@ -91,6 +99,7 @@ export const requiredScopeKeys: Record<SecretScope, readonly string[]> = {
   apple: ["ASC_KEY_ID", "ASC_ISSUER_ID", "ASC_KEY_P8_BASE64"],
   "mobile-updates": ["UPDATES_SIGNING_KEY_PEM_BASE64"],
   posthog: ["POSTHOG_PERSONAL_API_KEY"],
+  "analytics-erasure": ["CLOUDFLARE_D1_API_TOKEN"],
   recovery: ["DATABASE_URL"],
 };
 
@@ -119,6 +128,9 @@ export const runtimeSecretPurpose = (key: RuntimeSecretKey): string => {
   }
   if (key.startsWith("PLANNING_CENTER_")) {
     return "planning-center";
+  }
+  if (key.startsWith("POSTHOG_")) {
+    return "analytics";
   }
   return "auth";
 };
