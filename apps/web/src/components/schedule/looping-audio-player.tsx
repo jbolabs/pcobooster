@@ -8,18 +8,21 @@ export const LoopingAudioPlayer = ({
   fileId,
   url,
   name,
+  autoPlay = false,
   onRetry,
   onFailed,
 }: {
   fileId: string;
   url: string;
   name: string;
+  autoPlay?: boolean;
   onRetry: () => Promise<void>;
   onFailed: () => void;
 }) => (
   <RecordingPlayer
     songTitle={name}
     globalControls={false}
+    autoPlay={autoPlay}
     tracks={[{ id: fileId, name }]}
     renderAudio={(props) => (
       <RecordingAudio

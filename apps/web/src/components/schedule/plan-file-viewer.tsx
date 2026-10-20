@@ -163,6 +163,7 @@ const FileContent = ({
   data,
   preview,
   canOpen,
+  audioPlaybackVersion,
   onRetry,
   onFailed,
 }: {
@@ -171,6 +172,7 @@ const FileContent = ({
   data: string | undefined;
   preview: boolean;
   canOpen: boolean;
+  audioPlaybackVersion: number;
   onRetry: () => Promise<void>;
   onFailed: () => void;
 }) => {
@@ -199,8 +201,9 @@ const FileContent = ({
     return (
       <div className="flex flex-1 items-center justify-center p-6">
         <LoopingAudioPlayer
-          key={file.id}
+          key={`${file.id}:${String(audioPlaybackVersion)}`}
           fileId={file.id}
+          autoPlay={audioPlaybackVersion > 0}
           name={file.name}
           onRetry={onRetry}
           onFailed={onFailed}
@@ -284,6 +287,7 @@ export const PlanFileViewer = ({
   const kind = planFileKind(file);
   const [pdf, setPdf] = useState(kind === "pdf");
   const [mediaFailed, setMediaFailed] = useState(false);
+  const [audioPlaybackVersion, setAudioPlaybackVersion] = useState(0);
   let mode: PlanFileOpenMode = "link";
   if (pdf) {
     mode = "pdf";
@@ -293,9 +297,12 @@ export const PlanFileViewer = ({
   const link = usePlanFileLink(serviceTypeId, planId, file, mode);
   const canOpen = file.downloadable || kind === "link" || kind === "document";
   const url = link.data?.url ?? "";
-  const refresh = () => {
+  const refresh = async () => {
     setMediaFailed(false);
-    void link.refetch();
+    const result = await link.refetch();
+    if (result.isSuccess) {
+      setAudioPlaybackVersion((version) => version + 1);
+    }
   };
 
   let body: ReactNode = null;
@@ -313,7 +320,13 @@ export const PlanFileViewer = ({
         description="It may be unavailable, or you may not have access to it."
       >
         <div className="flex flex-wrap justify-center gap-2">
-          <Button variant="outline" size="sm" onClick={refresh}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void refresh();
+            }}
+          >
             <RefreshCw /> Try again
           </Button>
           {pdf ? (
@@ -338,6 +351,7 @@ export const PlanFileViewer = ({
         data={link.data.data}
         preview={link.data.preview}
         canOpen={canOpen}
+        audioPlaybackVersion={audioPlaybackVersion}
         onRetry={async () => {
           await link.refetch();
         }}
@@ -387,7 +401,13 @@ export const PlanFileViewer = ({
           className="bg-muted flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm"
         >
           This file couldn’t load here. Its link may have expired.
-          <Button variant="outline" size="xs" onClick={refresh}>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() => {
+              void refresh();
+            }}
+          >
             <RefreshCw /> Refresh link
           </Button>
         </div>

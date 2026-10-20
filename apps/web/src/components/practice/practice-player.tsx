@@ -493,11 +493,13 @@ const PhonePlaybackMenu = ({
 );
 
 /** The audio element's playback, driven by the player's buttons, keys, and the timeline. */
-const usePlayback = (rate: number) => {
+const usePlayback = (rate: number, autoPlay: boolean) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [requested, setRequested] = useState(false);
+  const [requested, setRequested] = useState(autoPlay);
   const [attempt, setAttempt] = useState(0);
-  const [playback, setPlayback] = useState<PlaybackState>(STOPPED);
+  const [playback, setPlayback] = useState<PlaybackState>(
+    autoPlay ? { ...STOPPED, status: "loading" } : STOPPED
+  );
   const [loop, setLoop] = useState<LoopRegion | null>(null);
 
   useEffect(() => {
@@ -600,6 +602,7 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
   renderAudio,
   trackControl,
   globalControls = true,
+  autoPlay = false,
 }: {
   songTitle: string;
   tracks: readonly Track[];
@@ -607,11 +610,13 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
   trackControl?: ReactNode;
   /** Embedded previews use their own buttons without claiming page or system controls. */
   globalControls?: boolean;
+  /** A user-requested restart can mount directly into playback. */
+  autoPlay?: boolean;
 }) => {
   const [trackId, setTrackId] = useState<string | null>(null);
   const track = tracks.find((entry) => entry.id === trackId) ?? tracks[0];
   const [rate, setRate] = useState(1);
-  const player = usePlayback(rate);
+  const player = usePlayback(rate, autoPlay);
   const { playback, loop } = player;
 
   useMediaSession(songTitle, globalControls ? track : undefined, player);
