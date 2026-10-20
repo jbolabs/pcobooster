@@ -9,7 +9,7 @@ import {
   adjacentStep,
   chartView,
   formatPlaybackTime,
-  nextLoop,
+  initialLoop,
   playedSequence,
   practiceFiles,
   practiceSetlist,
@@ -248,14 +248,11 @@ describe(formatPlaybackTime, () => {
   });
 });
 
-describe(nextLoop, () => {
-  it("marks a start, then an end, then clears", () => {
-    const started = nextLoop(null, 30);
-    expect(started).toStrictEqual({ start: 30, end: null });
-    expect(nextLoop(started, 45)).toStrictEqual({ start: 30, end: 45 });
-    expect(nextLoop(started, 10)).toStrictEqual({ start: 10, end: 30 });
-    expect(nextLoop(started, 30)).toStrictEqual({ start: 30, end: null });
-    expect(nextLoop({ start: 30, end: 45 }, 50)).toBeNull();
+describe(initialLoop, () => {
+  it("selects fifteen seconds without exceeding the recording", () => {
+    expect(initialLoop(30, 120)).toStrictEqual({ start: 30, end: 45 });
+    expect(initialLoop(118, 120)).toStrictEqual({ start: 105, end: 120 });
+    expect(initialLoop(0, 5)).toStrictEqual({ start: 0, end: 5 });
   });
 });
 
