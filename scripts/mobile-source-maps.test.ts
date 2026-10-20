@@ -49,6 +49,45 @@ const map = (fields: MapFields) =>
   });
 
 const packagerMap = map({ debugId: DEBUG_ID });
+// SDK 58's packager output has sections instead of top-level sources. The identity
+// belongs to the whole map; IDs on embedded maps must never replace it.
+const indexedPackagerMap = JSON.stringify({
+  version: 3,
+  debugId: DEBUG_ID,
+  sections: [
+    {
+      offset: { line: 0, column: 0 },
+      map: {
+        version: 3,
+        sources: [
+          "/repo/apps/mobile/src/index.ts",
+          "/repo/node_modules/react/index.js",
+        ],
+        names: [],
+        mappings: "AAAA",
+      },
+    },
+    {
+      offset: { line: 1, column: 0 },
+      map: {
+        version: 3,
+        debugId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        sections: [
+          {
+            offset: { line: 0, column: 0 },
+            map: {
+              version: 3,
+              sources: ["/repo/apps/mobile/src/diagnostics/fatal-sentinel.ts"],
+              names: [],
+              mappings: "AAAA",
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+
 const composedMap = map({ x_hermes_function_offsets: { 0: [0] } });
 const bytecode = new TextEncoder().encode(`\u0000hbc\u0000${DEBUG_ID}\u0000`);
 
@@ -91,11 +130,61 @@ describe(summarizeSourceMap, () => {
       summarizeSourceMap("not json"),
     ]).toStrictEqual([DEBUG_ID, DEBUG_ID, null]);
   });
+
+  it("reads indexed and nested sections while keeping the top-level identity", () => {
+    expect(summarizeSourceMap(indexedPackagerMap)).toStrictEqual({
+      debugId: DEBUG_ID,
+      appSources: 2,
+      hermes: false,
+    });
+  });
 });
 
 describe(releaseMapProblems, () => {
   it("accepts maps that belong to the shipped bytecode", () => {
     expect(releaseMapProblems(releaseMaps())).toStrictEqual([]);
+  });
+
+  it("verifies an indexed packager map without relaxing bundle or provenance checks", () => {
+    const indexed = releaseMaps({
+      packagerMap: indexedPackagerMap,
+      provenance: provenanceOf({ packager: indexedPackagerMap }),
+    });
+    expect([
+      releaseMapProblems(indexed),
+      releaseMapProblems({
+        ...indexed,
+        bytecode: new TextEncoder().encode("wrong bundle"),
+      }),
+      releaseMapProblems({ ...indexed, provenance: provenanceOf() }),
+    ]).toStrictEqual([
+      [],
+      [
+        `The shipped bundle does not contain debug ID ${DEBUG_ID}; the maps belong to another build.`,
+        "The shipped bundle is not the bytecode these maps were composed for.",
+      ],
+      [
+        "The packager map is not the one this composition kept; the maps come from different runs.",
+      ],
+    ]);
+  });
+
+  it("rejects URL-only indexed sections whose source contents cannot be verified", () => {
+    const packager = JSON.stringify({
+      version: 3,
+      debugId: DEBUG_ID,
+      sections: [{ offset: { line: 0, column: 0 }, url: "missing.map" }],
+    });
+    expect(
+      releaseMapProblems(
+        releaseMaps({
+          packagerMap: packager,
+          provenance: provenanceOf({ packager }),
+        })
+      )
+    ).toStrictEqual([
+      "The packager map has no debug ID; is metro.config.ts using getPostHogExpoConfig?",
+    ]);
   });
 
   it("rejects maps from another build", () => {
@@ -198,21 +287,25 @@ describe(releaseMapProblems, () => {
  * One run of the composition hook the archive uses, on real files: a packager map with `debugId`,
  * Hermes's map, and the bytecode beside it, as react-native-xcode.sh lays them out.
  */
-const composeRun = (debugId: string, offset: number) => {
+const composeRun = (debugId: string, offset: number, indexed = false) => {
   const work = mkdtempSync(path.join(tmpdir(), "pcob-maps-"));
   const maps = path.join(work, "maps");
   const packager = path.join(work, "packager-output.map");
   const hbc = path.join(work, "main.jsbundle");
-  writeFileSync(
-    packager,
-    JSON.stringify({
-      version: 3,
-      sources: ["/repo/apps/mobile/src/index.ts"],
-      names: [],
-      mappings: "AAAA",
-      debugId,
-    })
-  );
+  const sectionMap = {
+    version: 3,
+    sources: ["/repo/apps/mobile/src/index.ts"],
+    names: [],
+    mappings: "AAAA",
+  };
+  const packagerContents = indexed
+    ? {
+        version: 3,
+        sections: [{ offset: { line: 0, column: 0 }, map: sectionMap }],
+        debugId,
+      }
+    : { ...sectionMap, debugId };
+  writeFileSync(packager, JSON.stringify(packagerContents));
   writeFileSync(hbc, `\u0000hbc\u0000${debugId}\u0000${offset}`);
   writeFileSync(
     `${hbc}.map`,
@@ -243,6 +336,19 @@ const composeRun = (debugId: string, offset: number) => {
 const OTHER_DEBUG_ID = "9a3e6d70-5b6c-4f27-8d4c-2d6f0b1c3e4a";
 
 describe("maps from two composition runs", () => {
+  it("composes SDK 58 indexed packager output with its recorded identity intact", () => {
+    const run = composeRun(DEBUG_ID, 1, true);
+    expect({
+      summary: summarizeSourceMap(
+        readFileSync(mapsIn(run.maps).packager, "utf-8")
+      ),
+      problems: directoryMapProblems(run.maps, run.bundle, false),
+    }).toStrictEqual({
+      summary: { debugId: DEBUG_ID, appSources: 1, hermes: false },
+      problems: [],
+    });
+  });
+
   it("are accepted only together with their own bundle", () => {
     const first = composeRun(DEBUG_ID, 1);
     const second = composeRun(OTHER_DEBUG_ID, 2);

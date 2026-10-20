@@ -44,16 +44,57 @@ const SENTINEL_MARKER = 'Object.defineProperty(exports, "installFatalSentinel"';
 const DIAGNOSTICS_MARKER = "pcobooster-pending-fatals-a.json";
 const APP_SOURCE = "apps/mobile/src/";
 
-const decodeMap = Schema.decodeUnknownOption(
-  Schema.fromJsonString(
+interface SourceMapMetadata {
+  readonly debugId?: string;
+  readonly chunkId?: string;
+  readonly x_hermes_function_offsets?: Schema.Json;
+}
+
+type SourceMap = SourceMapMetadata &
+  (
+    | { readonly sources: readonly string[] }
+    | {
+        readonly sections: readonly {
+          readonly offset: { readonly line: number; readonly column: number };
+          readonly map: SourceMap;
+        }[];
+      }
+  );
+
+const mapMetadata = {
+  debugId: Schema.optionalKey(Schema.String),
+  chunkId: Schema.optionalKey(Schema.String),
+  x_hermes_function_offsets: Schema.optionalKey(Schema.Json),
+};
+
+// Expo 58 emits indexed maps. Each embedded section may itself be indexed; URL-only
+// sections cannot establish which sources were archived, so they remain unsupported.
+const SourceMapSchema: Schema.Codec<SourceMap> = Schema.suspend(() =>
+  Schema.Union([
+    Schema.Struct({ sources: Schema.Array(Schema.String), ...mapMetadata }),
     Schema.Struct({
-      sources: Schema.Array(Schema.String),
-      debugId: Schema.optionalKey(Schema.String),
-      chunkId: Schema.optionalKey(Schema.String),
-      x_hermes_function_offsets: Schema.optionalKey(Schema.Json),
-    })
-  )
+      sections: Schema.Array(
+        Schema.Struct({
+          offset: Schema.Struct({ line: Schema.Number, column: Schema.Number }),
+          map: SourceMapSchema,
+        })
+      ),
+      ...mapMetadata,
+    }),
+  ])
 );
+
+const decodeMap = Schema.decodeUnknownOption(
+  Schema.fromJsonString(SourceMapSchema)
+);
+
+const appSourceCount = (map: SourceMap): number =>
+  "sources" in map
+    ? map.sources.filter((source) => source.includes(APP_SOURCE)).length
+    : map.sections.reduce(
+        (count, section) => count + appSourceCount(section.map),
+        0
+      );
 
 const Sha256 = Schema.String.check(Schema.isPattern(/^[\da-f]{64}$/u));
 
@@ -92,8 +133,7 @@ export const summarizeSourceMap = (text: string): SourceMapSummary | null => {
   const debugId = map.chunkId ?? map.debugId ?? null;
   return {
     debugId: debugId !== null && DEBUG_ID.test(debugId) ? debugId : null,
-    appSources: map.sources.filter((source) => source.includes(APP_SOURCE))
-      .length,
+    appSources: appSourceCount(map),
     hermes: map.x_hermes_function_offsets !== undefined,
   };
 };
