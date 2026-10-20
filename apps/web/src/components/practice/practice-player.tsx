@@ -2,6 +2,7 @@ import type { PlanFile } from "@pcobooster/contracts/http/plan-files";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import {
   ChevronDown,
+  Ellipsis,
   Pause,
   Play,
   Repeat2,
@@ -15,6 +16,10 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -396,7 +401,7 @@ const TransportControls = ({
   const back = `Back ${String(SEEK_SECONDS)} seconds`;
   const forward = `Forward ${String(SEEK_SECONDS)} seconds`;
   return (
-    <div className="flex shrink-0 items-center sm:order-4">
+    <div className="hidden shrink-0 items-center md:order-4 md:flex">
       <HoverLabel
         label={back}
         trigger={
@@ -448,6 +453,77 @@ const TransportControls = ({
     </div>
   );
 };
+
+/** Secondary controls stay in one menu on phones, leaving room for the track title. */
+const PhonePlaybackMenu = ({
+  loaded,
+  loop,
+  rate,
+  onSeek,
+  onLoop,
+  onRate,
+}: {
+  loaded: boolean;
+  loop: LoopRegion | null;
+  rate: number;
+  onSeek: (by: number) => void;
+  onLoop: () => void;
+  onRate: (rate: number) => void;
+}) => (
+  <div className="md:hidden">
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="ghost" size="icon" aria-label="Playback options" />
+        }
+      >
+        <Ellipsis />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="top">
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            disabled={!loaded}
+            onClick={() => {
+              onSeek(-SEEK_SECONDS);
+            }}
+          >
+            <RotateCcw />
+            Back 5 seconds
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={!loaded}
+            onClick={() => {
+              onSeek(SEEK_SECONDS);
+            }}
+          >
+            <RotateCw />
+            Forward 5 seconds
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={!loaded} onClick={onLoop}>
+            <Repeat2 />
+            {loopLabel(loop)}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Playback speed</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={String(rate)}
+            onValueChange={(value) => {
+              onRate(Number(value));
+            }}
+          >
+            {PLAYBACK_RATES.map((option) => (
+              <DropdownMenuRadioItem key={option} value={String(option)}>
+                {option === 1 ? "Normal" : `${String(option)}×`}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  </div>
+);
 
 /** The audio element's playback, driven by the player's buttons, keys, and the timeline. */
 const usePlayback = (rate: number) => {
@@ -550,10 +626,12 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
   songTitle,
   tracks,
   renderAudio,
+  trackControl,
 }: {
   songTitle: string;
   tracks: readonly Track[];
   renderAudio: (props: RecordingAudioProps<Track>) => ReactNode;
+  trackControl?: ReactNode;
 }) => {
   const [trackId, setTrackId] = useState<string | null>(null);
   const track = tracks.find((entry) => entry.id === trackId) ?? tracks[0];
@@ -593,7 +671,7 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
 
   return (
     <div className="bg-background sticky bottom-0 z-10">
-      <div className="pb-safe-2 flex flex-col gap-1 border-t pt-2 sm:flex-row sm:items-center sm:gap-3">
+      <div className="pb-safe-2 flex flex-col gap-1 border-t pt-2 md:flex-row md:items-center md:gap-3">
         {player.requested && playback.status !== "failed" ? (
           <Fragment key={player.attempt}>
             {renderAudio({
@@ -604,10 +682,10 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
             })}
           </Fragment>
         ) : null}
-        <div className="flex min-w-0 items-center gap-2 sm:contents">
+        <div className="flex min-w-0 items-center gap-2 md:contents">
           <Button
             size="icon"
-            className="shrink-0 sm:order-first"
+            className="shrink-0 md:order-first"
             aria-label={playbackActionLabel(playback)}
             onClick={() => {
               player.toggle();
@@ -615,16 +693,30 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
           >
             <PlayIcon loading={loading} playing={playback.playing} />
           </Button>
-          <div className="flex min-w-0 flex-1 items-center sm:order-2 sm:w-56 sm:flex-none">
-            <TrackMenu
-              tracks={tracks}
-              current={track}
-              onChoose={(fileId) => {
-                setTrackId(fileId);
-                player.stop();
-              }}
-            />
+          <div className="flex min-w-0 flex-1 items-center md:order-2 md:w-56 md:flex-none">
+            {trackControl ?? (
+              <TrackMenu
+                tracks={tracks}
+                current={track}
+                onChoose={(fileId) => {
+                  setTrackId(fileId);
+                  player.stop();
+                }}
+              />
+            )}
           </div>
+          <PhonePlaybackMenu
+            loaded={loaded}
+            loop={loop}
+            rate={rate}
+            onSeek={(by) => {
+              player.seek(by);
+            }}
+            onLoop={() => {
+              player.markLoop();
+            }}
+            onRate={setRate}
+          />
           <TransportControls
             loaded={loaded}
             loop={loop}
@@ -638,7 +730,7 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
             onRate={setRate}
           />
         </div>
-        <div className="flex min-w-0 items-center gap-2 sm:order-3 sm:flex-1">
+        <div className="flex min-w-0 items-center gap-2 md:order-3 md:flex-1">
           <span className="text-muted-foreground w-10 shrink-0 text-right text-xs tabular-nums">
             {formatPlaybackTime(playback.time)}
           </span>

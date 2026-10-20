@@ -64,6 +64,7 @@ export const PageScrollArea = ({
   children,
   axis = "y",
   besidePane = false,
+  contained = false,
   ref,
 }: {
   children: ReactNode;
@@ -71,19 +72,22 @@ export const PageScrollArea = ({
   axis?: "y" | "both";
   /** Sits right of a side pane on wide screens, so it reaches only the right edge there. */
   besidePane?: boolean;
+  /** Keeps a nested split pane inside its column instead of extending to the shell edges. */
+  contained?: boolean;
   ref?: Ref<HTMLDivElement>;
 }) => (
   <div
     ref={ref}
     className={cn(
-      "-mx-(--page-gutter) flex flex-col md:min-h-0 md:flex-1 md:overscroll-contain",
+      "flex flex-col md:min-h-0 md:flex-1 md:overscroll-contain",
+      !contained && "-mx-(--page-gutter)",
       axis === "both" ? "md:overflow-auto" : "md:overflow-y-auto",
       besidePane && "lg:ml-0"
     )}
   >
     <div
       className={cn(
-        "px-(--page-gutter)",
+        !contained && "px-(--page-gutter)",
         // Phones stack boards into one column, so only wider screens size to the content.
         axis === "both"
           ? "w-full min-w-0 md:w-fit md:min-w-full"
