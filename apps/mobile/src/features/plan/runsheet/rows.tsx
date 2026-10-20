@@ -10,7 +10,6 @@ import {
 } from "@expo/ui/swift-ui";
 import {
   accessibilityIdentifier,
-  buttonStyle,
   frame,
   font as swiftFont,
   foregroundStyle,
@@ -46,7 +45,6 @@ import {
   rowFacts,
   songUrl,
 } from "./formatting";
-import { KeyControl, LengthControl } from "./row-controls";
 
 const destructiveButton = { role: "destructive" } as const;
 
@@ -64,7 +62,6 @@ export interface RowActions {
 }
 interface RowProps {
   item: PlanItem;
-  serviceTypeId: string;
   canEdit: boolean;
   canMove: boolean;
   nextIsHeader: boolean;
@@ -103,7 +100,7 @@ const InsertMenu = ({
   ));
 
 const RowContent = (props: RowProps) => {
-  const { item, actions, canEdit, options, recent, transition } = props;
+  const { item, actions, canEdit, options, recent } = props;
   const variant = useColorVariant();
   if (item.itemType === "header") {
     return (
@@ -156,25 +153,31 @@ const RowContent = (props: RowProps) => {
     <HStack
       alignment="firstTextBaseline"
       spacing={12}
-      modifiers={[padding({ vertical: 4 })]}
+      modifiers={[
+        padding({ vertical: 6 }),
+        onTapGesture(() => {
+          actions.open(item);
+        }),
+        accessibilityIdentifier(`run-sheet-row-${item.id}`),
+      ]}
     >
-      <LengthControl
-        item={item}
-        canEdit={canEdit}
-        onLength={(length) => {
-          actions.length(item, length);
-        }}
-      />
+      <VStack
+        alignment="leading"
+        modifiers={[frame({ width: 46, alignment: "leading" })]}
+      >
+        <NativeLabel font="meta" color="inkSecondary" tabular>
+          {lengthLabel(item.length)}
+        </NativeLabel>
+        {item.servicePosition === "during" ? null : (
+          <NativeLabel font="caption2" color="inkTertiary">
+            {item.servicePosition === "pre" ? "before" : "after"}
+          </NativeLabel>
+        )}
+      </VStack>
       <VStack
         alignment="leading"
         spacing={3}
-        modifiers={[
-          frame({ maxWidth: Infinity, alignment: "leading" }),
-          onTapGesture(() => {
-            actions.open(item);
-          }),
-          accessibilityIdentifier(`run-sheet-row-${item.id}`),
-        ]}
+        modifiers={[frame({ maxWidth: Infinity, alignment: "leading" })]}
       >
         <HStack spacing={4}>
           {item.itemType === "media" ? (
@@ -203,42 +206,15 @@ const RowContent = (props: RowProps) => {
           </HStack>
         )}
         {item.description === "" ? null : (
-          <NativeLabel font="meta" color="inkSecondary">
+          <NativeLabel font="meta" color="inkSecondary" lines={2}>
             {item.description}
           </NativeLabel>
         )}
       </VStack>
       {item.song === null ? null : (
-        <HStack spacing={2}>
-          {transition === undefined ? null : (
-            <Button
-              modifiers={[
-                buttonStyle("plain"),
-                accessibilityIdentifier(`run-sheet-transition-${item.id}`),
-              ]}
-              onPress={() => {
-                actions.transition(item, transition);
-              }}
-            >
-              <Image
-                systemName="key"
-                modifiers={[
-                  frame({ width: 28, height: 28 }),
-                  swiftFont({ textStyle: "footnote", weight: "semibold" }),
-                  foregroundStyle(resolvedTokenColor("inkTertiary", variant)),
-                ]}
-              />
-            </Button>
-          )}
-          <KeyControl
-            item={item}
-            serviceTypeId={props.serviceTypeId}
-            canEdit={canEdit}
-            onKey={(arrangement, key) => {
-              actions.key(item, arrangement, key);
-            }}
-          />
-        </HStack>
+        <NativeLabel font="meta" color="inkSecondary">
+          {item.key?.startingKey ?? item.key?.name ?? "—"}
+        </NativeLabel>
       )}
     </HStack>
   );
@@ -251,6 +227,7 @@ const RowMenu = ({
   index,
   count,
   options,
+  transition,
 }: RowProps) => {
   const toasts = useToasts();
   const keyed = keyedArrangements(options);
@@ -263,6 +240,15 @@ const RowMenu = ({
           actions.open(item);
         }}
       />
+      {transition === undefined ? null : (
+        <Button
+          label="Key transition"
+          systemImage="key"
+          onPress={() => {
+            actions.transition(item, transition);
+          }}
+        />
+      )}
       {canEdit && item.song !== null ? (
         <>
           {keyed.length === 0 ? null : (

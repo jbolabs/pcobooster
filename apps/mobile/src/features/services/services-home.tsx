@@ -11,6 +11,7 @@ import { EmptyState } from "../../components/empty-state";
 import { InfoBanner } from "../../components/info-banner";
 import { PillButton } from "../../components/pill-button";
 import { ProgressCapsule } from "../../components/progress-capsule";
+import { SectionHeader } from "../../components/section-header";
 import { colors } from "../../design/colors";
 import { Spacing } from "../../design/metrics";
 import { useClock, useOrgTimeZone } from "../../lib/environment";
@@ -220,6 +221,17 @@ export const ServicesHome = () => {
     );
   }
   if (placeholder === null) {
+    children.push(
+      <View key="all-plans" style={styles.banners}>
+        <SectionHeader
+          title={
+            agenda.hasActiveFilters || agenda.searchText.trim() !== ""
+              ? "Matching plans"
+              : "All plans"
+          }
+        />
+      </View>
+    );
     const todayKey = formatCalendarDayInTimeZone(now, timeZone);
     for (const month of groupPlansByMonthAndDay(rows, timeZone)) {
       stickyIndices.push(children.length);

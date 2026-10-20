@@ -19,7 +19,6 @@ import { useSyncExternalStore } from "react";
 import { ScrollView, View } from "react-native";
 
 import { useProductClient } from "../../../app-shell/queries";
-import { FloatingGlassBar } from "../../../components/floating-glass-bar";
 import { PillButton } from "../../../components/pill-button";
 import { AppText } from "../../../design/app-text";
 import {
@@ -52,7 +51,7 @@ const CachedRow = ({
   ids,
   item,
   ...props
-}: Omit<Parameters<typeof RunSheetRow>[0], "options" | "serviceTypeId"> & {
+}: Omit<Parameters<typeof RunSheetRow>[0], "options"> & {
   ids: PlanIds;
 }) => {
   const context = useProductClient();
@@ -66,14 +65,7 @@ const CachedRow = ({
     (changed) => cache.getQueryCache().subscribe(changed),
     () => cache.getQueryData<SongOptionSet>(key)
   );
-  return (
-    <RunSheetRow
-      {...props}
-      item={item}
-      options={options}
-      serviceTypeId={ids.serviceTypeId}
-    />
-  );
+  return <RunSheetRow {...props} item={item} options={options} />;
 };
 
 export const PlanRunSheet = ({
@@ -129,6 +121,8 @@ export const PlanRunSheet = ({
       <RunSheetToolbar
         toolbar={toolbar}
         canReorder={access.canEdit && items.length > 1}
+        canAdd={access.canEdit && !reordering && !creating}
+        onAdd={insert}
         reordering={reordering}
         onReorder={() => {
           setReordering(!reordering);
@@ -249,43 +243,6 @@ export const PlanRunSheet = ({
           />
         </View>
       )}
-      {access.canEdit && !reordering ? (
-        <FloatingGlassBar
-          alignment="leading"
-          actions={[
-            {
-              id: "header",
-              title: "Header",
-              systemImage: "textformat",
-              showsTitle: false,
-              disabled: creating,
-              onPress: () => {
-                insert("header");
-              },
-            },
-            {
-              id: "item",
-              title: "Item",
-              systemImage: "text.alignleft",
-              showsTitle: false,
-              disabled: creating,
-              onPress: () => {
-                insert("item");
-              },
-            },
-            {
-              id: "song",
-              title: "Add Song",
-              systemImage: "music.note",
-              showsTitle: false,
-              isProminent: true,
-              onPress: () => {
-                insert("song");
-              },
-            },
-          ]}
-        />
-      ) : null}
       {selection === undefined ? null : (
         <ItemEditor
           key={selection.id}
@@ -323,12 +280,12 @@ export const PlanRunSheet = ({
       )}
       {transition === null ? null : (
         <TransitionSheet
+          serviceTypeId={ids.serviceTypeId}
           item={
             items.find((item) => item.id === transition.item.id) ??
             transition.item
           }
           transition={transition.value}
-          serviceTypeId={ids.serviceTypeId}
           onKey={(arrangement, key) => {
             actions.key(transition.item, arrangement, key);
             setTransition(null);

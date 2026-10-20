@@ -100,6 +100,7 @@ export class PlanContentWriter {
       reconciler,
       [
         { queryKey: [scope, "songs.schedule"] },
+        { queryKey: [scope, "planFiles.list", ids.serviceTypeId, ids.planId] },
         { queryKey: [scope, "songs.options"] },
       ]
     );

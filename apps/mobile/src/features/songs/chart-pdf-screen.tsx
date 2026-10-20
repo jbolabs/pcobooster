@@ -50,6 +50,7 @@ import { PreviewError } from "./previews";
 import type { PreviewFile } from "./previews";
 import { songsReads } from "./reads";
 import { useKeepAwakeWhile, usePreviewRender } from "./use-preview-lifecycle";
+import { useSongPath } from "./use-song-path";
 
 const styles = StyleSheet.create({
   center: { flexGrow: 1, justifyContent: "center" },
@@ -415,6 +416,7 @@ export const ChartPdfScreen = () => {
   }>();
   const { songId } = params;
   const router = useRouter();
+  const songPath = useSongPath();
   const toasts = useToasts();
   const context = useProductClient();
   const features = useFeatures();
@@ -489,7 +491,9 @@ export const ChartPdfScreen = () => {
                     songId,
                     select,
                     openFiles: () => {
-                      router.push(songFilesHref(songId, arrangement.id));
+                      router.push(
+                        songPath(songFilesHref(songId, arrangement.id))
+                      );
                     },
                   }),
                 ]),

@@ -1,0 +1,75 @@
+{
+  "default": {
+    "files": [
+      {
+        "contentType": "application/pdf",
+        "fileType": "pdf",
+        "providerType": "Attachment",
+        "size": 2048,
+        "hasPreview": true,
+        "downloadable": true,
+        "streamable": false,
+        "ownerType": "Plan",
+        "ownerId": "881261004",
+        "id": "plan-guide",
+        "name": "Sunday team guide",
+        "filename": "Sunday team guide.pdf"
+      },
+      {
+        "contentType": "application/pdf",
+        "fileType": "pdf",
+        "providerType": "AttachmentChart::Chord",
+        "size": 2048,
+        "hasPreview": true,
+        "downloadable": true,
+        "streamable": false,
+        "ownerType": "Arrangement",
+        "ownerId": "55011",
+        "id": "plan-chart",
+        "name": "Morning Light - G",
+        "filename": "Morning Light - G.pdf"
+      },
+      {
+        "contentType": "audio/wav",
+        "fileType": "audio",
+        "providerType": "Attachment",
+        "size": 2048,
+        "hasPreview": true,
+        "downloadable": true,
+        "streamable": true,
+        "ownerType": "Arrangement",
+        "ownerId": "55011",
+        "id": "88001",
+        "name": "Morning Light - recording",
+        "filename": "Morning Light.wav"
+      }
+    ],
+    "nextOffset": 100
+  },
+  "cases": [
+    {
+      "match": {
+        "offset": "100"
+      },
+      "output": {
+        "files": [
+          {
+            "contentType": "image/png",
+            "fileType": "image",
+            "providerType": "Attachment",
+            "size": 2048,
+            "hasPreview": true,
+            "downloadable": true,
+            "streamable": false,
+            "ownerType": "Plan",
+            "ownerId": "881261004",
+            "id": "88004",
+            "name": "Stage plot",
+            "filename": "Stage plot.png"
+          }
+        ],
+        "nextOffset": null
+      }
+    }
+  ]
+}

@@ -26,6 +26,7 @@ import {
 } from "react-native";
 
 import { failureMessage } from "../../app-shell/queries";
+import { useNavigationPath } from "../../app-shell/use-navigation-path";
 import { Glyph } from "../../components/glyph";
 import { Hairline } from "../../components/hairline";
 import { KeyBadge } from "../../components/key-badge";
@@ -52,6 +53,7 @@ import type { SongHistoryEntry } from "./detail";
 import { songChartPdfHref, songFilesHref } from "./preview-reads";
 import { songChartHref } from "./reads";
 import type { SongDetailModel } from "./use-song-detail";
+import { useSongPath } from "./use-song-path";
 
 /** Text sizes from here up are accessibility sizes (Swift `isAccessibilitySize`). */
 const ACCESSIBILITY_FONT_SCALE = 1.6;
@@ -265,6 +267,7 @@ export const SongFactsCard = ({ model }: { model: SongDetailModel }) => {
  */
 export const SongChartCard = ({ model }: { model: SongDetailModel }) => {
   const router = useRouter();
+  const songPath = useSongPath();
   const { chart } = model;
   if (!model.chartsEnabled) {
     return null;
@@ -316,7 +319,13 @@ export const SongChartCard = ({ model }: { model: SongDetailModel }) => {
           <PillButton
             onPress={() => {
               router.push(
-                songChartHref(model.songId, withChart.id, chartTargetId(target))
+                songPath(
+                  songChartHref(
+                    model.songId,
+                    withChart.id,
+                    chartTargetId(target)
+                  )
+                )
               );
             }}
             size="small"
@@ -329,10 +338,12 @@ export const SongChartCard = ({ model }: { model: SongDetailModel }) => {
             kind="secondary"
             onPress={() => {
               router.push(
-                songChartPdfHref(
-                  model.songId,
-                  withChart.id,
-                  chartTargetId(target)
+                songPath(
+                  songChartPdfHref(
+                    model.songId,
+                    withChart.id,
+                    chartTargetId(target)
+                  )
                 )
               );
             }}
@@ -345,7 +356,7 @@ export const SongChartCard = ({ model }: { model: SongDetailModel }) => {
             accessibilityHint="Lists the arrangement's attached files"
             kind="secondary"
             onPress={() => {
-              router.push(songFilesHref(model.songId, withChart.id));
+              router.push(songPath(songFilesHref(model.songId, withChart.id)));
             }}
             size="small"
             symbol="attachment"
@@ -405,11 +416,12 @@ const ArrangementRow = ({
   row: ArrangementRowData;
 }) => {
   const router = useRouter();
+  const songPath = useSongPath();
   const openChart = () => {
-    router.push(songChartHref(model.songId, row.id));
+    router.push(songPath(songChartHref(model.songId, row.id)));
   };
   const openFiles = () => {
-    router.push(songFilesHref(model.songId, row.id));
+    router.push(songPath(songFilesHref(model.songId, row.id)));
   };
   const content = (
     <>
@@ -544,6 +556,7 @@ const HistoryRow = ({
   namesArrangement: boolean;
 }) => {
   const router = useRouter();
+  const navigationPath = useNavigationPath();
   const timeZone = useOrgTimeZone();
   const stacked = useWindowDimensions().fontScale >= ACCESSIBILITY_FONT_SCALE;
   const date = historyDateLabel(entry.sortDate, now, timeZone);
@@ -565,7 +578,9 @@ const HistoryRow = ({
       onPress={
         opens
           ? () => {
-              router.push(planHref({ serviceTypeId, planId }, "Plan"));
+              router.push(
+                navigationPath(planHref({ serviceTypeId, planId }, "Plan"))
+              );
             }
           : undefined
       }

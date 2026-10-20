@@ -27,6 +27,7 @@ import {
 } from "./song-detail-sections";
 import { useSongDetail } from "./use-song-detail";
 import type { SongDetailModel } from "./use-song-detail";
+import { useSongPath } from "./use-song-path";
 
 /** Content stays readable on iPad instead of stretching across the screen. */
 const READABLE_WIDTH = 680;
@@ -106,11 +107,12 @@ export const SongDetailScreen = () => {
   const { songId } = params;
   const model = useSongDetail(songId);
   const router = useRouter();
+  const songPath = useSongPath();
   const toasts = useToasts();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const openChart = () => {
     const [first] = model.chartArrangements;
-    router.push(songChartHref(songId, first?.id));
+    router.push(songPath(songChartHref(songId, first?.id)));
   };
   const screen = (
     <Stack.Screen

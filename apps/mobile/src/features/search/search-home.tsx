@@ -20,6 +20,7 @@ import {
   sharedReads,
   useProductClient,
 } from "../../app-shell/queries";
+import { useNavigationPath } from "../../app-shell/use-navigation-path";
 import {
   useVisibleQuery as useQuery,
   useVisibleQueries as useQueries,
@@ -182,6 +183,7 @@ const useSearch = () => {
   const context = useProductClient();
   const cache = useQueryClient();
   const router = useRouter();
+  const navigationPath = useNavigationPath();
   const features = useFeatures();
   const timeZone = useOrgTimeZone();
   const clock = useClock();
@@ -302,7 +304,7 @@ const useSearch = () => {
   );
   const open = (row: ResultRow) => {
     rememberSearchItem(cache, context.scope, row.recent);
-    router.push(row.route);
+    router.push(navigationPath(row.route));
   };
   const openRecent = (item: SearchRecent) => {
     if (item.kind === "query") {
@@ -311,7 +313,7 @@ const useSearch = () => {
       const path = recentDestination(item);
       if (path !== null && available.includes(item.kind)) {
         rememberSearchItem(cache, context.scope, item);
-        router.push(path);
+        router.push(navigationPath(path));
       }
     }
   };
