@@ -193,9 +193,15 @@ export const toSongAttachment = (
       chart: pcoType === LYRICS_CHART_TYPE ? "lyrics" : "chord",
     };
   }
+  let kind = storedFileKind(contentType, filename);
+  if (isLink) {
+    kind = "link";
+  } else if (pcoType.startsWith("AttachmentRehearsalMix")) {
+    kind = "audio";
+  }
   return {
     ...base,
-    kind: isLink ? "link" : storedFileKind(contentType, filename),
+    kind,
     fileSize:
       isNumber(size) && Number.isSafeInteger(size) && size >= 0 ? size : null,
   };

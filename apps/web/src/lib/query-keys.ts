@@ -72,8 +72,16 @@ export const queryKeys = {
   songAttachmentLink: (
     songId: string,
     arrangementId: string,
-    attachmentId: string
-  ) => ["song-attachment-link", songId, arrangementId, attachmentId] as const,
+    attachmentId: string,
+    keyId: string | null
+  ) =>
+    [
+      "song-attachment-link",
+      songId,
+      arrangementId,
+      keyId,
+      attachmentId,
+    ] as const,
   chordChartSong: (songId: string) => ["chord-chart-song", songId] as const,
   lyricsSearch: (query: string) => ["lyrics-search", query] as const,
   /** Keyed by the saved version, so each save renders again. */

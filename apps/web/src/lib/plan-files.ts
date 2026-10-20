@@ -191,6 +191,9 @@ export const orderedPlanFiles = (
 
 /** Embed only recognized YouTube video IDs, never an arbitrary attachment URL. */
 export const youtubeEmbedUrl = (url: string): string | null => {
+  if (!URL.canParse(url)) {
+    return null;
+  }
   const parsed = new URL(url);
   const hosts = [
     "youtube.com",

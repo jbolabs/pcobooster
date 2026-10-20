@@ -8,7 +8,7 @@ import {
   RotateCcw,
   RotateCw,
 } from "lucide-react";
-import type { CSSProperties, RefObject } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import type { LoopRegion } from "@/lib/practice";
 
 const SEEK_SECONDS = 5;
 
-interface PlaybackState {
+export interface PlaybackState {
   /** The track's audio has loaded enough to seek and loop. */
   readonly loaded: boolean;
   readonly playing: boolean;
@@ -60,30 +60,37 @@ const startPlayback = async (audio: HTMLAudioElement) => {
   }
 };
 
+export interface RecordingTrack {
+  readonly id: string;
+  readonly name: string;
+}
+
+export interface RecordingAudioProps<Track extends RecordingTrack> {
+  file: Track;
+  rate: number;
+  audioRef: RefObject<HTMLAudioElement | null>;
+  onPlayback: (state: PlaybackState) => void;
+}
+
 /**
  * The track's audio element, mounted only once someone presses play: opening a file asks
  * Planning Center for a signed link and records a view, so it waits for clear intent. A link
  * that fails (they expire) is asked for again once, and playback picks up where it was.
  */
-const TrackAudio = ({
-  serviceTypeId,
-  planId,
-  file,
+export const RecordingAudio = ({
+  url,
   rate,
   audioRef,
   onPlayback,
-}: {
-  serviceTypeId: string;
-  planId: string;
-  file: PlanFile;
-  rate: number;
-  audioRef: RefObject<HTMLAudioElement | null>;
-  onPlayback: (state: PlaybackState) => void;
+  onRetry,
+  onFailed,
+}: Omit<RecordingAudioProps<RecordingTrack>, "file"> & {
+  url: string | undefined;
+  onRetry: () => Promise<void>;
+  onFailed?: () => void;
 }) => {
-  const link = usePlanFileLink(serviceTypeId, planId, file, "link");
   const resumeAt = useRef(0);
   const retried = useRef(false);
-  const url = link.data?.url;
   if (url === undefined) {
     return null;
   }
@@ -111,10 +118,32 @@ const TrackAudio = ({
       onEnded={report}
       onError={(event) => {
         resumeAt.current = event.currentTarget.currentTime;
-        if (!retried.current) {
+        if (retried.current) {
+          onFailed?.();
+        } else {
           retried.current = true;
-          void link.refetch();
+          void onRetry();
         }
+      }}
+    />
+  );
+};
+
+const TrackAudio = ({
+  serviceTypeId,
+  planId,
+  ...props
+}: RecordingAudioProps<PlanFile> & {
+  serviceTypeId: string;
+  planId: string;
+}) => {
+  const link = usePlanFileLink(serviceTypeId, planId, props.file, "link");
+  return (
+    <RecordingAudio
+      {...props}
+      url={link.data?.url}
+      onRetry={async () => {
+        await link.refetch();
       }}
     />
   );
@@ -169,7 +198,7 @@ const MEDIA_ACTIONS = [
 /** Lock-screen and headphone controls name the song and run the player. */
 const useMediaSession = (
   title: string,
-  track: PlanFile | undefined,
+  track: RecordingTrack | undefined,
   controls: MediaControls
 ) => {
   const controlsRef = useRef(controls);
@@ -247,8 +276,8 @@ const TrackMenu = ({
   current,
   onChoose,
 }: {
-  tracks: readonly PlanFile[];
-  current: PlanFile;
+  tracks: readonly RecordingTrack[];
+  current: RecordingTrack;
   onChoose: (fileId: string) => void;
 }) => {
   if (tracks.length === 1) {
@@ -489,16 +518,14 @@ const usePlayback = (rate: number) => {
  * slow down, and loop a passage. The stage mounts one per item, so the next song starts on its
  * first track, stopped.
  */
-export const PracticePlayer = ({
-  serviceTypeId,
-  planId,
+export const RecordingPlayer = <Track extends RecordingTrack>({
   songTitle,
   tracks,
+  renderAudio,
 }: {
-  serviceTypeId: string;
-  planId: string;
   songTitle: string;
-  tracks: readonly PlanFile[];
+  tracks: readonly Track[];
+  renderAudio: (props: RecordingAudioProps<Track>) => ReactNode;
 }) => {
   const [trackId, setTrackId] = useState<string | null>(null);
   const track = tracks.find((entry) => entry.id === trackId) ?? tracks[0];
@@ -537,19 +564,14 @@ export const PracticePlayer = ({
 
   return (
     <div className="bg-background pb-safe-2 sticky bottom-0 z-10 flex flex-col gap-1 border-t pt-2 sm:flex-row sm:items-center sm:gap-3">
-      {player.requested ? (
-        <TrackAudio
-          key={track.id}
-          serviceTypeId={serviceTypeId}
-          planId={planId}
-          file={track}
-          rate={rate}
-          audioRef={player.audioRef}
-          onPlayback={(state) => {
-            player.setPlayback(state);
-          }}
-        />
-      ) : null}
+      {player.requested
+        ? renderAudio({
+            file: track,
+            rate,
+            audioRef: player.audioRef,
+            onPlayback: player.setPlayback,
+          })
+        : null}
       <div className="flex min-w-0 items-center gap-2 sm:contents">
         <Button
           size="icon"
@@ -611,3 +633,23 @@ export const PracticePlayer = ({
     </div>
   );
 };
+
+export const PracticePlayer = ({
+  serviceTypeId,
+  planId,
+  songTitle,
+  tracks,
+}: {
+  serviceTypeId: string;
+  planId: string;
+  songTitle: string;
+  tracks: readonly PlanFile[];
+}) => (
+  <RecordingPlayer
+    songTitle={songTitle}
+    tracks={tracks}
+    renderAudio={(props) => (
+      <TrackAudio {...props} serviceTypeId={serviceTypeId} planId={planId} />
+    )}
+  />
+);
