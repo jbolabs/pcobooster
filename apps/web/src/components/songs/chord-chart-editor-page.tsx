@@ -56,6 +56,7 @@ import {
   useSongSelection,
 } from "@/components/songs/song-arrangement-controls";
 import { SongLoadError } from "@/components/songs/song-load-error";
+import { SongRecordingPlayer } from "@/components/songs/song-recording-player";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -696,6 +697,20 @@ const AccessUnavailable = () => {
   );
 };
 
+const ChartRecordings = ({
+  song,
+  arrangement,
+  chartKey,
+}: Pick<ChartViewProps, "song" | "arrangement" | "chartKey">) => (
+  <SongRecordingPlayer
+    key={`${arrangement.id}:${chartKey?.id ?? "lyrics"}`}
+    songId={song.id}
+    arrangementId={arrangement.id}
+    keyId={chartKey?.id ?? null}
+    songTitle={song.title}
+  />
+);
+
 /**
  * The chart as Planning Center saved it: its own PDF for the chosen key (the lyrics sheet
  * without one), full width. People who can edit get an Edit button (and E); nobody else sees
@@ -794,6 +809,11 @@ const ChartReader = ({
           </div>
         </div>
       </PageScrollArea>
+      <ChartRecordings
+        song={song}
+        arrangement={arrangement}
+        chartKey={chartKey}
+      />
       {onEdit === null ? null : (
         <>
           {/* A short chart still puts the phone's Edit at the bottom of the screen. */}
@@ -1367,6 +1387,11 @@ const ChartEditor = ({
         <EditorPane workspace={workspace} textareaRef={textareaRef} />
         {isMobile ? null : preview}
       </div>
+      <ChartRecordings
+        song={song}
+        arrangement={arrangement}
+        chartKey={chartKey}
+      />
       <PhoneBottomAction>
         <Button
           size="lg"

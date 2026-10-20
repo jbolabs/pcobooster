@@ -316,3 +316,26 @@ describe(getSongAttachmentLink, () => {
     expect(JSON.stringify(exit)).not.toContain("secret");
   });
 });
+
+describe("RehearsalMix attachments", () => {
+  it("recognizes RehearsalMix streams without file metadata and preserves access flags", () => {
+    expect(
+      toSongAttachment(
+        file("904", {
+          pco_type: "AttachmentRehearsalMixV2",
+          display_name: "Keys: Piano",
+          streamable: true,
+          downloadable: false,
+        }),
+        "550111"
+      )
+    ).toMatchObject({
+      id: "904",
+      keyId: "550111",
+      name: "Keys: Piano",
+      kind: "audio",
+      streamable: true,
+      downloadable: false,
+    });
+  });
+});

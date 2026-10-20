@@ -42,7 +42,8 @@ export const useOpenSongAttachment = (
         queryKey: queryKeys.songAttachmentLink(
           songId,
           arrangementId,
-          attachment.id
+          attachment.id,
+          attachment.keyId
         ),
         queryFn: async (context) =>
           await callForQuery(context, productClient, (api) =>
@@ -69,3 +70,29 @@ export const useOpenSongAttachment = (
     }
   };
 };
+
+/** Mounted only after Play; short-lived streaming links never survive the player. */
+export const useSongAttachmentLink = (
+  songId: string,
+  arrangementId: string,
+  attachment: SongAttachment
+) =>
+  useQuery({
+    queryKey: queryKeys.songAttachmentLink(
+      songId,
+      arrangementId,
+      attachment.id,
+      attachment.keyId
+    ),
+    queryFn: async (context) =>
+      await callForQuery(context, productClient, (api) =>
+        api.songs.attachmentLink({
+          params: { songId, arrangementId, attachmentId: attachment.id },
+          query: { keyId: attachment.keyId ?? undefined },
+        })
+      ),
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });

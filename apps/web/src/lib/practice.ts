@@ -258,3 +258,22 @@ export const chartView = ({
     ? { kind: "text", reason: "key" }
     : { kind: "pdf", keyId: match.id };
 };
+
+/** The audio transport's state, including terminal failures that disable stale controls. */
+export interface PlaybackState {
+  readonly status: "idle" | "loading" | "ready" | "failed";
+  readonly playing: boolean;
+  readonly time: number;
+  readonly duration: number;
+}
+
+export const STOPPED_RECORDING: PlaybackState = {
+  status: "idle",
+  playing: false,
+  time: 0,
+  duration: 0,
+};
+export const RECORDING_FAILURE: PlaybackState = {
+  ...STOPPED_RECORDING,
+  status: "failed",
+};

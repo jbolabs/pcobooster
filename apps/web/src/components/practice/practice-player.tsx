@@ -8,8 +8,8 @@ import {
   RotateCcw,
   RotateCw,
 } from "lucide-react";
-import type { CSSProperties, RefObject } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,28 +24,19 @@ import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 import { usePlanFileLink } from "@/hooks/use-plan-files";
 import { practiceBinding } from "@/lib/app-hotkeys";
-import { PLAYBACK_RATES, formatPlaybackTime, nextLoop } from "@/lib/practice";
-import type { LoopRegion } from "@/lib/practice";
+import {
+  PLAYBACK_RATES,
+  RECORDING_FAILURE,
+  STOPPED_RECORDING as STOPPED,
+  formatPlaybackTime,
+  nextLoop,
+} from "@/lib/practice";
+import type { LoopRegion, PlaybackState } from "@/lib/practice";
 
 const SEEK_SECONDS = 5;
 
-interface PlaybackState {
-  /** The track's audio has loaded enough to seek and loop. */
-  readonly loaded: boolean;
-  readonly playing: boolean;
-  readonly time: number;
-  readonly duration: number;
-}
-
-const STOPPED: PlaybackState = {
-  loaded: false,
-  playing: false,
-  time: 0,
-  duration: 0,
-};
-
 const playbackOf = (audio: HTMLAudioElement): PlaybackState => ({
-  loaded: true,
+  status: "ready",
   playing: !audio.paused,
   time: audio.currentTime,
   duration: Number.isFinite(audio.duration) ? audio.duration : 0,
@@ -60,30 +51,47 @@ const startPlayback = async (audio: HTMLAudioElement) => {
   }
 };
 
+export interface RecordingTrack {
+  readonly id: string;
+  readonly name: string;
+}
+
+export interface RecordingAudioProps<Track extends RecordingTrack> {
+  file: Track;
+  rate: number;
+  audioRef: RefObject<HTMLAudioElement | null>;
+  onPlayback: (state: PlaybackState) => void;
+}
+
 /**
  * The track's audio element, mounted only once someone presses play: opening a file asks
  * Planning Center for a signed link and records a view, so it waits for clear intent. A link
  * that fails (they expire) is asked for again once, and playback picks up where it was.
  */
-const TrackAudio = ({
-  serviceTypeId,
-  planId,
-  file,
+export const RecordingAudio = ({
+  url,
   rate,
   audioRef,
   onPlayback,
-}: {
-  serviceTypeId: string;
-  planId: string;
-  file: PlanFile;
-  rate: number;
-  audioRef: RefObject<HTMLAudioElement | null>;
-  onPlayback: (state: PlaybackState) => void;
+  onRetry,
+  onFailed,
+}: Omit<RecordingAudioProps<RecordingTrack>, "file"> & {
+  url: string | undefined;
+  onRetry: () => Promise<void>;
+  onFailed?: () => void;
 }) => {
-  const link = usePlanFileLink(serviceTypeId, planId, file, "link");
   const resumeAt = useRef(0);
   const retried = useRef(false);
-  const url = link.data?.url;
+  const [attempt, setAttempt] = useState(0);
+  const handleRetry = async () => {
+    try {
+      await onRetry();
+      setAttempt((current) => current + 1);
+    } catch {
+      onPlayback(RECORDING_FAILURE);
+      onFailed?.();
+    }
+  };
   if (url === undefined) {
     return null;
   }
@@ -94,7 +102,7 @@ const TrackAudio = ({
     // oxlint-disable-next-line jsx-a11y/media-has-caption -- Rehearsal tracks are music; there are no captions to offer.
     <audio
       ref={audioRef}
-      key={url}
+      key={`${url}:${String(attempt)}`}
       src={url}
       preload="auto"
       onLoadedMetadata={(event) => {
@@ -111,10 +119,43 @@ const TrackAudio = ({
       onEnded={report}
       onError={(event) => {
         resumeAt.current = event.currentTarget.currentTime;
-        if (!retried.current) {
+        if (retried.current) {
+          onPlayback(RECORDING_FAILURE);
+          onFailed?.();
+        } else {
+          onPlayback({ ...STOPPED, status: "loading" });
           retried.current = true;
-          void link.refetch();
+          void handleRetry();
         }
+      }}
+    />
+  );
+};
+
+const TrackAudio = ({
+  serviceTypeId,
+  planId,
+  ...props
+}: RecordingAudioProps<PlanFile> & {
+  serviceTypeId: string;
+  planId: string;
+}) => {
+  const link = usePlanFileLink(serviceTypeId, planId, props.file, "link");
+  const { onPlayback } = props;
+  useEffect(() => {
+    if (link.isError) {
+      onPlayback(RECORDING_FAILURE);
+    }
+  }, [link.isError, onPlayback]);
+  if (link.isError) {
+    return null;
+  }
+  return (
+    <RecordingAudio
+      {...props}
+      url={link.data?.url}
+      onRetry={async () => {
+        await link.refetch();
       }}
     />
   );
@@ -169,7 +210,7 @@ const MEDIA_ACTIONS = [
 /** Lock-screen and headphone controls name the song and run the player. */
 const useMediaSession = (
   title: string,
-  track: PlanFile | undefined,
+  track: RecordingTrack | undefined,
   controls: MediaControls
 ) => {
   const controlsRef = useRef(controls);
@@ -247,8 +288,8 @@ const TrackMenu = ({
   current,
   onChoose,
 }: {
-  tracks: readonly PlanFile[];
-  current: PlanFile;
+  tracks: readonly RecordingTrack[];
+  current: RecordingTrack;
   onChoose: (fileId: string) => void;
 }) => {
   if (tracks.length === 1) {
@@ -412,6 +453,7 @@ const TransportControls = ({
 const usePlayback = (rate: number) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [requested, setRequested] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [playback, setPlayback] = useState<PlaybackState>(STOPPED);
   const [loop, setLoop] = useState<LoopRegion | null>(null);
 
@@ -427,9 +469,16 @@ const usePlayback = (rate: number) => {
   usePlaybackClock(audioRef, playback.playing, loop, onTime);
 
   const play = () => {
+    if (playback.status === "failed") {
+      setAttempt((current) => current + 1);
+      setPlayback({ ...STOPPED, status: "loading" });
+      setLoop(null);
+      return;
+    }
     const audio = audioRef.current;
     if (audio === null) {
       setRequested(true);
+      setPlayback({ ...STOPPED, status: "loading" });
       return;
     }
     void startPlayback(audio);
@@ -471,6 +520,7 @@ const usePlayback = (rate: number) => {
   return {
     audioRef,
     requested,
+    attempt,
     playback,
     setPlayback,
     loop,
@@ -484,21 +534,26 @@ const usePlayback = (rate: number) => {
   };
 };
 
+const playbackActionLabel = (playback: PlaybackState): string => {
+  if (playback.status === "failed") {
+    return "Retry playback";
+  }
+  return playback.playing ? "Pause" : "Play";
+};
+
 /**
  * The song's recordings and rehearsal mixes in one bar: play, scrub, nudge back and forward,
  * slow down, and loop a passage. The stage mounts one per item, so the next song starts on its
  * first track, stopped.
  */
-export const PracticePlayer = ({
-  serviceTypeId,
-  planId,
+export const RecordingPlayer = <Track extends RecordingTrack>({
   songTitle,
   tracks,
+  renderAudio,
 }: {
-  serviceTypeId: string;
-  planId: string;
   songTitle: string;
-  tracks: readonly PlanFile[];
+  tracks: readonly Track[];
+  renderAudio: (props: RecordingAudioProps<Track>) => ReactNode;
 }) => {
   const [trackId, setTrackId] = useState<string | null>(null);
   const track = tracks.find((entry) => entry.id === trackId) ?? tracks[0];
@@ -508,7 +563,8 @@ export const PracticePlayer = ({
 
   useMediaSession(songTitle, track, player);
   const hotkeys = { enabled: track !== undefined, ignoreInputs: true } as const;
-  const loadedKeys = { enabled: playback.loaded, ignoreInputs: true } as const;
+  const loaded = playback.status === "ready";
+  const loadedKeys = { enabled: loaded, ignoreInputs: true } as const;
   useHotkey(practiceBinding("practice.play"), player.toggle, {
     ...hotkeys,
     preventDefault: true,
@@ -532,82 +588,107 @@ export const PracticePlayer = ({
   if (track === undefined) {
     return null;
   }
-  const loading = player.requested && !playback.loaded;
+  const loading = playback.status === "loading";
   const timeText = `${formatPlaybackTime(playback.time)} of ${formatPlaybackTime(playback.duration)}`;
 
   return (
-    <div className="bg-background pb-safe-2 sticky bottom-0 z-10 flex flex-col gap-1 border-t pt-2 sm:flex-row sm:items-center sm:gap-3">
-      {player.requested ? (
-        <TrackAudio
-          key={track.id}
-          serviceTypeId={serviceTypeId}
-          planId={planId}
-          file={track}
-          rate={rate}
-          audioRef={player.audioRef}
-          onPlayback={(state) => {
-            player.setPlayback(state);
-          }}
-        />
-      ) : null}
-      <div className="flex min-w-0 items-center gap-2 sm:contents">
-        <Button
-          size="icon"
-          className="shrink-0 sm:order-first"
-          aria-label={playback.playing ? "Pause" : "Play"}
-          onClick={() => {
-            player.toggle();
-          }}
-        >
-          <PlayIcon loading={loading} playing={playback.playing} />
-        </Button>
-        <div className="flex min-w-0 flex-1 items-center sm:order-2 sm:w-56 sm:flex-none">
-          <TrackMenu
-            tracks={tracks}
-            current={track}
-            onChoose={(fileId) => {
-              setTrackId(fileId);
-              player.stop();
+    <div className="bg-background sticky bottom-0 z-10">
+      <div className="pb-safe-2 flex flex-col gap-1 border-t pt-2 sm:flex-row sm:items-center sm:gap-3">
+        {player.requested && playback.status !== "failed" ? (
+          <Fragment key={player.attempt}>
+            {renderAudio({
+              file: track,
+              rate,
+              audioRef: player.audioRef,
+              onPlayback: player.setPlayback,
+            })}
+          </Fragment>
+        ) : null}
+        <div className="flex min-w-0 items-center gap-2 sm:contents">
+          <Button
+            size="icon"
+            className="shrink-0 sm:order-first"
+            aria-label={playbackActionLabel(playback)}
+            onClick={() => {
+              player.toggle();
             }}
+          >
+            <PlayIcon loading={loading} playing={playback.playing} />
+          </Button>
+          <div className="flex min-w-0 flex-1 items-center sm:order-2 sm:w-56 sm:flex-none">
+            <TrackMenu
+              tracks={tracks}
+              current={track}
+              onChoose={(fileId) => {
+                setTrackId(fileId);
+                player.stop();
+              }}
+            />
+          </div>
+          <TransportControls
+            loaded={loaded}
+            loop={loop}
+            rate={rate}
+            onSeek={(by) => {
+              player.seek(by);
+            }}
+            onLoop={() => {
+              player.markLoop();
+            }}
+            onRate={setRate}
           />
         </div>
-        <TransportControls
-          loaded={playback.loaded}
-          loop={loop}
-          rate={rate}
-          onSeek={(by) => {
-            player.seek(by);
-          }}
-          onLoop={() => {
-            player.markLoop();
-          }}
-          onRate={setRate}
-        />
+        <div className="flex min-w-0 items-center gap-2 sm:order-3 sm:flex-1">
+          <span className="text-muted-foreground w-10 shrink-0 text-right text-xs tabular-nums">
+            {formatPlaybackTime(playback.time)}
+          </span>
+          <Slider
+            variant="scrubber"
+            min={0}
+            max={playback.duration > 0 ? playback.duration : 1}
+            step={0.1}
+            value={playback.time}
+            disabled={!loaded}
+            thumbLabel="Playback position"
+            thumbValueText={() => timeText}
+            track={<LoopMarks loop={loop} duration={playback.duration} />}
+            onValueChange={(value: number | readonly number[]) => {
+              player.seekTo([value].flat()[0] ?? 0);
+            }}
+          />
+          <span className="text-muted-foreground w-10 shrink-0 text-xs tabular-nums">
+            {playback.duration > 0
+              ? formatPlaybackTime(playback.duration)
+              : "-:--"}
+          </span>
+        </div>
       </div>
-      <div className="flex min-w-0 items-center gap-2 sm:order-3 sm:flex-1">
-        <span className="text-muted-foreground w-10 shrink-0 text-right text-xs tabular-nums">
-          {formatPlaybackTime(playback.time)}
-        </span>
-        <Slider
-          variant="scrubber"
-          min={0}
-          max={playback.duration > 0 ? playback.duration : 1}
-          step={0.1}
-          value={playback.time}
-          disabled={!playback.loaded}
-          thumbLabel="Playback position"
-          thumbValueText={() => timeText}
-          track={<LoopMarks loop={loop} duration={playback.duration} />}
-          onValueChange={(value: number | readonly number[]) => {
-            player.seekTo([value].flat()[0] ?? 0);
-          }}
-        />
-        <span className="text-muted-foreground w-10 shrink-0 text-xs tabular-nums">
-          {playback.duration > 0
-            ? formatPlaybackTime(playback.duration)
-            : "-:--"}
-        </span>
-      </div>
+      {playback.status === "failed" ? (
+        <p role="alert" className="text-muted-foreground pb-2 text-sm">
+          This recording couldn’t play. Try again or check your access in
+          Planning Center.
+        </p>
+      ) : null}
     </div>
   );
 };
+
+export const PracticePlayer = ({
+  serviceTypeId,
+  planId,
+  songTitle,
+  tracks,
+}: {
+  serviceTypeId: string;
+  planId: string;
+  songTitle: string;
+  tracks: readonly PlanFile[];
+}) => (
+  <RecordingPlayer
+    songTitle={songTitle}
+    tracks={tracks}
+    renderAudio={(props) => (
+      <TrackAudio {...props} serviceTypeId={serviceTypeId} planId={planId} />
+    )}
+  />
+);
