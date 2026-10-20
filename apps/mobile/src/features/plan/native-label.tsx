@@ -3,6 +3,7 @@ import {
   font as swiftFont,
   foregroundStyle,
   monospacedDigit,
+  lineLimit,
 } from "@expo/ui/swift-ui/modifiers";
 import type { ReactNode } from "react";
 
@@ -29,12 +30,14 @@ export const NativeLabel = ({
   color = "ink",
   weight,
   tabular = false,
+  lines,
 }: {
   children: ReactNode;
   font?: FontName | TextStyleName;
   color?: ColorTokenName;
   weight?: FontWeight;
   tabular?: boolean;
+  lines?: number;
 }) => {
   const variant = useColorVariant();
   const resolved = resolveFont(textFont, weight);
@@ -46,6 +49,7 @@ export const NativeLabel = ({
           weight: resolved.weight,
         }),
         foregroundStyle(resolvedTokenColor(color, variant)),
+        ...(lines === undefined ? [] : [lineLimit(lines)]),
         ...(tabular ? [monospacedDigit()] : []),
       ]}
     >

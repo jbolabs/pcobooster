@@ -5,28 +5,56 @@ export const RunSheetToolbar = ({
   canReorder,
   reordering,
   onReorder,
+  canAdd,
+  onAdd,
 }: {
   toolbar: Parameters<typeof PlanToolbar>[0];
   /** Reorder needs edit access and at least two items. */
   canReorder: boolean;
   reordering: boolean;
   onReorder: () => void;
+  canAdd: boolean;
+  onAdd: (kind: "song" | "item" | "header") => void;
 }) => {
-  const { onStep, onOpenPlanningCenter } = toolbar;
+  const { onOpenPlanningCenter } = toolbar;
   return (
     <PlanToolbar
       {...toolbar}
       rightItems={() => [
-        {
-          type: "button",
-          label: "Previous plan",
-          icon: { type: "sfSymbol", name: "chevron.up" },
-          width: 37,
-          sharesBackground: true,
-          onPress: () => {
-            onStep("previous");
-          },
-        },
+        ...(canAdd
+          ? [
+              {
+                type: "menu" as const,
+                label: "Add",
+                accessibilityLabel: "Add to order",
+                menu: {
+                  items: [
+                    {
+                      type: "action" as const,
+                      label: "Song",
+                      onPress: () => {
+                        onAdd("song");
+                      },
+                    },
+                    {
+                      type: "action" as const,
+                      label: "Item",
+                      onPress: () => {
+                        onAdd("item");
+                      },
+                    },
+                    {
+                      type: "action" as const,
+                      label: "Section",
+                      onPress: () => {
+                        onAdd("header");
+                      },
+                    },
+                  ],
+                },
+              },
+            ]
+          : []),
         {
           type: "menu",
           label: "More",
@@ -35,13 +63,6 @@ export const RunSheetToolbar = ({
           sharesBackground: true,
           menu: {
             items: [
-              {
-                type: "action",
-                label: "Next plan",
-                onPress: () => {
-                  onStep("next");
-                },
-              },
               ...(canReorder
                 ? [
                     {

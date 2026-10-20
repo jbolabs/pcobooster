@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { useNavigationPath } from "../../app-shell/use-navigation-path";
 import { EmptyState } from "../../components/empty-state";
 import { Hairline } from "../../components/hairline";
 import { InfoBanner } from "../../components/info-banner";
@@ -504,8 +505,9 @@ const Loaded = ({
   detail: PersonDetail;
 }) => {
   const router = useRouter();
+  const navigationPath = useNavigationPath();
   const openPlan = (plan: PlanIds) => {
-    router.push(planHref(plan, "Lineup"));
+    router.push(navigationPath(planHref(plan, "Lineup")));
   };
   const name = model.name ?? detail.person.name;
   return (

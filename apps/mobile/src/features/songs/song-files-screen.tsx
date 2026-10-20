@@ -43,6 +43,7 @@ import { songLoadFailure, songLoadFailureCopy } from "./detail";
 import type { ChordChartArrangement } from "./detail";
 import { attachmentReads, songFileHref } from "./preview-reads";
 import { songsReads } from "./reads";
+import { useSongPath } from "./use-song-path";
 
 /** Content stays readable on iPad instead of stretching across the screen. */
 const READABLE_WIDTH = 680;
@@ -76,11 +77,12 @@ const styles = StyleSheet.create({
 /** Opens a file: links in the browser sheet, everything else in its preview screen. */
 const useOpenAttachment = (songId: string, arrangementId: string) => {
   const router = useRouter();
+  const songPath = useSongPath();
   const toasts = useToasts();
   return (attachment: SongAttachment) => {
     const preview = attachmentPreview(attachment);
     if (preview.kind !== "link") {
-      router.push(songFileHref(songId, arrangementId, attachment));
+      router.push(songPath(songFileHref(songId, arrangementId, attachment)));
       return;
     }
     void (async () => {

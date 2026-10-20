@@ -14,20 +14,37 @@ export interface PlanIds {
   readonly planId: string;
   readonly seriesId?: string;
 }
-export type PlanSegment = "Overview" | "Lineup" | "Plan" | "Times";
+export type PlanSegment = "Lineup" | "Plan" | "Times" | "Files";
 export const segments: readonly PlanSegment[] = [
-  "Overview",
-  "Lineup",
   "Plan",
+  "Lineup",
+  "Files",
   "Times",
 ];
-export const routeSegment = (value?: string): PlanSegment =>
-  segments.find((segment) => segment.toLowerCase() === value) ?? "Overview";
+export const segmentLabels: Record<PlanSegment, string> = {
+  Plan: "Order",
+  Lineup: "Teams",
+  Files: "Files",
+  Times: "Times",
+};
+export const routeSegment = (value?: string): PlanSegment => {
+  if (value === "lineup") {
+    return "Lineup";
+  }
+  if (value === "overview" || value === "details") {
+    return "Times";
+  }
+  return (
+    segments.find(
+      (segment) => segmentLabels[segment].toLowerCase() === value
+    ) ?? "Plan"
+  );
+};
 export const planHref = (
   { serviceTypeId, planId }: PlanIds,
   segment: PlanSegment
 ): string =>
-  `/services/${serviceTypeId}/plans/${planId}${segment === "Overview" ? "" : `/${segment.toLowerCase()}`}`;
+  `/services/${serviceTypeId}/plans/${planId}${segment === "Plan" ? "" : `/${segmentLabels[segment].toLowerCase()}`}`;
 
 export const assignHref = (
   ids: PlanIds,
@@ -43,7 +60,7 @@ export const assignHref = (
   }
   const encoded = query.toString();
   const suffix = encoded === "" ? "" : `?${encoded}`;
-  return `${planHref(ids, "Overview")}/assign${suffix}`;
+  return `${planHref(ids, "Plan")}/assign${suffix}`;
 };
 
 export const planReads = {

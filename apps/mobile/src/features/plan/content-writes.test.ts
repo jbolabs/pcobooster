@@ -3,10 +3,15 @@ import { procedureRoutes } from "@pcobooster/contracts/http/api";
 import { matchRoute } from "@pcobooster/contracts/http/route";
 import { createOptimisticBasicPlanItem } from "@pcobooster/planning-center-models/plan-item-order";
 import type { PlanItem } from "@pcobooster/planning-center-models/types";
-import { QueryClient, QueryObserver } from "@tanstack/react-query";
+import {
+  InfiniteQueryObserver,
+  QueryClient,
+  QueryObserver,
+} from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
 import { makeFixtureFetch } from "../../harness/fixture-transport";
+import { planFilesRead } from "./files/reads";
 import { makeManualTimer } from "./manual-timer";
 import { planReads } from "./reads";
 import type { ReconcileTimer } from "./reconcile";
@@ -807,6 +812,7 @@ describe("run sheet and time writes", () => {
     const watching = [
       new QueryObserver(cache, planReads.items(context, ids)),
       new QueryObserver(cache, planReads.groups(context, ids)),
+      new InfiniteQueryObserver(cache, planFilesRead(context, ids)),
     ].map((observer) =>
       observer.subscribe(() => {
         // Mounted screens keep these lists active, so invalidation refetches them.
@@ -814,6 +820,9 @@ describe("run sheet and time writes", () => {
     );
     const reads = (tag: string) =>
       calls.filter((value) => value === tag).length;
+    await vi.waitFor(() => {
+      expect(reads("planFiles.list")).toBe(1);
+    });
     const before = reads("planItems.list");
     const [, item] = items;
     await writer.updateItem(
@@ -825,10 +834,11 @@ describe("run sheet and time writes", () => {
       { ...item, description: "Two" }
     );
     expect(reads("planItems.list")).toBe(before);
-    expect(reconcile.pending()).toStrictEqual([2500, 2500, 2500]);
+    expect(reconcile.pending()).toStrictEqual([2500, 2500, 2500, 2500]);
     reconcile.fire();
     await vi.waitFor(() => {
       expect(reads("planItems.list")).toBe(before + 1);
+      expect(reads("planFiles.list")).toBe(2);
     });
     calls.length = 0;
     const [time] = times;

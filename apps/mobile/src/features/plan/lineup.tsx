@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { View } from "react-native";
 
 import { useProductClient } from "../../app-shell/queries";
+import { useNavigationPath } from "../../app-shell/use-navigation-path";
 import { useVisibleQuery as useQuery } from "../../app-shell/visible-queries";
 import { EmptyState } from "../../components/empty-state";
 import { SurfaceColorProvider } from "../../components/surface-card";
@@ -34,6 +35,7 @@ export const PlanLineup = ({
   const query = useQuery(planReads.groups(context, ids));
   const writer = usePlanWriter(ids);
   const router = useRouter();
+  const navigationPath = useNavigationPath();
   const groups = query.data;
   if (groups === undefined) {
     return (
@@ -119,7 +121,9 @@ export const PlanLineup = ({
             });
           }}
           onOpen={(position) => {
-            router.push(assignHref(ids, position.teamId, position.id));
+            router.push(
+              navigationPath(assignHref(ids, position.teamId, position.id))
+            );
           }}
         />
       ))}

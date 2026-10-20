@@ -40,6 +40,7 @@ import { songDisplayTitle } from "./library";
 import { songChartPdfHref, songFilesHref } from "./preview-reads";
 import type { ChordChartSongOutput } from "./reads";
 import { songsReads } from "./reads";
+import { useSongPath } from "./use-song-path";
 
 /** Lines stay a comfortable reading length on iPad. */
 const READABLE_WIDTH = 720;
@@ -322,6 +323,7 @@ export const ChordChartScreen = () => {
   }>();
   const { songId } = params;
   const router = useRouter();
+  const songPath = useSongPath();
   const context = useProductClient();
   const features = useFeatures();
   const chart = useVisibleQuery({
@@ -370,15 +372,19 @@ export const ChordChartScreen = () => {
                     select,
                     () => {
                       router.push(
-                        songChartPdfHref(
-                          songId,
-                          arrangement.id,
-                          chartTargetId(target)
+                        songPath(
+                          songChartPdfHref(
+                            songId,
+                            arrangement.id,
+                            chartTargetId(target)
+                          )
                         )
                       );
                     },
                     () => {
-                      router.push(songFilesHref(songId, arrangement.id));
+                      router.push(
+                        songPath(songFilesHref(songId, arrangement.id))
+                      );
                     }
                   ),
                 ],

@@ -32,6 +32,7 @@ const PlanTitle = ({
   <Pressable
     accessibilityRole="button"
     accessibilityLabel={`${title}, ${subtitle}`}
+    accessibilityHint="Switch plans"
     onPress={onMenu}
     style={styles.title}
   >
@@ -58,7 +59,6 @@ const toolbarOptions = ({
   header,
   segment,
   onTitleMenu,
-  onStep,
   onCollapse,
   onExpand,
   onOpenPlanningCenter,
@@ -67,7 +67,6 @@ const toolbarOptions = ({
   header: { title: string; subtitle: string };
   segment: PlanSegment;
   onTitleMenu: () => void;
-  onStep: (direction: "previous" | "next") => void;
   onCollapse: () => void;
   onExpand: () => void;
   onOpenPlanningCenter?: () => void;
@@ -86,44 +85,30 @@ const toolbarOptions = ({
   unstable_headerRightItems:
     rightItems ??
     (() =>
-      segment === "Lineup"
-        ? [
-            {
-              type: "button",
-              label: "Previous plan",
-              icon: { type: "sfSymbol", name: "chevron.up" },
-              onPress: () => {
-                onStep("previous");
-              },
-              sharesBackground: false,
-              width: 37,
-            },
+      segment !== "Lineup" && onOpenPlanningCenter === undefined
+        ? []
+        : [
             {
               type: "menu",
               label: "More",
+              accessibilityLabel: "Plan options",
               icon: { type: "sfSymbol", name: "ellipsis" },
-              sharesBackground: false,
-              width: 37,
               menu: {
                 items: [
-                  {
-                    type: "action",
-                    label: "Next plan",
-                    icon: { type: "sfSymbol", name: "chevron.down" },
-                    onPress: () => {
-                      onStep("next");
-                    },
-                  },
-                  {
-                    type: "action",
-                    label: "Collapse All Teams",
-                    onPress: onCollapse,
-                  },
-                  {
-                    type: "action",
-                    label: "Expand All Teams",
-                    onPress: onExpand,
-                  },
+                  ...(segment === "Lineup"
+                    ? [
+                        {
+                          type: "action" as const,
+                          label: "Collapse all teams",
+                          onPress: onCollapse,
+                        },
+                        {
+                          type: "action" as const,
+                          label: "Expand all teams",
+                          onPress: onExpand,
+                        },
+                      ]
+                    : []),
                   ...(onOpenPlanningCenter === undefined
                     ? []
                     : [
@@ -135,28 +120,6 @@ const toolbarOptions = ({
                       ]),
                 ],
               },
-            },
-          ]
-        : [
-            {
-              type: "button",
-              label: "Previous plan",
-              icon: { type: "sfSymbol", name: "chevron.up" },
-              onPress: () => {
-                onStep("previous");
-              },
-              sharesBackground: true,
-              width: 37,
-            },
-            {
-              type: "button",
-              label: "Next plan",
-              icon: { type: "sfSymbol", name: "chevron.down" },
-              onPress: () => {
-                onStep("next");
-              },
-              sharesBackground: true,
-              width: 37,
             },
           ]),
 });

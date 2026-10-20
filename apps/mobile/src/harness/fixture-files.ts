@@ -1,9 +1,3 @@
-/**
- * The fixture for each procedure: the Swift app's fictional fixtures
- * (`<namespace>.<procedure>.json`), copied as written. Each file is
- * `{"default": <output>, "cases": [{"match": <input subset>, "output": <output>}]}`. A test
- * checks each name is a procedure and each output decodes as its success.
- */
 import accessMe from "./fixtures/access.me.json";
 import accountsList from "./fixtures/accounts.list.json";
 import accountsSelect from "./fixtures/accounts.select.json";
@@ -34,6 +28,13 @@ import peopleMyScheduledPlans from "./fixtures/people.myScheduledPlans.json";
 import peoplePlanWindowHistory from "./fixtures/people.planWindowHistory.json";
 import peoplePositionCandidates from "./fixtures/people.positionCandidates.json";
 import peopleSearch from "./fixtures/people.search.json";
+/**
+ * The fixture for each procedure: the Swift app's fictional fixtures
+ * (`<namespace>.<procedure>.json`), copied as written. Each file is
+ * `{"default": <output>, "cases": [{"match": <input subset>, "output": <output>}]}`. A test
+ * checks each name is a procedure and each output decodes as its success.
+ */
+import planFilesList from "./fixtures/planFiles.list.json";
 import planItemsCreate from "./fixtures/planItems.create.json";
 import planItemsDelete from "./fixtures/planItems.delete.json";
 import planItemsList from "./fixtures/planItems.list.json";
@@ -58,6 +59,30 @@ import songsSearch from "./fixtures/songs.search.json";
 import songsSuggestions from "./fixtures/songs.suggestions.json";
 
 export const fixtureFiles = {
+  "planFiles.list": planFilesList,
+  "planFiles.open": {
+    default: {
+      ...chordChartsPdf.default,
+      url: "https://fixtures.invalid/attachments/88005",
+      preview: false,
+    },
+    cases: [
+      {
+        match: { attachmentId: "88001" },
+        output: {
+          url: "https://fixtures.invalid/attachments/88001",
+          preview: false,
+        },
+      },
+      {
+        match: { attachmentId: "88004" },
+        output: {
+          url: "https://fixtures.invalid/attachments/88004",
+          preview: false,
+        },
+      },
+    ],
+  },
   "access.me": accessMe,
   "accounts.list": accountsList,
   "accounts.select": accountsSelect,

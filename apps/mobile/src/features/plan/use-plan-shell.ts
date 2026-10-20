@@ -9,6 +9,7 @@ import {
   sharedReads,
   useProductClient,
 } from "../../app-shell/queries";
+import { useNavigationPath } from "../../app-shell/use-navigation-path";
 import { useVisibleQuery as useQuery } from "../../app-shell/visible-queries";
 import { playHaptic } from "../../design/haptics";
 import { useClock, useOrgTimeZone } from "../../lib/environment";
@@ -21,7 +22,7 @@ import {
   decodeCollapsedTeams,
   setCollapsedTeams,
 } from "./preferences";
-import { planHref, planReads, routeSegment } from "./reads";
+import { planHref, planReads, routeSegment, segmentLabels } from "./reads";
 import type { PlanSegment } from "./reads";
 import { refreshPlanReads } from "./refresh";
 
@@ -30,6 +31,7 @@ export const usePlanShell = () => {
     "service-type-id": string;
     "plan-id": string;
     segment?: string;
+    tab?: string;
   }>();
   const serviceTypeId = params["service-type-id"];
   const planId = params["plan-id"];
@@ -37,9 +39,7 @@ export const usePlanShell = () => {
     () => ({ serviceTypeId, planId }),
     [serviceTypeId, planId]
   );
-  const [segment, setSegment] = useState<PlanSegment>(() =>
-    routeSegment(params.segment)
-  );
+  const segment = routeSegment(params.tab ?? params.segment);
   const [refreshing, setRefreshing] = useState(false);
   const [savedCollapsed, setSavedCollapsed] = useState(() =>
     decodeCollapsedTeams(Settings.get(COLLAPSED_TEAMS_KEY))
@@ -65,6 +65,7 @@ export const usePlanShell = () => {
   const zone = useOrgTimeZone();
   const clock = useClock();
   const router = useRouter();
+  const navigationPath = useNavigationPath();
   const toasts = useToasts();
   const recheckOnReturn = useRef(false);
   const header = planHeader(
@@ -127,7 +128,9 @@ export const usePlanShell = () => {
           planReads.plan(context, { ...ids, planId: neighbor.id }).queryKey,
           neighbor
         );
-        router.replace(planHref({ ...ids, planId: neighbor.id }, segment));
+        router.replace(
+          navigationPath(planHref({ ...ids, planId: neighbor.id }, segment))
+        );
       } catch (error) {
         toasts.showError("Couldn't load that plan.", {
           detail:
@@ -143,13 +146,7 @@ export const usePlanShell = () => {
       {
         title: header.title,
         message: header.subtitle,
-        options: [
-          "Cancel",
-          "Previous plan",
-          "Next plan",
-          "Open in Planning Center",
-          "All services",
-        ],
+        options: ["Cancel", "Previous plan", "Next plan", "All services"],
         cancelButtonIndex: 0,
       },
       (index) => {
@@ -160,9 +157,6 @@ export const usePlanShell = () => {
           handleStep("next");
         }
         if (index === 3) {
-          handleSend?.();
-        }
-        if (index === 4) {
           router.dismissTo("/services");
         }
       }
@@ -228,7 +222,7 @@ export const usePlanShell = () => {
   };
   const handleSegment = (next: PlanSegment) => {
     playHaptic("selection");
-    setSegment(next);
+    router.setParams({ tab: segmentLabels[next].toLowerCase() });
   };
   return {
     ids,

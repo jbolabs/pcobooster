@@ -5,9 +5,11 @@ import type {
   PlanItemServicePosition,
 } from "@pcobooster/planning-center-models/types";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Linking, TextInput } from "react-native";
+import { TextInput } from "react-native";
 
+import { useFeatures } from "../../../app-shell/features";
 import { useProductClient } from "../../../app-shell/queries";
 import { useVisibleQuery as useQuery } from "../../../app-shell/visible-queries";
 import { PillButton } from "../../../components/pill-button";
@@ -15,12 +17,15 @@ import { AppText } from "../../../design/app-text";
 import { colors } from "../../../design/colors";
 import { playHaptic } from "../../../design/haptics";
 import { useToasts } from "../../../lib/toasts";
+import { songFilesHref } from "../../songs/preview-reads";
+import { songChartHref, songHref } from "../../songs/reads";
+import { useSongPath } from "../../songs/use-song-path";
 import type { PlanContentWriter } from "../content-writes";
 import { EditorSection, EditorSheet } from "../editor-sheet";
 import { ReadStatus } from "../read-status";
 import type { PlanIds } from "../reads";
 import { requestItemRemove } from "./confirm-remove";
-import { editorTitle, songUrl } from "./formatting";
+import { editorTitle } from "./formatting";
 import { ItemDraft } from "./item-draft";
 import { songReads } from "./reads";
 import { SongFields } from "./song-fields";
@@ -48,6 +53,9 @@ export const ItemEditor = ({
   onReplace: () => void;
 }) => {
   const initialItem = useRef(item);
+  const router = useRouter();
+  const songPath = useSongPath();
+  const features = useFeatures();
   const editor = useRef<ItemDraft | null>(null);
   const [draft, setDraft] = useState(() => new ItemDraft(item).draft);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +111,7 @@ export const ItemEditor = ({
   };
   return (
     <EditorSheet
-      title={editorTitle(item)}
+      title={item.song?.title ?? editorTitle(item)}
       onClose={close}
       actions={
         canEdit
@@ -151,11 +159,46 @@ export const ItemEditor = ({
         </EditorSection>
       ) : (
         <>
-          <AppText font="pageTitle">{item.song.title}</AppText>
           <AppText font="rowDetail" color={colors.inkSecondary}>
             {item.song.author}
           </AppText>
-          <EditorSection title="Arrangement and key">
+          {features.chordCharts ? (
+            <EditorSection title="Prepare">
+              <PillButton
+                title="Read chart"
+                kind="secondary"
+                testID="plan-item-chart"
+                onPress={() => {
+                  close();
+                  router.push(
+                    songPath(
+                      songChartHref(
+                        item.song?.id ?? "",
+                        draft.arrangementId,
+                        draft.keyId === "" ? "lyrics" : `key-${draft.keyId}`
+                      )
+                    )
+                  );
+                }}
+              />
+              {draft.arrangementId === "" ? null : (
+                <PillButton
+                  title="Files and recordings"
+                  kind="outline"
+                  testID="plan-item-files"
+                  onPress={() => {
+                    close();
+                    router.push(
+                      songPath(
+                        songFilesHref(item.song?.id ?? "", draft.arrangementId)
+                      )
+                    );
+                  }}
+                />
+              )}
+            </EditorSection>
+          ) : null}
+          <EditorSection title="Arrangement and key · this plan">
             {options.data === undefined ? (
               <ReadStatus
                 error={options.error}
@@ -244,10 +287,11 @@ export const ItemEditor = ({
       {item.song === null ? null : (
         <>
           <PillButton
-            title="Open in Planning Center"
+            title="Song details"
             kind="outline"
             onPress={() => {
-              void Linking.openURL(songUrl(item.song?.id ?? ""));
+              close();
+              router.push(songPath(songHref(item.song?.id ?? "")));
             }}
           />
           <PillButton
