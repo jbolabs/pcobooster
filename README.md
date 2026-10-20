@@ -30,15 +30,13 @@ Use Node.js 24 (see `.node-version`) and Bun 1.4.2 (pinned in `package.json`; CI
 bun install --frozen-lockfile
 ```
 
-### 2. Configure local secrets with macOS Keychain
+### 2. Configure local secrets
 
-Existing developers run `bun run secrets:migrate` to review the names to import from their current Infisical login, then `bun run secrets:migrate --apply`. Values move through pipes into Keychain and are verified without being printed. This importer is needed only for migration.
+Development credentials live in Infisical `pcobooster-dev`, which Alchemy reads for stage `local`. With the `agent-dev` machine identity's `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` set, run `bun run setup:infisical` once to store it in your default Alchemy profile. Never put a secret value in command arguments, chat, issues, or committed files.
 
-For a new credential, use `bun run secrets:set local PLANNING_CENTER_PAT` and enter it at the hidden prompt. [Application configuration](docs/environment.md) lists the scopes and expected keys. Never put a secret value in command arguments, chat, issues, or committed files.
+`bun run dev` signs you in as the owner of the Planning Center sandbox PAT from the Keychain `sandbox` scope (`bun run secrets:set sandbox PLANNING_CENTER_PAT`); `dev:church` uses the Agape PAT from Infisical, read-only. `dev:auth` uses real OAuth and `dev:present` enables presentation mode. The servers bind to `127.0.0.1`; deployed Workers ignore the development bypass. Each stage gets separate D1 data.
 
-`bun run dev` loads the Keychain `local` scope and signs you in as the owner of its Planning Center personal access token. `PLANNING_CENTER_CLIENT` and `PLANNING_CENTER_PAT` belong only to this scope. `dev:auth` uses real OAuth and `dev:present` enables presentation mode. The servers bind to `127.0.0.1`; deployed Workers ignore the development bypass. Each stage gets separate D1 data.
-
-One-off local tools use `bun run secrets:run local -- <command>`. Credentials are allowlisted by scope and injected into the command process without an env file. Cloudflare login stays in the saved Alchemy profile. Deployed app secrets live in Cloudflare Secrets Store; GitHub environment secrets supply deployment credentials. See [configuration](docs/environment.md), [migration](docs/secrets-migration.md), and [deployment](docs/ci-cd.md).
+Scripts that run outside Alchemy use `bun run secrets:dev <command>`. Operator-only tools keep Keychain scopes (`bun run secrets:run apple -- <command>`). Deployed app secrets live in Cloudflare Secrets Store; GitHub environment secrets supply deployment credentials. See [configuration](docs/environment.md), [migration](docs/secrets-migration.md), and [deployment](docs/ci-cd.md).
 
 ### 3. Start the app
 

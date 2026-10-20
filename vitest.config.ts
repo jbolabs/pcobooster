@@ -20,6 +20,7 @@ export default defineConfig({
       "apps/mobile/src/**/*.test.ts",
       "lint/**/*.test.ts",
       "scripts/**/*.test.ts",
+      "stacks/**/*.test.ts",
     ],
     // Turborepo runs packages in parallel. Bound each package's workers so auth and workerd
     // fixtures keep CPU time while other suites start, without serializing the package gate.

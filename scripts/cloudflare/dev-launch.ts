@@ -56,25 +56,11 @@ const resolvePortBase = (
     : DEFAULT_DEV_PORT_BASE;
 };
 
-const missingTokenMessage = [
-  "bun run dev signs in as the owner of a Planning Center personal access token, but",
-  "PLANNING_CENTER_CLIENT or PLANNING_CENTER_PAT is missing from the macOS Keychain local scope.",
-  "Add both (see docs/environment.md#developer-credentials), or run `bun run dev:auth` to sign in",
-  "through Planning Center OAuth instead.",
-].join("\n");
-
 export const resolveDevLaunch = (input: DevLaunchInput): DevLaunch => {
+  // The personal access token may come from Infisical inside Alchemy, so the stack, not this
+  // launcher, refuses a missing or foreign token (`scripts/cloudflare/dev-organization.ts`).
   const oauth = input.args.includes("--oauth");
   const { environment } = input;
-  if (
-    !oauth &&
-    !(
-      isSet(environment.PLANNING_CENTER_CLIENT) &&
-      isSet(environment.PLANNING_CENTER_PAT)
-    )
-  ) {
-    return { kind: "error", message: missingTokenMessage };
-  }
   let portBase: number;
   try {
     portBase = resolvePortBase(input, oauth);

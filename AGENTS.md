@@ -30,7 +30,7 @@
 
 - Use Bun for dependency management and scripts. `bun.lock` is the only committed lockfile; do not add `package-lock.json` or run npm-based install workflows for this repo.
 - `bun run dev`: start API, product, and admin through Alchemy, plus the marketing dev server, signed in with the pinned free Planning Center sandbox PAT from Keychain (`sandbox` scope; see `docs/planning-center-sandbox.md`). The main checkout uses ports 3000 to 3003 (API, product, marketing, admin); each linked worktree gets its own block from its path, so worktrees can run dev at once. `DEV_PORT_BASE=<port>` overrides the block. The command prints the product URL.
-- `bun run dev:church`: inspect the pinned Agape account with provider writes blocked. `dev:church:write` enables real church writes and requires explicit user authorization for the specific mutation.
+- `bun run dev:church`: inspect the pinned Agape account with provider writes blocked, using the `pcobooster-dev` PAT; the stack refuses a token from another organization. This is the PAT profile available without a Mac Keychain. `dev:church:write` enables real church writes and requires explicit user authorization for the specific mutation.
 - `bun run dev:auth`: the same with real Planning Center OAuth, on the main ports (the OAuth callback is registered for `127.0.0.1:3001`). Use it only to test sign-in.
 - `bun run build`: build the Vite apps through Turborepo. Alchemy bundles the API Worker itself on `dev`/deploy.
 - `bun run check` (also `lint`): run Ultracite formatting and type-aware lint checks; warnings fail the check. All selected presets in `oxlint.config.ts` remain strict.
@@ -50,7 +50,17 @@
 
 - Setup/maintenance scripts live under `scripts/codex-cloud/`; see [docs/codex-cloud.md](docs/codex-cloud.md).
 - `bun run ci` is secretless. Local D1 belongs to the checkout; no Neon branch setup or teardown is required.
-- Cloud app commands accept only their dedicated development credentials through the `cloud` allowlist; macOS reads Keychain, Linux reads host-injected secrets. Keep local PAT and deployment secrets out of cloud sessions.
+- Stage `local` reads development credentials from Infisical `pcobooster-dev` through the default Alchemy profile (including the Planning Center PAT, a deliberate choice: it acts as the owner on real Planning Center data and shares its rate limit). The launchers drop host-injected app keys; preview/prod and deployment secrets never reach agent sessions.
+
+## Agent secrets (Infisical)
+
+- Secrets come from Infisical through Alchemy (`Infisical.Secrets` in each stack). `stacks/secrets.ts` holds the project ids and maps stage → source: `prod` reads `pcobooster-prod`, `pr-*`/CI previews read nothing from Infisical, everything else reads `pcobooster-dev`.
+- Who can read what: Alchemy `default` profile = `agent-dev` (`*-dev` only); `admin` profile = `operator` (all; the owner's Mac only, pass `--profile admin`); CI = `ci-prod` via GitHub OIDC, only in jobs using the `production` environment (main only).
+- Agent setup, once per machine: export `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET`, then `bun run setup:infisical`.
+- Never add prod values to `pcobooster-dev`, never give a PR job the `production` environment, and never read secrets via `process.env` in stacks (use `Config`).
+- pcobooster: only stage `local` (`alchemy.run.ts`) and `alchemy.secrets.ts` declare Infisical. The secrets stack's `preview` tier (and `staging`) map to `pcobooster-prod` env `preview`; the operator runs `secrets:plan:*`/`secrets:deploy:*`, which pass `--profile admin`.
+- `bun run secrets:dev <cmd>` serves non-Alchemy scripts (`pc:check-contracts`): it loads `pcobooster-dev` with the Infisical CLI and gives `<cmd>` only the `cloud` allowlist, never an `INFISICAL_*` variable. The dev PAT is a deliberate grant (the Agape church token, used by `dev:church`).
+- Keychain holds only the `sandbox` PAT (`bun run dev`) and operator scopes (`apple`, `mobile-updates`, `analytics-erasure`, `recovery`, `posthog`); `deploy:*`, `infra:*`, and `alchemy.load.ts` still read the legacy `preview`/`production` scopes.
 
 ## Coding Style & Naming Conventions
 

@@ -1,21 +1,52 @@
 # Application configuration
 
-Deployed application secrets live in Cloudflare Secrets Store. `alchemy.secrets.ts` is their sole writer; the product stack references them without reading their values at deploy time. Local commands load their own development credentials from macOS Keychain. GitHub Actions receives deployment credentials from encrypted GitHub environment secrets managed by `alchemy.ci.ts`.
+Deployed application secrets live in Cloudflare Secrets Store. `alchemy.secrets.ts` is their sole writer; the product stack references them without reading their values at deploy time. Local development (people and agents alike) reads its credentials from Infisical `pcobooster-dev` through Alchemy; `alchemy.secrets.ts` reads the deployed values it writes from Infisical `pcobooster-prod`. Operator-only tools keep their macOS Keychain scopes. GitHub Actions receives deployment credentials from encrypted GitHub environment secrets managed by `alchemy.ci.ts`.
 
 ## Environment boundaries
 
 | Use | Credential source | Runtime |
 | --- | --- | --- |
-| Local development | Keychain `com.pcobooster.secrets.local` | Local Workers and persistent local D1 |
-| Agent verification | Keychain `com.pcobooster.secrets.sandbox` | Pinned free Planning Center test organization |
-| Codex cloud | Host-injected development credentials, allowlisted by the `cloud` scope | Local Workers and local D1 |
-| Previews and staging | `pcobooster-secrets/preview` references; GitHub environment deployment credentials | Independent Workers and D1; Cloudflare Access |
-| Production | `pcobooster-secrets/prod` references; `cloudflare-production` deployment credentials | Retained production Workers and D1 |
+| Local development and agents (stage `local`) | Infisical `pcobooster-dev` env `dev`, read by Alchemy through the default profile (`agent-dev`) | Local Workers and persistent local D1 |
+| Sandbox verification (`bun run dev`) | Keychain `sandbox` scope, overriding the `pcobooster-dev` PAT | Pinned free Planning Center test organization |
+| Non-Alchemy scripts (`secrets:dev`) | Infisical `pcobooster-dev` through the Infisical CLI, allowlisted by the `cloud` scope | The command's own process |
+| Pull request previews | Generated stage secrets and `pcobooster-secrets/preview` references; GitHub environment deployment credentials. Never Infisical | Independent Workers and D1; Cloudflare Access |
+| Staging | `pcobooster-secrets/preview` references; GitHub environment deployment credentials | Independent Workers and D1; Cloudflare Access |
+| Production | `pcobooster-secrets/prod` references; `production` deployment credentials | Retained production Workers and D1 |
+| Central secrets stack (`alchemy.secrets.ts`) | Infisical `pcobooster-prod` env `prod` or `preview`, read with the operator's `admin` profile | Cloudflare Secrets Store |
 | Local Apple release tools | Keychain `apple` scope | macOS signing and App Store Connect tools |
 | iOS update publishing | Keychain `mobile-updates` scope | The update signing key `ios:update` signs with; Cloudflare access comes from the operator's Alchemy login |
 | Recovery | Keychain `recovery` scope | Read-only legacy database reconciliation |
 
-The existing Infisical values are imported without rotation by `bun run secrets:migrate --apply`. That one-time tool is the only remaining Infisical dependency. Infisical projects and identities are retained until external cutover and recovery acceptance; deleting them is a separate action. See [migration and cutover](secrets-migration.md).
+## Infisical
+
+Infisical is on the free plan, which has no environment-scoped roles, so each project is the access boundary. `stacks/secrets.ts` names both projects and maps each stage to one.
+
+- `pcobooster-dev`, env `dev`: development `BETTER_AUTH_SECRET`, Planning Center OAuth client ID and secret, `PLANNING_CENTER_CLIENT`, `PLANNING_CENTER_PAT` (the Agape church token: a deliberate grant that acts as its owner on real Planning Center data and shares their rate limit), and `PCOBOOSTER_ADMIN_EMAILS`. Never put preview or production values here.
+- `pcobooster-prod`, envs `prod` and `preview`: the inputs to `alchemy.secrets.ts` and the deployment values.
+- Stage mapping: `prod` reads `pcobooster-prod` env `prod`; `preview` and `staging` read env `preview`; every other stage, including `pr-*`, maps to `pcobooster-dev`. Only `alchemy.run.ts` stage `local` and `alchemy.secrets.ts` stages `prod` and `preview` declare Infisical; pull request, staging, and production app deploys read nothing from it, so CI needs no Infisical identity today.
+
+Alchemy loads the values into Effect Config (not `process.env`), and the shell outranks them. Credentials resolve in this order: `INFISICAL_TOKEN`; `INFISICAL_IDENTITY_ID` with the platform's OIDC token (GitHub Actions); otherwise the selected Alchemy profile's Infisical machine identity, which mints a fresh token each run.
+
+| Identity | Access | Where it lives |
+| --- | --- | --- |
+| `agent-dev` (Universal Auth) | Viewer on every `*-dev` project | The default Alchemy profile on agent machines and for everyday development |
+| `operator` (Universal Auth) | Viewer on every `*-dev` and `*-prod` project | The operator's `admin` Alchemy profile, alongside its Cloudflare credentials |
+| `ci-prod` (GitHub OIDC, subject `repo:jbolabs@305914027/*:environment:production`) | Viewer on every `*-prod` project | The `production` GitHub environment's `INFISICAL_IDENTITY_ID` and `INFISICAL_OIDC_AUDIENCE` variables (`alchemy.ci.ts`); no job reads Infisical yet |
+
+Bootstrap the default profile without putting the secret in arguments or history (`INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` must be set; use `--reconfigure Infisical` instead of `--add` to replace an existing identity):
+
+```sh
+bun run setup:infisical
+# = bun alchemy profile edit --add Infisical --method universal-auth --set clientId=env:INFISICAL_CLIENT_ID --set clientSecret=env:INFISICAL_CLIENT_SECRET --no-input
+```
+
+The operator adds the `operator` identity to the `admin` profile the same way, with `--profile admin`. `secrets:plan:*` and `secrets:deploy:*` run `alchemy.secrets.ts` with `--profile admin` (deployment commands still need Jake's confirmation). The shell outranks Infisical, so do not run them with application keys exported.
+
+`bun run secrets:dev <command>` (`scripts/secrets/dev-run.ts`) serves scripts that read `process.env` instead of running under Alchemy, such as `pc:check-contracts`. It uses `INFISICAL_TOKEN`, else logs in with `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` (never printing the token), else the Infisical CLI's own login; runs `infisical run` against `pcobooster-dev`; and passes the values through `secrets:run --host-env cloud`, so the command sees only the `cloud` allowlist and no `INFISICAL_*` variable.
+
+The Keychain `local`, `cloud`, `preview`, and `production` scopes are legacy. `deploy:staging`, `deploy:production`, `infra:plan`, `infra:deploy`, and `alchemy.load.ts` still read `preview`/`production`; keep those values in sync with `pcobooster-prod` until those commands move. The operator-only scopes `apple`, `mobile-updates`, `analytics-erasure`, `recovery`, and `posthog`, and the `sandbox` scope, are unchanged.
+
+The old projects `pcobooster-preview`, `pcobooster-production`, and `worshipadmin.com` are recovery copies, read only by the one-time `bun run secrets:migrate` importer. Deleting them is a separate action. See [migration and cutover](secrets-migration.md).
 
 ## Stored application secrets
 
@@ -28,7 +59,7 @@ Global names use `pcobooster__<tier>__<purpose>__<KEY>`; bindings keep their fam
 
 The API reads a complete secret snapshot on its first request and at most once per minute per isolate. Unchanged snapshots reuse the existing server dependencies; a changed snapshot rebuilds them in the requesting context. Failed reads serve a generic 503 and retry on the next request, without using expired values. The native Promise cache lets concurrent requests resume in their own workerd I/O contexts. Provider propagation is additional to this one-minute application cache. Rotating the authentication signing key still invalidates existing sessions; relocating its unchanged value does not.
 
-Local Workers use ordinary `Config.Redacted` bindings from Keychain. They do not access the remote store. Alchemy's ignored local state can contain deployment inputs; Keychain prevents plaintext credential source files, not all tool-generated local copies.
+Local Workers use ordinary `Config.Redacted` bindings from Infisical `pcobooster-dev` (or a sandbox override). They do not access the remote store. Alchemy's ignored local state can contain deployment inputs; Infisical and Keychain prevent plaintext credential source files, not all tool-generated local copies.
 
 ## Configuration that is not secret
 
@@ -51,11 +82,11 @@ Deploying Flagship resources needs Flagship access: the deploy tokens need Flags
 
 ## Developer credentials
 
-Normal `bun run dev` and `dev:present` load the PAT from the separate `sandbox` scope and verify the pinned test organization before startup. `dev:church` uses the existing `local` church PAT with provider writes blocked; `dev:church:write` explicitly enables real church writes. Local app/OAuth settings still come from `local`; its church PAT is never the fallback for these commands. See [Planning Center sandbox](planning-center-sandbox.md).
+Every stage `local` command reads app and OAuth settings from Infisical `pcobooster-dev`. Normal `bun run dev` and `dev:present` override its PAT with the Keychain `sandbox` scope's and verify the pinned test organization before startup; they need a Mac with that scope. `dev:church` uses the `pcobooster-dev` church PAT with provider writes blocked; `dev:church:write` explicitly enables real church writes. Each profile pins its organization in `DEV_PLANNING_CENTER_ORGANIZATION`, and the stack refuses to start when the resolved token belongs to another one (`scripts/cloudflare/dev-organization.ts`). `bun run dev:auth` signs in through Planning Center OAuth. See [Planning Center sandbox](planning-center-sandbox.md).
 
-The Keychain `sandbox` scope contains the test organization’s `PLANNING_CENTER_CLIENT` and `PLANNING_CENTER_PAT`. The `local` scope retains app/OAuth settings, historical church credentials, and optional `PRESENTATION_SEED`. Normal agent development overrides its PAT with the sandbox values. Codex cloud accepts only its own development credentials; never the local PAT, staging, or production credentials. Alchemy binds these development keys only in stage `local`.
+The Keychain `sandbox` scope contains the test organization’s `PLANNING_CENTER_CLIENT` and `PLANNING_CENTER_PAT`. Agents without it use `dev:church` or `dev:auth`. Optional `PRESENTATION_SEED` can be added to `pcobooster-dev`. The launchers remove stale shell credentials (the shell outranks Infisical) and give stage `local` placeholder Cloudflare credentials, so it starts without a Cloudflare login. Alchemy binds these development keys only in stage `local`.
 
-`DEV_AUTH_BYPASS` is process-owned, like `PRESENTATION_MODE`: `scripts/cloudflare/dev.ts` sets it after the sandbox launcher verifies the test organization. `bun run dev` and `bun run dev:present` turn it on, signing every request in as the token's owner (`packages/api/src/auth/dev-bypass.ts`), and refuse to start without the token. `bun run dev:auth` (and `bun run cloud:dev`) turn it off for real Planning Center OAuth. The product Worker also receives `DEV_AUTH_BYPASS` in stage `local`; its sign-in gate honors it only in the development server, never in a production build. The bypass synthesizes its session on the server and sets no session cookie, so checkouts running side by side on `127.0.0.1` (cookies ignore the port) do not sign each other out; only UI preferences such as `sidebar_state` are shared.
+`DEV_AUTH_BYPASS` is process-owned, like `PRESENTATION_MODE`: `scripts/cloudflare/dev.ts` sets it. `bun run dev`, `dev:present`, and `dev:church` turn it on, signing every request in as the token's owner (`packages/api/src/auth/dev-bypass.ts`); the stack refuses to start without the token. `bun run dev:auth` turns it off for real Planning Center OAuth. The product Worker also receives `DEV_AUTH_BYPASS` in stage `local`; its sign-in gate honors it only in the development server, never in a production build. The bypass synthesizes its session on the server and sets no session cookie, so checkouts running side by side on `127.0.0.1` (cookies ignore the port) do not sign each other out; only UI preferences such as `sidebar_state` are shared.
 
 All checkouts share the one token and therefore Planning Center's 100 requests per 20 seconds per user. Each API Worker's pacer (`packages/api/src/planning-center/rate-pacer.ts`) sees only its own requests, so several busy checkouts together can hit 429s.
 

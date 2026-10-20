@@ -83,9 +83,16 @@ const preview: DeployTarget = {
     },
   ],
 };
+/**
+ * The one GitHub environment for production secrets, shared by every jbolabs repository: `main`
+ * only, and the only subject Infisical's `ci-prod` identity trusts
+ * (`repo:jbolabs@305914027/*:environment:production`).
+ */
+export const productionEnvironment = "production";
+
 const production: DeployTarget = {
   key: "Production",
-  environments: ["cloudflare-production"],
+  environments: [productionEnvironment],
   policies: [
     {
       effect: "allow",
@@ -137,7 +144,7 @@ interface DeployEnvironment {
   readonly variables: Readonly<Record<string, string>>;
 }
 
-const environments: readonly DeployEnvironment[] = [
+export const environments: readonly DeployEnvironment[] = [
   {
     id: "PreviewEnvironment",
     name: "cloudflare-preview",
@@ -166,13 +173,22 @@ const environments: readonly DeployEnvironment[] = [
     variables: {},
   },
   {
-    id: "ProductionEnvironment",
-    name: "cloudflare-production",
+    // Formerly `cloudflare-production` (id `ProductionEnvironment`). A new id, so its variables and
+    // token secret get new ids too: Alchemy creates them in `production` and leaves the retained
+    // `cloudflare-production` copies untouched until that environment is deleted by hand.
+    id: "ProductionGitHubEnvironment",
+    name: productionEnvironment,
     target: production,
     // Merging to `main` is the approval: every push to `main` deploys.
     reviewers: undefined,
     branches: { customBranchPolicies: ["main"] },
-    variables: { CLOUDFLARE_CUSTOM_DOMAINS: "1" },
+    variables: {
+      CLOUDFLARE_CUSTOM_DOMAINS: "1",
+      // Infisical GitHub OIDC login as `ci-prod` for jobs that read `pcobooster-prod`
+      // (project `infisical.prod`).
+      INFISICAL_IDENTITY_ID: "23fa16cc-a7a1-4e35-8011-2f24b0e037ba",
+      INFISICAL_OIDC_AUDIENCE: "https://github.com/jbolabs",
+    },
   },
   {
     id: "TestFlightEnvironment",
@@ -348,9 +364,9 @@ export default Alchemy.Stack(
       "POSTHOG_ANNOTATION_API_KEY"
     ).pipe(Config.option);
     if (annotationKey._tag === "Some") {
-      yield* GitHub.Secret("ProductionPostHogAnnotationKey", {
+      yield* GitHub.Secret("ProductionEnvironmentPostHogAnnotationKey", {
         ...target,
-        environment: "cloudflare-production",
+        environment: productionEnvironment,
         name: "POSTHOG_ANNOTATION_API_KEY",
         value: annotationKey.value,
       }).pipe(RemovalPolicy.retain());

@@ -4,9 +4,9 @@ Agent development uses **Jake Bodea's Org**, Services organization **524200**, i
 
 ## Commands
 
-- `bun run dev`: load local app settings, override the church PAT with the sandbox PAT, verify the organization, then launch local Workers. Missing or mismatched sandbox credentials stop startup.
+- `bun run dev`: load app settings from Infisical `pcobooster-dev`, override its church PAT with the Keychain sandbox PAT, verify the organization, then launch local Workers. Missing or mismatched sandbox credentials stop startup.
 - `bun run dev:present`: the same sandbox connection with presentation masking.
-- `bun run dev:church`: verify Agape organization **42167**, use the existing `local` PAT, and block provider data writes in the core client.
+- `bun run dev:church`: verify Agape organization **42167**, use the `pcobooster-dev` church PAT, and block provider data writes in the core client.
 - `bun run dev:church:write`: explicitly enable real Agape writes. Agents must have user authorization for the specific church mutation before running this command; starting it is not authorization to change arbitrary church records.
 - `bun run dev:auth`: real OAuth sign-in, read-only by default. PAT bypass does not test OAuth.
 - `bun run sandbox:plan`: read-only Alchemy plan.
@@ -37,4 +37,4 @@ bun run secrets:set sandbox PLANNING_CENTER_CLIENT
 bun run secrets:set sandbox PLANNING_CENTER_PAT
 ```
 
-Existing `local` Keychain credentials power the explicit church profiles. Normal agent development reads its PAT from `sandbox`. Codex cloud retains its separate OAuth-only `cloud` scope.
+The church profiles use the Agape PAT in Infisical `pcobooster-dev`; the stack refuses to start if it belongs to another organization. Normal `bun run dev` reads its PAT from the Keychain `sandbox` scope. App and OAuth settings come from `pcobooster-dev` for every profile.

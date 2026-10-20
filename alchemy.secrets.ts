@@ -9,12 +9,16 @@ import {
   storedRuntimeKeys,
   storeSecretName,
 } from "./scripts/secrets/manifest";
+import { stageSecrets } from "./stacks/secrets";
 
 export default Alchemy.Stack(
   "pcobooster-secrets",
   {
     providers: Cloudflare.providers(),
     state: Cloudflare.state(),
+    // Inputs come from Infisical `pcobooster-prod` (env `prod` or `preview`). The operator runs this
+    // stack with `--profile admin` (the `operator` identity plus Cloudflare); agents cannot read it.
+    secrets: stageSecrets(["prod", "preview"]),
   },
   Effect.gen(function* runtimeSecrets() {
     const stage = yield* Alchemy.Stage;

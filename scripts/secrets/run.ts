@@ -10,27 +10,35 @@ import {
   selectScopeValues,
 } from "./manifest";
 
-const [scopeInput, separator, command, ...args] = process.argv.slice(2);
+// `--host-env` (used by `agent:run`, which loads Infisical into the environment) skips Keychain on a
+// Mac too. Either way, only the `cloud` scope may come from the host.
+const argv = process.argv.slice(2);
+const hostOnly = argv[0] === "--host-env";
+const [scopeInput, separator, command, ...args] = hostOnly
+  ? argv.slice(1)
+  : argv;
 const scope = parseSecretScope(scopeInput);
 if (separator !== "--" || command === undefined) {
-  throw new Error("Usage: secrets:run <scope> -- <command> [arguments]");
+  throw new Error(
+    "Usage: secrets:run [--host-env] <scope> -- <command> [arguments]"
+  );
 }
-if (process.platform !== "darwin" && scope !== "cloud") {
+const fromHost = hostOnly || process.platform !== "darwin";
+if (fromHost && scope !== "cloud") {
   throw new Error(
     "Use GitHub environment secrets for deployed jobs; this scope requires macOS Keychain locally."
   );
 }
-const values =
-  process.platform === "darwin"
-    ? await readKeychain(scope)
-    : selectScopeValues(
-        scope,
-        Object.fromEntries(
-          Object.entries(process.env).filter(
-            (entry): entry is [string, string] => entry[1] !== undefined
-          )
+const values = fromHost
+  ? selectScopeValues(
+      scope,
+      Object.fromEntries(
+        Object.entries(process.env).filter(
+          (entry): entry is [string, string] => entry[1] !== undefined
         )
-      );
+      )
+    )
+  : await readKeychain(scope);
 const missing = requiredScopeKeys[scope].filter((key) => !values[key]);
 if (missing.length > 0) {
   throw new Error(

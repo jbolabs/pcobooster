@@ -15,8 +15,8 @@ const sharedInput = (file: string): boolean =>
   /^(?:[^/]+\.(?:jsonc?|[cm]?ts|mjs)|bun\.lock|bunfig\.toml|\.node-version)$/u.test(
     file
   ) ||
-  [".github/", "patches/", "packages/config/", "scripts/"].some((prefix) =>
-    file.startsWith(prefix)
+  [".github/", "patches/", "packages/config/", "scripts/", "stacks/"].some(
+    (prefix) => file.startsWith(prefix)
   );
 
 /** Missing history fails closed. The diff includes staged, unstaged, and untracked inputs. */

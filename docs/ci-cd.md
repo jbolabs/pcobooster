@@ -73,7 +73,7 @@ Cloudflare Access protects it, and every pull request preview the same way. `alc
 
 ## Production
 
-Merge equals deploy. A push to `main` deploys production after `ci`, `cloudflare-build`, and the `staging` deploy pass. So does a manual CI run on `main` with `deploy_production`. `cloudflare-production` accepts only the `main` branch and has no approval gate. When newer `main` has superseded the revision, the job ends green without reading production secrets or deploying; the newer revision's own run deploys it. Staging and labeled previews skip superseded (or closed) revisions the same way. Post-deploy verification then fails the run unless production's Workers serve the merged commit and pcobooster.com routes to them ([deploy verification](#preview-lifecycle)). The required checks on the pull request, then the same checks on the merged commit, are the only gates before production, so keep them strict.
+Merge equals deploy. A push to `main` deploys production after `ci`, `cloudflare-build`, and the `staging` deploy pass. So does a manual CI run on `main` with `deploy_production`. `production` accepts only the `main` branch and has no approval gate. When newer `main` has superseded the revision, the job ends green without reading production secrets or deploying; the newer revision's own run deploys it. Staging and labeled previews skip superseded (or closed) revisions the same way. Post-deploy verification then fails the run unless production's Workers serve the merged commit and pcobooster.com routes to them ([deploy verification](#preview-lifecycle)). The required checks on the pull request, then the same checks on the merged commit, are the only gates before production, so keep them strict.
 
 After verification, the job marks the release on PostHog charts. It skips with a warning when `POSTHOG_ANNOTATION_API_KEY` is absent; see [analytics](analytics.md#deploy-annotations). PostHog dashboards are applied separately with `bun run posthog:deploy`, never by CI.
 
@@ -296,7 +296,8 @@ Publishing runs from a person's Mac, like TestFlight uploads. A CI executor woul
 `alchemy.ci.ts` provisions scoped Cloudflare account API tokens and writes their values as encrypted `GitHub.Secret` resources. This follows [Alchemy's Cloudflare CI pattern](https://alchemy.run/cloudflare/tutorial/part-5/). Unlike the former Infisical flow, this stores the deployment token in GitHub rather than obtaining it through an OIDC exchange.
 
 - Preview token: `cloudflare-preview`, `cloudflare-preview-cleanup`, and `cloudflare-staging` environments.
-- Production token: only `cloudflare-production`, restricted to `main`.
+- Production token: only `production`, restricted to `main`.
+- `production` is the one jbolabs environment for production secrets. It also carries `INFISICAL_IDENTITY_ID` (`ci-prod`) and `INFISICAL_OIDC_AUDIENCE`, the only subject `ci-prod` trusts (`repo:jbolabs@305914027/*:environment:production`). A job that reads `pcobooster-prod` declares `environment: production` and `id-token: write`; no job does yet. It replaced `cloudflare-production`, which Alchemy retains untouched: delete it by hand after the rename merges. `scripts/infra/environments.test.ts` fails if `production` admits any branch other than `main`.
 - Access check credentials: only preview and staging environments. Their service-token ID is a variable.
 - Optional PostHog annotation key: only production. Signing/release credentials are separate and the release executor stays blocked.
 

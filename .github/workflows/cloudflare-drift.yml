@@ -23,7 +23,7 @@ jobs:
             environment: cloudflare-staging
             concurrency: cloudflare-staging
           - stage: prod
-            environment: cloudflare-production
+            environment: production
             concurrency: cloudflare-prod
     name: drift (${{ matrix.stage }})
     runs-on: ubuntu-latest

@@ -6,7 +6,8 @@
     "bunfig.toml",
     "tsconfig.json",
     "packages/config/**",
-    "scripts/**"
+    "scripts/**",
+    "stacks/**"
   ],
   "tasks": {
     "build": {
