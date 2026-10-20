@@ -79,7 +79,7 @@ const ActionContainer = ({
   children: ReactNode;
 }) => {
   const visibility = useAnimatedStyle(() => ({
-    opacity: progress.value === 0 ? 0 : 1,
+    opacity: progress.value > 0 ? 1 : 0,
   }));
   return (
     <Animated.View style={[styles.actions, visibility]}>
