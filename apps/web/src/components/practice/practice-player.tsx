@@ -9,7 +9,7 @@ import {
   RotateCw,
 } from "lucide-react";
 import type { CSSProperties, ReactNode, RefObject } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,28 +24,19 @@ import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 import { usePlanFileLink } from "@/hooks/use-plan-files";
 import { practiceBinding } from "@/lib/app-hotkeys";
-import { PLAYBACK_RATES, formatPlaybackTime, nextLoop } from "@/lib/practice";
-import type { LoopRegion } from "@/lib/practice";
+import {
+  PLAYBACK_RATES,
+  RECORDING_FAILURE,
+  STOPPED_RECORDING as STOPPED,
+  formatPlaybackTime,
+  nextLoop,
+} from "@/lib/practice";
+import type { LoopRegion, PlaybackState } from "@/lib/practice";
 
 const SEEK_SECONDS = 5;
 
-export interface PlaybackState {
-  /** The track's audio has loaded enough to seek and loop. */
-  readonly loaded: boolean;
-  readonly playing: boolean;
-  readonly time: number;
-  readonly duration: number;
-}
-
-const STOPPED: PlaybackState = {
-  loaded: false,
-  playing: false,
-  time: 0,
-  duration: 0,
-};
-
 const playbackOf = (audio: HTMLAudioElement): PlaybackState => ({
-  loaded: true,
+  status: "ready",
   playing: !audio.paused,
   time: audio.currentTime,
   duration: Number.isFinite(audio.duration) ? audio.duration : 0,
@@ -97,6 +88,7 @@ export const RecordingAudio = ({
       await onRetry();
       setAttempt((current) => current + 1);
     } catch {
+      onPlayback(RECORDING_FAILURE);
       onFailed?.();
     }
   };
@@ -128,8 +120,10 @@ export const RecordingAudio = ({
       onError={(event) => {
         resumeAt.current = event.currentTarget.currentTime;
         if (retried.current) {
+          onPlayback(RECORDING_FAILURE);
           onFailed?.();
         } else {
+          onPlayback({ ...STOPPED, status: "loading" });
           retried.current = true;
           void handleRetry();
         }
@@ -147,6 +141,15 @@ const TrackAudio = ({
   planId: string;
 }) => {
   const link = usePlanFileLink(serviceTypeId, planId, props.file, "link");
+  const { onPlayback } = props;
+  useEffect(() => {
+    if (link.isError) {
+      onPlayback(RECORDING_FAILURE);
+    }
+  }, [link.isError, onPlayback]);
+  if (link.isError) {
+    return null;
+  }
   return (
     <RecordingAudio
       {...props}
@@ -450,6 +453,7 @@ const TransportControls = ({
 const usePlayback = (rate: number) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [requested, setRequested] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [playback, setPlayback] = useState<PlaybackState>(STOPPED);
   const [loop, setLoop] = useState<LoopRegion | null>(null);
 
@@ -465,9 +469,16 @@ const usePlayback = (rate: number) => {
   usePlaybackClock(audioRef, playback.playing, loop, onTime);
 
   const play = () => {
+    if (playback.status === "failed") {
+      setAttempt((current) => current + 1);
+      setPlayback({ ...STOPPED, status: "loading" });
+      setLoop(null);
+      return;
+    }
     const audio = audioRef.current;
     if (audio === null) {
       setRequested(true);
+      setPlayback({ ...STOPPED, status: "loading" });
       return;
     }
     void startPlayback(audio);
@@ -509,6 +520,7 @@ const usePlayback = (rate: number) => {
   return {
     audioRef,
     requested,
+    attempt,
     playback,
     setPlayback,
     loop,
@@ -520,6 +532,13 @@ const usePlayback = (rate: number) => {
     markLoop,
     stop,
   };
+};
+
+const playbackActionLabel = (playback: PlaybackState): string => {
+  if (playback.status === "failed") {
+    return "Retry playback";
+  }
+  return playback.playing ? "Pause" : "Play";
 };
 
 /**
@@ -544,7 +563,8 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
 
   useMediaSession(songTitle, track, player);
   const hotkeys = { enabled: track !== undefined, ignoreInputs: true } as const;
-  const loadedKeys = { enabled: playback.loaded, ignoreInputs: true } as const;
+  const loaded = playback.status === "ready";
+  const loadedKeys = { enabled: loaded, ignoreInputs: true } as const;
   useHotkey(practiceBinding("practice.play"), player.toggle, {
     ...hotkeys,
     preventDefault: true,
@@ -568,77 +588,87 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
   if (track === undefined) {
     return null;
   }
-  const loading = player.requested && !playback.loaded;
+  const loading = playback.status === "loading";
   const timeText = `${formatPlaybackTime(playback.time)} of ${formatPlaybackTime(playback.duration)}`;
 
   return (
-    <div className="bg-background pb-safe-2 sticky bottom-0 z-10 flex flex-col gap-1 border-t pt-2 sm:flex-row sm:items-center sm:gap-3">
-      {player.requested
-        ? renderAudio({
-            file: track,
-            rate,
-            audioRef: player.audioRef,
-            onPlayback: player.setPlayback,
-          })
-        : null}
-      <div className="flex min-w-0 items-center gap-2 sm:contents">
-        <Button
-          size="icon"
-          className="shrink-0 sm:order-first"
-          aria-label={playback.playing ? "Pause" : "Play"}
-          onClick={() => {
-            player.toggle();
-          }}
-        >
-          <PlayIcon loading={loading} playing={playback.playing} />
-        </Button>
-        <div className="flex min-w-0 flex-1 items-center sm:order-2 sm:w-56 sm:flex-none">
-          <TrackMenu
-            tracks={tracks}
-            current={track}
-            onChoose={(fileId) => {
-              setTrackId(fileId);
-              player.stop();
+    <div className="bg-background sticky bottom-0 z-10">
+      <div className="pb-safe-2 flex flex-col gap-1 border-t pt-2 sm:flex-row sm:items-center sm:gap-3">
+        {player.requested && playback.status !== "failed" ? (
+          <Fragment key={player.attempt}>
+            {renderAudio({
+              file: track,
+              rate,
+              audioRef: player.audioRef,
+              onPlayback: player.setPlayback,
+            })}
+          </Fragment>
+        ) : null}
+        <div className="flex min-w-0 items-center gap-2 sm:contents">
+          <Button
+            size="icon"
+            className="shrink-0 sm:order-first"
+            aria-label={playbackActionLabel(playback)}
+            onClick={() => {
+              player.toggle();
             }}
+          >
+            <PlayIcon loading={loading} playing={playback.playing} />
+          </Button>
+          <div className="flex min-w-0 flex-1 items-center sm:order-2 sm:w-56 sm:flex-none">
+            <TrackMenu
+              tracks={tracks}
+              current={track}
+              onChoose={(fileId) => {
+                setTrackId(fileId);
+                player.stop();
+              }}
+            />
+          </div>
+          <TransportControls
+            loaded={loaded}
+            loop={loop}
+            rate={rate}
+            onSeek={(by) => {
+              player.seek(by);
+            }}
+            onLoop={() => {
+              player.markLoop();
+            }}
+            onRate={setRate}
           />
         </div>
-        <TransportControls
-          loaded={playback.loaded}
-          loop={loop}
-          rate={rate}
-          onSeek={(by) => {
-            player.seek(by);
-          }}
-          onLoop={() => {
-            player.markLoop();
-          }}
-          onRate={setRate}
-        />
+        <div className="flex min-w-0 items-center gap-2 sm:order-3 sm:flex-1">
+          <span className="text-muted-foreground w-10 shrink-0 text-right text-xs tabular-nums">
+            {formatPlaybackTime(playback.time)}
+          </span>
+          <Slider
+            variant="scrubber"
+            min={0}
+            max={playback.duration > 0 ? playback.duration : 1}
+            step={0.1}
+            value={playback.time}
+            disabled={!loaded}
+            thumbLabel="Playback position"
+            thumbValueText={() => timeText}
+            track={<LoopMarks loop={loop} duration={playback.duration} />}
+            onValueChange={(value: number | readonly number[]) => {
+              player.seekTo([value].flat()[0] ?? 0);
+            }}
+          />
+          <span className="text-muted-foreground w-10 shrink-0 text-xs tabular-nums">
+            {playback.duration > 0
+              ? formatPlaybackTime(playback.duration)
+              : "-:--"}
+          </span>
+        </div>
       </div>
-      <div className="flex min-w-0 items-center gap-2 sm:order-3 sm:flex-1">
-        <span className="text-muted-foreground w-10 shrink-0 text-right text-xs tabular-nums">
-          {formatPlaybackTime(playback.time)}
-        </span>
-        <Slider
-          variant="scrubber"
-          min={0}
-          max={playback.duration > 0 ? playback.duration : 1}
-          step={0.1}
-          value={playback.time}
-          disabled={!playback.loaded}
-          thumbLabel="Playback position"
-          thumbValueText={() => timeText}
-          track={<LoopMarks loop={loop} duration={playback.duration} />}
-          onValueChange={(value: number | readonly number[]) => {
-            player.seekTo([value].flat()[0] ?? 0);
-          }}
-        />
-        <span className="text-muted-foreground w-10 shrink-0 text-xs tabular-nums">
-          {playback.duration > 0
-            ? formatPlaybackTime(playback.duration)
-            : "-:--"}
-        </span>
-      </div>
+      {playback.status === "failed" ? (
+        <p role="alert" className="text-muted-foreground pb-2 text-sm">
+          This recording couldn’t play. Try again or check your access in
+          Planning Center.
+        </p>
+      ) : null}
     </div>
   );
 };

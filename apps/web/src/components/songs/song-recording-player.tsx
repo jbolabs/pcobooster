@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   RecordingAudio,
@@ -15,6 +15,7 @@ import {
   useSongAttachments,
 } from "@/hooks/use-song-attachments";
 import type { SongAttachment } from "@/hooks/use-song-attachments";
+import { RECORDING_FAILURE } from "@/lib/practice";
 import { songRecordings } from "@/lib/song-recordings";
 
 const SongAudio = ({
@@ -26,23 +27,14 @@ const SongAudio = ({
   arrangementId: string;
 }) => {
   const link = useSongAttachmentLink(songId, arrangementId, props.file);
-  const [failed, setFailed] = useState(false);
-  if (link.isError || failed) {
-    return (
-      <p role="alert" className="text-muted-foreground text-sm">
-        This recording couldn’t play. Check your access in Planning Center.
-        <Button
-          variant="link"
-          size="sm"
-          onClick={() => {
-            setFailed(false);
-            void link.refetch();
-          }}
-        >
-          Try again
-        </Button>
-      </p>
-    );
+  const { onPlayback } = props;
+  useEffect(() => {
+    if (link.isError) {
+      onPlayback(RECORDING_FAILURE);
+    }
+  }, [link.isError, onPlayback]);
+  if (link.isError) {
+    return null;
   }
   return (
     <RecordingAudio
@@ -50,9 +42,6 @@ const SongAudio = ({
       url={link.data?.url}
       onRetry={async () => {
         await link.refetch();
-      }}
-      onFailed={() => {
-        setFailed(true);
       }}
     />
   );
