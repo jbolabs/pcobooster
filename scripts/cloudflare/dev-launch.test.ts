@@ -40,12 +40,6 @@ describe(resolveDevLaunch, () => {
     expect(result.environment).not.toHaveProperty("PORT");
   });
 
-  it("refuses the default mode without a personal access token", () => {
-    const result = launch({ environment: { PLANNING_CENTER_CLIENT: "id" } });
-    expect(result.kind).toBe("error");
-    expect(result.kind === "error" && result.message).toContain("dev:auth");
-  });
-
   it("runs OAuth on the registered default ports, even without a token", () => {
     const result = ready({
       args: ["--oauth"],

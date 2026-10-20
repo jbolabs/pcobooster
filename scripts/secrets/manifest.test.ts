@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  agentInfisicalProject,
   commandEnvironment,
+  developmentEnvironment,
   requiredScopeKeys,
   runtimeSecretPurpose,
   scopeKeys,
@@ -49,7 +49,7 @@ describe("secret ownership boundaries", () => {
     );
   });
 
-  it("gives agent commands the dev PAT but no inherited, Infisical, signing, or release credentials", () => {
+  it("gives secrets:dev commands the dev PAT but no inherited, Infisical, signing, or release credentials", () => {
     expect(
       commandEnvironment(
         "cloud",
@@ -82,8 +82,6 @@ describe("secret ownership boundaries", () => {
       )
     ).toStrictEqual({
       PATH: "/usr/bin",
-      CLOUDFLARE_ACCOUNT_ID: "00000000000000000000000000000000",
-      CLOUDFLARE_API_TOKEN: "local-development-never-reaches-cloudflare",
       BETTER_AUTH_SECRET: "cloud-session",
       PLANNING_CENTER_OAUTH_CLIENT_ID: "cloud-client",
       PLANNING_CENTER_OAUTH_CLIENT_SECRET: "cloud-oauth",
@@ -93,7 +91,7 @@ describe("secret ownership boundaries", () => {
     });
   });
 
-  it("keeps deployed-tier secrets out of the agent scope and requires only OAuth settings", () => {
+  it("keeps deployed-tier secrets out of the secrets:dev scope and requires only OAuth settings", () => {
     const sharedWithDev = new Set([
       "BETTER_AUTH_SECRET",
       "PLANNING_CENTER_OAUTH_CLIENT_ID",
@@ -108,7 +106,6 @@ describe("secret ownership boundaries", () => {
     expect({
       leaked: scopeKeys.cloud.filter((key) => deployedOnly.has(key)),
       required: requiredScopeKeys.cloud,
-      project: agentInfisicalProject.environment,
     }).toStrictEqual({
       leaked: [],
       required: [
@@ -116,7 +113,36 @@ describe("secret ownership boundaries", () => {
         "PLANNING_CENTER_OAUTH_CLIENT_ID",
         "PLANNING_CENTER_OAUTH_CLIENT_SECRET",
       ],
-      project: "dev",
+    });
+  });
+
+  it("lets Infisical answer local development: stale shell credentials go, its own auth stays", () => {
+    expect(
+      developmentEnvironment(
+        {
+          PATH: "/usr/bin",
+          ALCHEMY_PROFILE: "default",
+          INFISICAL_TOKEN: "alchemy-reads-this",
+          PLANNING_CENTER_PAT: "stale-shell",
+          BETTER_AUTH_SECRET: "stale-shell",
+          CLOUDFLARE_API_TOKEN: "deploy",
+          CLOUDFLARE_ACCOUNT_ID: "real-account",
+          DEV_AUTH_BYPASS: "1",
+          DEV_PLANNING_CENTER_ORGANIZATION: "999",
+        },
+        {
+          PLANNING_CENTER_CLIENT: "sandbox-client",
+          PLANNING_CENTER_PAT: "sandbox-pat",
+        }
+      )
+    ).toStrictEqual({
+      PATH: "/usr/bin",
+      ALCHEMY_PROFILE: "default",
+      INFISICAL_TOKEN: "alchemy-reads-this",
+      CLOUDFLARE_ACCOUNT_ID: "00000000000000000000000000000000",
+      CLOUDFLARE_API_TOKEN: "local-development-never-reaches-cloudflare",
+      PLANNING_CENTER_CLIENT: "sandbox-client",
+      PLANNING_CENTER_PAT: "sandbox-pat",
     });
   });
 

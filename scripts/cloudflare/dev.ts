@@ -5,6 +5,7 @@ import path from "node:path";
 import { devOrigin, devPorts } from "@pcobooster/config/dev-ports";
 import { Schema } from "effect";
 
+import { developmentEnvironment } from "../secrets/manifest";
 import {
   findBusyPorts,
   isLinkedWorktree,
@@ -12,9 +13,14 @@ import {
 } from "./dev-launch";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
+const args = process.argv.slice(2);
 const launch = resolveDevLaunch({
-  args: process.argv.slice(2),
-  environment: process.env,
+  args,
+  // OAuth (`dev:auth`) starts from the shell, so drop stale credentials that would outrank
+  // Infisical. The PAT profiles arrive from `dev-profile.ts`, which already prepared theirs.
+  environment: args.includes("--oauth")
+    ? developmentEnvironment(process.env, {})
+    : process.env,
   repositoryRoot,
   linkedWorktree: isLinkedWorktree(repositoryRoot),
 });
@@ -32,7 +38,7 @@ if (busy.length > 0) {
 }
 process.stdout.write(
   [
-    `Product ${devOrigin(ports.web)} (${launch.oauth ? "Planning Center sign-in" : "signed in with the local personal access token"})`,
+    `Product ${devOrigin(ports.web)} (${launch.oauth ? "Planning Center sign-in" : "signed in with the personal access token"})`,
     `API ${devOrigin(ports.api)}, marketing ${devOrigin(ports.marketing)}, admin ${devOrigin(ports.admin)}`,
     "",
   ].join("\n")
@@ -41,9 +47,14 @@ process.stdout.write(
 // Alchemy runs the product and admin Vite dev servers with their Workers bindings and applies
 // local D1 migrations. The product proxies `/`, `/about`, and `/marketing/*` to marketing.
 const processes = [
+  // Only Alchemy reads Infisical credentials; the marketing dev server never sees them.
   spawn("bun", ["run", "dev:marketing"], {
     stdio: "inherit",
-    env: launch.environment,
+    env: Object.fromEntries(
+      Object.entries(launch.environment).filter(
+        ([key]) => !key.startsWith("INFISICAL_")
+      )
+    ),
   }),
   spawn("bun", ["run", "alchemy", "dev", "--stage", "local", "--no-input"], {
     stdio: "inherit",

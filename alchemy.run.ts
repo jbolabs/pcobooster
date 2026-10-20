@@ -17,12 +17,14 @@ import { Database } from "./apps/server/src/database";
 import { workerObservability } from "./apps/server/src/observability";
 import { currentStageSettings } from "./apps/server/src/stage";
 import Api from "./apps/server/src/worker";
+import { verifyDevelopmentOrganization } from "./scripts/cloudflare/dev-organization";
 import { prepareCloudflareBuild } from "./scripts/cloudflare/prepare";
 import {
   allowUniversalSslIssuers,
   formerDomainRedirect,
   protectZoneEdge,
 } from "./scripts/cloudflare/zones";
+import { infisicalSecrets } from "./scripts/secrets/infisical";
 
 const workspacePackages = readdirSync(
   path.join(import.meta.dirname, "packages"),
@@ -138,6 +140,10 @@ export default Alchemy.Stack(
         )
       )
     ),
+    // Stage `local` reads development credentials from Infisical `pcobooster-dev`. Deployed stages
+    // read stored secrets by reference and their CI environment, never Infisical: PR stages must
+    // not need an identity.
+    secrets: infisicalSecrets(["local"]),
   },
   Effect.gen(function* infrastructure() {
     const {
@@ -161,6 +167,9 @@ export default Alchemy.Stack(
     process.env.PCOBOOSTER_STAGE = stage;
     process.env.POSTHOG_PROJECT_KEY = production ? productionPostHogKey : "";
     process.env.PLANNING_CENTER_TIME_ZONE = planningCenterFallbackTimeZone;
+    if (local) {
+      yield* verifyDevelopmentOrganization;
+    }
     yield* Effect.promise(async () => {
       await prepareCloudflareBuild(stage);
     });

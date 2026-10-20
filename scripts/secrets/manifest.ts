@@ -63,20 +63,16 @@ const inheritedCredentialKeys = [
 ] as const;
 
 /**
- * The Infisical project `agent:run` reads the `cloud` scope from. It holds development values only:
- * the free plan has no environment-scoped roles, so the project is the access boundary.
+ * Only these keys may be injected into commands in each trust boundary. Alchemy stacks read
+ * Infisical directly (`scripts/secrets/infisical.ts`); `local`, `cloud`, `preview`, and `production`
+ * remain for the importer, `secrets:dev`, and the legacy Keychain deploy commands.
  */
-export const agentInfisicalProject = {
-  projectId: "0d496fd4-544e-448a-b685-978847676ec0",
-  environment: "dev",
-} as const;
-
-/** Only these keys may be injected into commands in each trust boundary. */
 export const scopeKeys: Record<SecretScope, readonly string[]> = {
   local: localKeys,
   sandbox: ["PLANNING_CENTER_CLIENT", "PLANNING_CENTER_PAT"],
-  // Agents' development credentials, from Infisical `pcobooster-dev`. The PAT is a deliberate
-  // grant: it acts as its owner on real Planning Center data and shares their rate limit.
+  // What `secrets:dev` passes from Infisical `pcobooster-dev` to a non-Alchemy command. The PAT
+  // is a deliberate grant: it acts as its owner on real Planning Center data and shares their
+  // rate limit.
   cloud: [
     "BETTER_AUTH_SECRET",
     "PLANNING_CENTER_OAUTH_CLIENT_ID",
@@ -174,34 +170,55 @@ export const selectScopeValues = (
     })
   );
 
+/** Development switches each launcher sets itself; an inherited value never counts. */
+const processOwnedKeys = new Set([
+  "DEV_AUTH_BYPASS",
+  "DEV_PLANNING_CENTER_ACCESS",
+  "DEV_PLANNING_CENTER_ORGANIZATION",
+  "PRESENTATION_MODE",
+]);
+
+/** The parent environment without any known credential or process-owned switch. */
+const withoutCredentials = (parent: NodeJS.ProcessEnv): NodeJS.ProcessEnv => {
+  const environment = { ...parent };
+  for (const key of new Set([
+    ...Object.values(scopeKeys).flat(),
+    ...inheritedCredentialKeys,
+    ...processOwnedKeys,
+  ])) {
+    Reflect.deleteProperty(environment, key);
+  }
+  return environment;
+};
+
+/**
+ * The environment for `alchemy dev --stage local`. Stale shell credentials are removed because the
+ * shell outranks Infisical in Alchemy's precedence; `overrides` (the sandbox PAT) deliberately
+ * outrank it. Infisical auth variables stay: Alchemy itself reads `INFISICAL_TOKEN`, never a Worker.
+ * Alchemy resolves Cloudflare credentials even for local providers, so the stage gets placeholders,
+ * not grants, and runs the same with or without a Cloudflare login.
+ */
+export const developmentEnvironment = (
+  parent: NodeJS.ProcessEnv,
+  overrides: Readonly<Record<string, string>>
+): NodeJS.ProcessEnv => ({
+  ...withoutCredentials(parent),
+  CLOUDFLARE_ACCOUNT_ID: "00000000000000000000000000000000",
+  CLOUDFLARE_API_TOKEN: "local-development-never-reaches-cloudflare",
+  ...overrides,
+});
+
 /** Strip every known credential before adding the selected scope, including stale parent values. */
 export const commandEnvironment = (
   scope: SecretScope,
   parent: NodeJS.ProcessEnv,
   values: Readonly<Record<string, string>>
 ): NodeJS.ProcessEnv => {
-  const environment = { ...parent };
-  for (const key of new Set([
-    ...Object.values(scopeKeys).flat(),
-    ...inheritedCredentialKeys,
-  ])) {
-    Reflect.deleteProperty(environment, key);
-  }
+  const environment = withoutCredentials(parent);
   for (const key of Object.keys(environment)) {
-    if (
-      key.startsWith("INFISICAL_") ||
-      key === "DEV_AUTH_BYPASS" ||
-      key === "DEV_PLANNING_CENTER_ACCESS" ||
-      key === "PRESENTATION_MODE"
-    ) {
+    if (key.startsWith("INFISICAL_")) {
       Reflect.deleteProperty(environment, key);
     }
-  }
-  if (scope === "cloud") {
-    // Alchemy resolves credentials even for local providers. These are placeholders, not grants.
-    environment.CLOUDFLARE_ACCOUNT_ID = "00000000000000000000000000000000";
-    environment.CLOUDFLARE_API_TOKEN =
-      "local-development-never-reaches-cloudflare";
   }
   return { ...environment, ...selectScopeValues(scope, values) };
 };

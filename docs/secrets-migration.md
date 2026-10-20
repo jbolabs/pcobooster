@@ -14,11 +14,11 @@ The control-plane apply created 9 encrypted GitHub environment secrets and 5 var
 
 - `alchemy.secrets.ts`, stack `pcobooster-secrets`: the sole writer for retained runtime secrets. Stages `prod` and `preview` hold 8 and 3 secrets respectively (production added `POSTHOG_ERASURE_API_KEY` after the migration). Product stacks only reference them.
 - `alchemy.ci.ts`: generated deployment tokens and Access check credentials, delivered as encrypted GitHub environment secrets. It reuses existing token generations and service-token values during migration.
-- Infisical `pcobooster-prod` (envs `preview`, `prod`): the canonical source for `alchemy.secrets.ts` inputs, read by the operator and the `ci-prod` GitHub OIDC identity. Infisical `pcobooster-dev` (env `dev`) holds agent development credentials. See [Infisical](environment.md#infisical).
-- macOS Keychain: `com.pcobooster.secrets.<scope>`, one generic-password item per key. Scopes separate development, cloud development, preview, production bootstrap/rotation, Apple signing, PostHog administration, and legacy recovery.
+- Infisical `pcobooster-prod` (envs `preview`, `prod`): the source `alchemy.secrets.ts` reads natively (`Infisical.Secrets`), with the operator's `admin` Alchemy profile. Infisical `pcobooster-dev` (env `dev`) holds the development credentials stage `local` reads. See [Infisical](environment.md#infisical).
+- macOS Keychain: `com.pcobooster.secrets.<scope>`, one generic-password item per key. Active scopes: the Planning Center sandbox, Apple signing, update signing, analytics erasure, PostHog administration, and legacy recovery. The `local`, `cloud`, `preview`, and `production` scopes are legacy.
 - Public configuration stays in source. Process-owned development switches are not imported. User OAuth tokens remain in D1.
 
-Production/preview Keychain items are the legacy bootstrap and rotation inputs for the central secrets stack, not inputs required by a running application; Infisical `pcobooster-prod` replaces them. Rotate in Infisical and deploy the reviewed secrets stack with `infisical run --projectId a27bbce0-b9f7-41b3-a7a0-c5ae9e004a2f --env prod|preview -- bun alchemy deploy alchemy.secrets.ts --stage prod|preview`; do not independently rotate Cloudflare values and later deploy stale Keychain inputs. Keep the Mac's encrypted disk and Keychain recovery available. Keychain protects the source credentials; Alchemy's ignored state and local Worker bindings can retain generated deployment copies.
+Infisical `pcobooster-prod` is the bootstrap and rotation input for the central secrets stack, not an input required by a running application. Rotate in Infisical, then deploy the reviewed secrets stack with `secrets:deploy:preview` or `secrets:deploy:production` (`--profile admin`); do not independently rotate Cloudflare values and later deploy stale inputs. The production/preview Keychain items still feed `deploy:staging`, `deploy:production`, and `infra:*`; keep them in sync until those move. Keep the Mac's encrypted disk and Keychain recovery available. Infisical and Keychain protect the source credentials; Alchemy's ignored state and local Worker bindings can retain generated deployment copies.
 
 ## Commands
 
@@ -28,15 +28,15 @@ bun run secrets:migrate
 bun run secrets:migrate --apply
 
 # Values are entered at a hidden prompt, or supplied through stdin for multiline keys.
-bun run secrets:set local PLANNING_CENTER_PAT
-bun run secrets:set production PLANNING_CENTER_OAUTH_CLIENT_SECRET
+bun run secrets:set sandbox PLANNING_CENTER_PAT
 
-# Normal local commands load their allowlisted scope automatically.
+# Stage `local` reads Infisical pcobooster-dev through the default Alchemy profile.
+bun run secrets:login
 bun run dev
 bun run dev:auth
 bun run secrets:run apple -- bun run --cwd apps/mobile ios:testflight
 
-# Read-only plans, with the appropriate credentials injected internally.
+# Read-only plans. Runtime secrets read Infisical pcobooster-prod with --profile admin.
 bun run secrets:plan:preview
 bun run secrets:plan:production
 bun run infra:plan

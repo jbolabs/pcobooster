@@ -30,7 +30,7 @@
 
 - Use Bun for dependency management and scripts. `bun.lock` is the only committed lockfile; do not add `package-lock.json` or run npm-based install workflows for this repo.
 - `bun run dev`: start API, product, and admin through Alchemy, plus the marketing dev server, signed in with the pinned free Planning Center sandbox PAT from Keychain (`sandbox` scope; see `docs/planning-center-sandbox.md`). The main checkout uses ports 3000 to 3003 (API, product, marketing, admin); each linked worktree gets its own block from its path, so worktrees can run dev at once. `DEV_PORT_BASE=<port>` overrides the block. The command prints the product URL.
-- `bun run dev:church`: inspect the pinned Agape account with provider writes blocked. `dev:church:write` enables real church writes and requires explicit user authorization for the specific mutation.
+- `bun run dev:church`: inspect the pinned Agape account with provider writes blocked, using the `pcobooster-dev` PAT; the stack refuses a token from another organization. This is the PAT profile available without a Mac Keychain. `dev:church:write` enables real church writes and requires explicit user authorization for the specific mutation.
 - `bun run dev:auth`: the same with real Planning Center OAuth, on the main ports (the OAuth callback is registered for `127.0.0.1:3001`). Use it only to test sign-in.
 - `bun run build`: build the Vite apps through Turborepo. Alchemy bundles the API Worker itself on `dev`/deploy.
 - `bun run check` (also `lint`): run Ultracite formatting and type-aware lint checks; warnings fail the check. All selected presets in `oxlint.config.ts` remain strict.
@@ -50,16 +50,17 @@
 
 - Setup/maintenance scripts live under `scripts/codex-cloud/`; see [docs/codex-cloud.md](docs/codex-cloud.md).
 - `bun run ci` is secretless. Local D1 belongs to the checkout; no Neon branch setup or teardown is required.
-- Cloud app commands accept only their dedicated development credentials through the `cloud` allowlist; macOS reads Keychain, Linux reads host-injected secrets. Agents get dev credentials (including the Planning Center PAT, a deliberate choice: it acts as the owner on real Planning Center data and shares its rate limit) from Infisical `pcobooster-dev`; preview/prod and deployment secrets never reach agent sessions.
+- Stage `local` reads development credentials from Infisical `pcobooster-dev` through the default Alchemy profile (including the Planning Center PAT, a deliberate choice: it acts as the owner on real Planning Center data and shares its rate limit). The launchers drop host-injected app keys; preview/prod and deployment secrets never reach agent sessions.
 
 ## Agent secrets (Infisical)
 
-- Each repo has two Infisical projects. `pcobooster-dev` (env `dev`, id `0d496fd4-544e-448a-b685-978847676ec0`) holds development credentials; `pcobooster-prod` (envs `preview`, `prod`, id `a27bbce0-b9f7-41b3-a7a0-c5ae9e004a2f`) holds deployed-tier values.
-- Identities are trust tiers: `agent-dev` (Universal Auth; `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET` in the agent environment) is Viewer on every `*-dev` project only. `ci-prod` (GitHub OIDC, `main` of any jbolabs repo) is Viewer on every `*-prod` project. Agents never get `*-prod` access.
+- Each repo has two Infisical projects. `pcobooster-dev` (env `dev`, id `0d496fd4-544e-448a-b685-978847676ec0`) holds development credentials; `pcobooster-prod` (envs `preview`, `prod`, id `a27bbce0-b9f7-41b3-a7a0-c5ae9e004a2f`) holds deployed-tier values. `scripts/secrets/infisical.ts` is the only place in code that names them.
 - The free plan has no environment-scoped roles: the project is the access boundary. Never put prod or preview values in a `*-dev` project, or add a non-`dev` environment to one.
-- Deploy jobs load `pcobooster-prod` through `ci-prod` and Alchemy writes the values into Cloudflare.
-- Agent run: `bun run agent:run <cmd>` (`scripts/secrets/agent.ts`). It uses `INFISICAL_TOKEN` or logs in with `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET`, loads `pcobooster-dev` with `infisical run`, and gives `<cmd>` only the `cloud` allowlist, never the token. For example `bun run agent:run bun run scripts/cloudflare/dev.ts --oauth`.
-- On a Mac, `secrets:run` still reads Keychain; operator-only scopes (`apple`, `mobile-updates`, `recovery`) stay in Keychain.
+- Alchemy reads Infisical natively (`Infisical.Secrets`, into Effect Config, not `process.env`; the shell still outranks it). Stage mapping: `prod` reads `pcobooster-prod`/`prod`; `preview` and `staging` read `pcobooster-prod`/`preview`; every other stage, including `pr-*`, maps to `pcobooster-dev`. Only `alchemy.run.ts` stage `local` and `alchemy.secrets.ts` (`prod`, `preview`) declare it. PR previews never read Infisical.
+- Alchemy profiles: the default profile holds `agent-dev` (Universal Auth, Viewer on `*-dev` only); the operator's `admin` profile holds `operator` (Viewer on `*-dev` and `*-prod`) plus Cloudflare. `secrets:plan:*`/`secrets:deploy:*` run with `--profile admin`. `ci-prod` (GitHub OIDC, `main` of any jbolabs repo, Viewer on `*-prod`) is reserved for main-branch jobs; no workflow here uses it yet. Agents never get `*-prod` access.
+- Agent bootstrap: with `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET` in the environment, run `bun run secrets:login` once (Codex `setup.sh` does). Then `bun run dev:church` or `bun run dev:auth` just work. `INFISICAL_TOKEN`, when set, outranks the profile.
+- Scripts outside Alchemy: `bun run secrets:dev <cmd>` loads `pcobooster-dev` with the Infisical CLI and gives `<cmd>` only the `cloud` allowlist, never an `INFISICAL_*` variable.
+- Keychain remains for the `sandbox` PAT (`bun run dev`) and operator-only scopes (`apple`, `mobile-updates`, `analytics-erasure`, `recovery`, `posthog`). The `local`, `cloud`, `preview`, and `production` scopes are legacy; `deploy:*`, `infra:*`, and `alchemy.load.ts` still read the last two.
 
 ## Coding Style & Naming Conventions
 

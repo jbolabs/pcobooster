@@ -2,17 +2,25 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import path from "node:path";
 
-import { agentInfisicalProject, processExit } from "./manifest";
+import { infisicalSource } from "./infisical";
+import { processExit } from "./manifest";
 
-// Agent entry point: loads `pcobooster-dev` from Infisical, then hands it to `secrets:run`, whose
-// `cloud` allowlist decides what the command sees and strips every INFISICAL_* variable from it.
+// `secrets:dev`: development credentials for commands Alchemy does not run (for example
+// `pc:check-contracts`). Alchemy stacks read Infisical natively; this exists only for scripts that
+// read `process.env`. It loads `pcobooster-dev` with the Infisical CLI and hands it to
+// `secrets:run --host-env cloud`, whose allowlist decides what the command sees and which strips
+// every INFISICAL_* variable from it.
 const command = process.argv.slice(2);
 if (command.length === 0) {
-  throw new Error("Usage: agent:run <command> [arguments]");
+  throw new Error("Usage: secrets:dev <command> [arguments]");
 }
 
-/** A machine identity access token, from the environment or a Universal Auth login. Never printed. */
-const accessToken = async (): Promise<string> => {
+/**
+ * `INFISICAL_TOKEN`, else a Universal Auth login with the `agent-dev` identity's
+ * `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET`, else the CLI's own `infisical login` session.
+ * The token is never printed.
+ */
+const accessToken = async (): Promise<string | undefined> => {
   const existing = process.env.INFISICAL_TOKEN ?? "";
   if (existing !== "") {
     return existing;
@@ -20,9 +28,7 @@ const accessToken = async (): Promise<string> => {
   const clientId = process.env.INFISICAL_CLIENT_ID ?? "";
   const clientSecret = process.env.INFISICAL_CLIENT_SECRET ?? "";
   if (clientId === "" || clientSecret === "") {
-    throw new Error(
-      "Set INFISICAL_TOKEN, or INFISICAL_CLIENT_ID and INFISICAL_CLIENT_SECRET for the agent-dev identity."
-    );
+    return undefined;
   }
   const login = spawn(
     "infisical",
@@ -50,12 +56,14 @@ const accessToken = async (): Promise<string> => {
   return token;
 };
 
+const source = infisicalSource("local");
+const token = await accessToken();
 const child = spawn(
   "infisical",
   [
     "run",
-    `--projectId=${agentInfisicalProject.projectId}`,
-    `--env=${agentInfisicalProject.environment}`,
+    `--projectId=${source.project}`,
+    `--env=${source.environment}`,
     "--silent",
     "--",
     "bun",
@@ -67,7 +75,10 @@ const child = spawn(
   ],
   {
     stdio: "inherit",
-    env: { ...process.env, INFISICAL_TOKEN: await accessToken() },
+    env:
+      token === undefined
+        ? process.env
+        : { ...process.env, INFISICAL_TOKEN: token },
   }
 );
 const stop = (signal: NodeJS.Signals): void => {
