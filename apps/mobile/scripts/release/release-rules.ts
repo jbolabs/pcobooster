@@ -73,7 +73,7 @@ const localExportSigning = (
   }
   return {
     certificateSha1: certificateSha1.toUpperCase(),
-    profileUuid: profileUuid.toUpperCase(),
+    profileUuid,
   };
 };
 
