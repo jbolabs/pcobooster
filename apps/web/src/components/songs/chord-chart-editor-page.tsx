@@ -706,7 +706,6 @@ const ChartRecordings = ({
   children: (video: ReactNode, controls: ReactNode) => ReactElement;
 }) => (
   <SongRecordingPlayer
-    key={`${arrangement.id}:${chartKey?.id ?? "lyrics"}`}
     songId={song.id}
     arrangementId={arrangement.id}
     keyId={chartKey?.id ?? null}

@@ -63,10 +63,16 @@ export const SongRecordingPlayer = ({
   children: (video: ReactNode, controls: ReactNode) => ReactElement;
 }) => {
   const files = useSongAttachments(songId, arrangementId);
-  const [selected, setSelected] = useState<string | null>(null);
+  const scope = `${songId}:${arrangementId}:${keyId ?? "lyrics"}`;
+  const [selected, setSelected] = useState<{
+    scope: string;
+    id: string;
+  } | null>(null);
   const recordings = songRecordings(files.data?.attachments ?? [], keyId);
   const current =
-    recordings.find((entry) => entry.id === selected) ?? recordings[0];
+    recordings.find(
+      (entry) => selected?.scope === scope && entry.id === selected.id
+    ) ?? recordings[0];
   if (files.isError) {
     return children(
       null,
@@ -94,13 +100,14 @@ export const SongRecordingPlayer = ({
       ) : null
     );
   }
+  const playbackKey = `${scope}:${current.id}`;
   const picker = (
     <NativeSelect
       aria-label="Recording"
       className="w-full sm:max-w-sm"
       value={current.id}
       onChange={(event) => {
-        setSelected(event.target.value);
+        setSelected({ scope, id: event.target.value });
       }}
     >
       {recordings.map((entry) => (
@@ -118,7 +125,7 @@ export const SongRecordingPlayer = ({
         className="flex shrink-0 flex-col gap-1"
       >
         <iframe
-          key={current.id}
+          key={playbackKey}
           // oxlint-disable-next-line react/iframe-missing-sandbox -- Validated youtube-nocookie.com is cross-origin; its player needs scripts and its own origin for media access.
           sandbox="allow-scripts allow-same-origin allow-presentation"
           title={current.attachment.name}
@@ -145,7 +152,7 @@ export const SongRecordingPlayer = ({
     >
       {current.embedUrl === null ? (
         <RecordingPlayer
-          key={current.id}
+          key={playbackKey}
           songTitle={songTitle}
           tracks={[current.attachment]}
           trackControl={picker}
