@@ -5,11 +5,13 @@ import {
 
 /** File previews use the same audio timeline as Practice and chord charts. */
 export const LoopingAudioPlayer = ({
+  fileId,
   url,
   name,
   onRetry,
   onFailed,
 }: {
+  fileId: string;
   url: string;
   name: string;
   onRetry: () => Promise<void>;
@@ -17,7 +19,8 @@ export const LoopingAudioPlayer = ({
 }) => (
   <RecordingPlayer
     songTitle={name}
-    tracks={[{ id: url, name }]}
+    globalControls={false}
+    tracks={[{ id: fileId, name }]}
     renderAudio={(props) => (
       <RecordingAudio
         {...props}

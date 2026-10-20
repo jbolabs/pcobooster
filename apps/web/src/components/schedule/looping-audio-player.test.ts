@@ -8,6 +8,7 @@ import { LoopingAudioPlayer } from "@/components/schedule/looping-audio-player";
 const view = (id: string) =>
   createElement(LoopingAudioPlayer, {
     key: id,
+    fileId: id,
     url: `https://audio.example/${id}.mp3`,
     name: "Rehearsal mix",
     onRetry: async () => {

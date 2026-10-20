@@ -199,7 +199,8 @@ const FileContent = ({
     return (
       <div className="flex flex-1 items-center justify-center p-6">
         <LoopingAudioPlayer
-          key={`${file.id}:${url}`}
+          key={file.id}
+          fileId={file.id}
           name={file.name}
           onRetry={onRetry}
           onFailed={onFailed}

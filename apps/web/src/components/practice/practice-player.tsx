@@ -599,11 +599,14 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
   tracks,
   renderAudio,
   trackControl,
+  globalControls = true,
 }: {
   songTitle: string;
   tracks: readonly Track[];
   renderAudio: (props: RecordingAudioProps<Track>) => ReactNode;
   trackControl?: ReactNode;
+  /** Embedded previews use their own buttons without claiming page or system controls. */
+  globalControls?: boolean;
 }) => {
   const [trackId, setTrackId] = useState<string | null>(null);
   const track = tracks.find((entry) => entry.id === trackId) ?? tracks[0];
@@ -611,10 +614,16 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
   const player = usePlayback(rate);
   const { playback, loop } = player;
 
-  useMediaSession(songTitle, track, player);
-  const hotkeys = { enabled: track !== undefined, ignoreInputs: true } as const;
+  useMediaSession(songTitle, globalControls ? track : undefined, player);
+  const hotkeys = {
+    enabled: globalControls && track !== undefined,
+    ignoreInputs: true,
+  } as const;
   const loaded = playback.status === "ready";
-  const loadedKeys = { enabled: loaded, ignoreInputs: true } as const;
+  const loadedKeys = {
+    enabled: globalControls && loaded,
+    ignoreInputs: true,
+  } as const;
   const loopable = loaded && playback.duration >= LOOP_STEP;
   useHotkey(practiceBinding("practice.play"), player.toggle, {
     ...hotkeys,
@@ -635,7 +644,7 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
     loadedKeys
   );
   useHotkey(practiceBinding("practice.loop"), player.toggleLoop, {
-    enabled: loopable,
+    enabled: globalControls && loopable,
     ignoreInputs: true,
   });
 
