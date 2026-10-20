@@ -50,7 +50,16 @@
 
 - Setup/maintenance scripts live under `scripts/codex-cloud/`; see [docs/codex-cloud.md](docs/codex-cloud.md).
 - `bun run ci` is secretless. Local D1 belongs to the checkout; no Neon branch setup or teardown is required.
-- Cloud app commands accept only their dedicated development credentials through the `cloud` allowlist; macOS reads Keychain, Linux reads host-injected secrets. Keep local PAT and deployment secrets out of cloud sessions.
+- Cloud app commands accept only their dedicated development credentials through the `cloud` allowlist; macOS reads Keychain, Linux reads host-injected secrets. Agents get dev credentials (including the Planning Center PAT, a deliberate choice: it acts as the owner on real Planning Center data and shares its rate limit) from Infisical `pcobooster-dev`; preview/prod and deployment secrets never reach agent sessions.
+
+## Agent secrets (Infisical)
+
+- Each repo has two Infisical projects. `pcobooster-dev` (env `dev`, id `0d496fd4-544e-448a-b685-978847676ec0`) holds development credentials; `pcobooster-prod` (envs `preview`, `prod`, id `a27bbce0-b9f7-41b3-a7a0-c5ae9e004a2f`) holds deployed-tier values.
+- Identities are trust tiers: `agent-dev` (Universal Auth; `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET` in the agent environment) is Viewer on every `*-dev` project only. `ci-prod` (GitHub OIDC, `main` of any jbolabs repo) is Viewer on every `*-prod` project. Agents never get `*-prod` access.
+- The free plan has no environment-scoped roles: the project is the access boundary. Never put prod or preview values in a `*-dev` project, or add a non-`dev` environment to one.
+- Deploy jobs load `pcobooster-prod` through `ci-prod` and Alchemy writes the values into Cloudflare.
+- Agent run: `bun run agent:run <cmd>` (`scripts/secrets/agent.ts`). It uses `INFISICAL_TOKEN` or logs in with `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET`, loads `pcobooster-dev` with `infisical run`, and gives `<cmd>` only the `cloud` allowlist, never the token. For example `bun run agent:run bun run scripts/cloudflare/dev.ts --oauth`.
+- On a Mac, `secrets:run` still reads Keychain; operator-only scopes (`apple`, `mobile-updates`, `recovery`) stay in Keychain.
 
 ## Coding Style & Naming Conventions
 

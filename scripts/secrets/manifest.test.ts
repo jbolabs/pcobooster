@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  agentInfisicalProject,
   commandEnvironment,
+  requiredScopeKeys,
   runtimeSecretPurpose,
+  scopeKeys,
   selectScopeValues,
   storedRuntimeKeys,
   storeSecretName,
@@ -46,20 +49,22 @@ describe("secret ownership boundaries", () => {
     );
   });
 
-  it("keeps local PATs, production signing keys, and release credentials out of cloud commands", () => {
+  it("gives agent commands the dev PAT but no inherited, Infisical, signing, or release credentials", () => {
     expect(
       commandEnvironment(
         "cloud",
         {
           PATH: "/usr/bin",
-          PLANNING_CENTER_PAT: "personal",
+          PLANNING_CENTER_PAT: "inherited-personal",
           ASC_KEY_P8_BASE64: "signing",
           ASC_KEY_PATH: "/private/signing.p8",
           CLOUDFLARE_API_TOKEN: "deploy",
           CLOUDFLARE_TOKEN_ADMIN_API_TOKEN: "administrator",
           CLOUDFLARE_API_KEY: "global-key",
           BETTER_AUTH_SECRET: "production",
-          INFISICAL_TOKEN: "old-token",
+          INFISICAL_TOKEN: "machine-identity-token",
+          INFISICAL_CLIENT_ID: "agent-dev-client",
+          INFISICAL_CLIENT_SECRET: "agent-dev-secret",
           DEV_AUTH_BYPASS: "1",
           PRESENTATION_MODE: "1",
         },
@@ -67,7 +72,12 @@ describe("secret ownership boundaries", () => {
           BETTER_AUTH_SECRET: "cloud-session",
           PLANNING_CENTER_OAUTH_CLIENT_ID: "cloud-client",
           PLANNING_CENTER_OAUTH_CLIENT_SECRET: "cloud-oauth",
-          PLANNING_CENTER_PAT: "wrong-scope",
+          PLANNING_CENTER_CLIENT: "dev-client",
+          PLANNING_CENTER_PAT: "dev-pat",
+          PCOBOOSTER_ADMIN_EMAILS: "admin@example.com",
+          OAUTH_PROXY_SECRET: "wrong-scope",
+          DEMO_PLANNING_CENTER_PAT: "wrong-scope",
+          STAGING_ACCESS_SERVICE_TOKEN_ID: "wrong-scope",
         }
       )
     ).toStrictEqual({
@@ -77,6 +87,36 @@ describe("secret ownership boundaries", () => {
       BETTER_AUTH_SECRET: "cloud-session",
       PLANNING_CENTER_OAUTH_CLIENT_ID: "cloud-client",
       PLANNING_CENTER_OAUTH_CLIENT_SECRET: "cloud-oauth",
+      PLANNING_CENTER_CLIENT: "dev-client",
+      PLANNING_CENTER_PAT: "dev-pat",
+      PCOBOOSTER_ADMIN_EMAILS: "admin@example.com",
+    });
+  });
+
+  it("keeps deployed-tier secrets out of the agent scope and requires only OAuth settings", () => {
+    const sharedWithDev = new Set([
+      "BETTER_AUTH_SECRET",
+      "PLANNING_CENTER_OAUTH_CLIENT_ID",
+      "PLANNING_CENTER_OAUTH_CLIENT_SECRET",
+      "PCOBOOSTER_ADMIN_EMAILS",
+    ]);
+    const deployedOnly = new Set([
+      ...storedRuntimeKeys(true),
+      ...scopeKeys.preview,
+      ...scopeKeys.production,
+    ]).difference(sharedWithDev);
+    expect({
+      leaked: scopeKeys.cloud.filter((key) => deployedOnly.has(key)),
+      required: requiredScopeKeys.cloud,
+      project: agentInfisicalProject.environment,
+    }).toStrictEqual({
+      leaked: [],
+      required: [
+        "BETTER_AUTH_SECRET",
+        "PLANNING_CENTER_OAUTH_CLIENT_ID",
+        "PLANNING_CENTER_OAUTH_CLIENT_SECRET",
+      ],
+      project: "dev",
     });
   });
 

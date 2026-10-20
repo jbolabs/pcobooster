@@ -62,14 +62,28 @@ const inheritedCredentialKeys = [
   "CLOUDFLARE_ACCESS_TOKEN",
 ] as const;
 
+/**
+ * The Infisical project `agent:run` reads the `cloud` scope from. It holds development values only:
+ * the free plan has no environment-scoped roles, so the project is the access boundary.
+ */
+export const agentInfisicalProject = {
+  projectId: "0d496fd4-544e-448a-b685-978847676ec0",
+  environment: "dev",
+} as const;
+
 /** Only these keys may be injected into commands in each trust boundary. */
 export const scopeKeys: Record<SecretScope, readonly string[]> = {
   local: localKeys,
   sandbox: ["PLANNING_CENTER_CLIENT", "PLANNING_CENTER_PAT"],
+  // Agents' development credentials, from Infisical `pcobooster-dev`. The PAT is a deliberate
+  // grant: it acts as its owner on real Planning Center data and shares their rate limit.
   cloud: [
     "BETTER_AUTH_SECRET",
     "PLANNING_CENTER_OAUTH_CLIENT_ID",
     "PLANNING_CENTER_OAUTH_CLIENT_SECRET",
+    "PLANNING_CENTER_CLIENT",
+    "PLANNING_CENTER_PAT",
+    "PCOBOOSTER_ADMIN_EMAILS",
   ],
   preview: [...runtimeSecretKeys.slice(1, 4), ...deploymentKeys],
   production: [...runtimeSecretKeys, ...deploymentKeys],
@@ -93,7 +107,7 @@ export const scopeKeys: Record<SecretScope, readonly string[]> = {
 export const requiredScopeKeys: Record<SecretScope, readonly string[]> = {
   local: localKeys.slice(0, 3),
   sandbox: scopeKeys.sandbox,
-  cloud: scopeKeys.cloud,
+  cloud: scopeKeys.cloud.slice(0, 3),
   preview: [],
   production: [],
   apple: ["ASC_KEY_ID", "ASC_ISSUER_ID", "ASC_KEY_P8_BASE64"],

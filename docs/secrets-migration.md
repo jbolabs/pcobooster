@@ -14,10 +14,11 @@ The control-plane apply created 9 encrypted GitHub environment secrets and 5 var
 
 - `alchemy.secrets.ts`, stack `pcobooster-secrets`: the sole writer for retained runtime secrets. Stages `prod` and `preview` hold 8 and 3 secrets respectively (production added `POSTHOG_ERASURE_API_KEY` after the migration). Product stacks only reference them.
 - `alchemy.ci.ts`: generated deployment tokens and Access check credentials, delivered as encrypted GitHub environment secrets. It reuses existing token generations and service-token values during migration.
+- Infisical `pcobooster-prod` (envs `preview`, `prod`): the canonical source for `alchemy.secrets.ts` inputs, read by the operator and the `ci-prod` GitHub OIDC identity. Infisical `pcobooster-dev` (env `dev`) holds agent development credentials. See [Infisical](environment.md#infisical).
 - macOS Keychain: `com.pcobooster.secrets.<scope>`, one generic-password item per key. Scopes separate development, cloud development, preview, production bootstrap/rotation, Apple signing, PostHog administration, and legacy recovery.
 - Public configuration stays in source. Process-owned development switches are not imported. User OAuth tokens remain in D1.
 
-Production/preview Keychain items are the bootstrap and rotation inputs for the central secrets stack, not inputs required by a running application. Rotate through `secrets:set` and the reviewed secrets stack; do not independently rotate Cloudflare values and later deploy stale Keychain inputs. Keep the Mac's encrypted disk and Keychain recovery available. Keychain protects the source credentials; Alchemy's ignored state and local Worker bindings can retain generated deployment copies.
+Production/preview Keychain items are the legacy bootstrap and rotation inputs for the central secrets stack, not inputs required by a running application; Infisical `pcobooster-prod` replaces them. Rotate in Infisical and deploy the reviewed secrets stack with `infisical run --projectId a27bbce0-b9f7-41b3-a7a0-c5ae9e004a2f --env prod|preview -- bun alchemy deploy alchemy.secrets.ts --stage prod|preview`; do not independently rotate Cloudflare values and later deploy stale Keychain inputs. Keep the Mac's encrypted disk and Keychain recovery available. Keychain protects the source credentials; Alchemy's ignored state and local Worker bindings can retain generated deployment copies.
 
 ## Commands
 
@@ -43,7 +44,7 @@ bun run infra:plan
 
 The importer refuses an existing Keychain value that differs; `--overwrite` is an explicit choice after reviewing the conflict names. It never writes secret values to files, command arguments, logs, or stack outputs. Runtime-secret plan output must remain redacted.
 
-Temporary historical resource registrations let Alchemy retain the old Infisical objects while removing their ownership rows, without contacting or mutating Infisical. Those registrations were removed after the successful apply and follow-up plan. The source importer is now the only active Infisical dependency. Existing token-admin permissions are needed to inspect token policy drift or apply a future token change; the migration did not change tokens, and both original credential identities were verified active through Cloudflare's token verification API.
+Temporary historical resource registrations let Alchemy retain the old Infisical objects while removing their ownership rows, without contacting or mutating Infisical. Those registrations were removed after the successful apply and follow-up plan. The importer's old projects (`pcobooster-preview`, `pcobooster-production`, `worshipadmin.com`) are now recovery copies; `pcobooster-dev` and `pcobooster-prod` are the active Infisical layout. Existing token-admin permissions are needed to inspect token policy drift or apply a future token change; the migration did not change tokens, and both original credential identities were verified active through Cloudflare's token verification API.
 
 ## Approved external cutover
 
