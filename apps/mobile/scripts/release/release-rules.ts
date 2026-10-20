@@ -40,6 +40,43 @@ export interface SigningInput {
   readonly hasKey: boolean;
 }
 
+interface LocalExportSigning {
+  readonly certificateSha1: string;
+  readonly profileUuid: string;
+}
+
+const CERTIFICATE_SHA1 = /^[\da-f]{40}$/iu;
+const PROFILE_UUID =
+  /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu;
+
+/** Explicit local identities only; never select a certificate or profile by an ambiguous name. */
+const localExportSigning = (
+  env: SigningInput["env"]
+): LocalExportSigning | null => {
+  const certificateSha1 = env.PCOB_RELEASE_CERTIFICATE_SHA1 ?? "";
+  const profileUuid = env.PCOB_RELEASE_PROFILE_UUID ?? "";
+  if (certificateSha1 === "" && profileUuid === "") {
+    return null;
+  }
+  if (automationMarker(env) !== null) {
+    throw new Error(
+      "Explicit local distribution signing is unavailable in automation."
+    );
+  }
+  if (
+    !CERTIFICATE_SHA1.test(certificateSha1) ||
+    !PROFILE_UUID.test(profileUuid)
+  ) {
+    throw new Error(
+      "Supply PCOB_RELEASE_CERTIFICATE_SHA1 (40 hex characters) and PCOB_RELEASE_PROFILE_UUID (UUID) together."
+    );
+  }
+  return {
+    certificateSha1: certificateSha1.toUpperCase(),
+    profileUuid: profileUuid.toUpperCase(),
+  };
+};
+
 /**
  * How the export signs. A supplied key signs unless `PCOB_RELEASE_SIGNING=xcode-account` asks
  * for the Apple account signed into Xcode (the key then only checks build numbers). Automation
@@ -65,7 +102,38 @@ export const signingMode = ({ env, hasKey }: SigningInput): SigningMode => {
       "PCOB_RELEASE_SIGNING=api-key needs ASC_KEY_ID, ASC_ISSUER_ID, and a private key."
     );
   }
+  if (localExportSigning(env) !== null && mode !== "api-key") {
+    throw new Error(
+      "Explicit local distribution signing requires PCOB_RELEASE_SIGNING=api-key and an App Store Connect API key."
+    );
+  }
   return mode;
+};
+
+/** Fixed app/team export settings; validated hex/UUID values cannot inject plist XML. */
+export const exportOptionsPlist = (input: SigningInput): string => {
+  signingMode(input);
+  const local = localExportSigning(input.env);
+  const identity =
+    local === null
+      ? "  <key>signingStyle</key><string>automatic</string>"
+      : `  <key>signingStyle</key><string>manual</string>
+  <key>signingCertificate</key><string>${local.certificateSha1}</string>
+  <key>provisioningProfiles</key><dict>
+    <key>com.pcobooster.ios</key><string>${local.profileUuid}</string>
+  </dict>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>method</key><string>app-store-connect</string>
+  <key>destination</key><string>export</string>
+  <key>teamID</key><string>6C46GY4Z38</string>
+${identity}
+  <key>manageAppVersionAndBuildNumber</key><false/>
+  <key>testFlightInternalTestingOnly</key><false/>
+  <key>uploadSymbols</key><true/>
+</dict></plist>
+`;
 };
 
 /** A build number as typed: a positive integer without leading zeros, or an error. */

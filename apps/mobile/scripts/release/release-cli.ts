@@ -2,6 +2,7 @@
  * The release steps `release-ios.sh` runs outside Xcode. Every App Store Connect call is a read.
  *
  * Usage: bun run scripts/release/release-cli.ts <command>
+ *   export-options [--has-key]                  Prints validated local export options plist.
  *   signing [--has-key]                         Prints api-key or xcode-account.
  *   lock acquire --pid <pid> --revision <sha>   Takes this machine's release lock.
  *   lock release --pid <pid>
@@ -30,6 +31,7 @@ import {
 import type { AscClient } from "./asc";
 import {
   chooseBuildNumber,
+  exportOptionsPlist,
   parseBuildNumber,
   releaseAnalyticsKey,
   signingMode,
@@ -115,6 +117,15 @@ const listBuilds = async (limit: number): Promise<void> => {
 };
 
 const commands = {
+  "export-options": async (args) => {
+    await Promise.resolve();
+    console.log(
+      exportOptionsPlist({
+        env: process.env,
+        hasKey: args.includes("--has-key"),
+      })
+    );
+  },
   signing: async (args) => {
     await Promise.resolve();
     console.log(
@@ -202,7 +213,7 @@ const command: Command | undefined =
   name !== undefined && isCommandName(name) ? commands[name] : undefined;
 if (command === undefined) {
   console.error(
-    "Usage: release-cli.ts signing|lock|build-number|status|builds|latest|analytics-key ..."
+    "Usage: release-cli.ts signing|export-options|lock|build-number|status|builds|latest|analytics-key ..."
   );
   process.exitCode = 64;
 } else {

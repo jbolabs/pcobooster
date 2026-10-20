@@ -19,6 +19,7 @@ import type { Fetch } from "../apps/mobile/scripts/release/asc";
 import {
   automationMarker,
   chooseBuildNumber,
+  exportOptionsPlist,
   parseBuildNumber,
   POSTHOG_PROJECT_KEY,
   processingOutcome,
@@ -101,6 +102,85 @@ describe("signing", () => {
       signingMode({ env: { PCOB_RELEASE_SIGNING: "api-key" }, hasKey: false })
     ).toThrow("needs ASC_KEY_ID");
   });
+});
+
+const LOCAL_SIGNING = {
+  PCOB_RELEASE_SIGNING: "api-key",
+  PCOB_RELEASE_CERTIFICATE_SHA1: "0123456789abcdef0123456789abcdef01234567",
+  PCOB_RELEASE_PROFILE_UUID: "a1234567-1234-4567-89ab-0123456789ab",
+};
+
+describe("local export options", () => {
+  it("selects the exact installed distribution identity", () => {
+    const plist = exportOptionsPlist({ env: LOCAL_SIGNING, hasKey: true });
+    expect(plist).toContain("<key>signingStyle</key><string>manual</string>");
+    expect(plist).toContain(
+      "<key>signingCertificate</key><string>0123456789ABCDEF0123456789ABCDEF01234567</string>"
+    );
+    expect(plist).toContain(
+      "<key>provisioningProfiles</key><dict>\n    <key>com.pcobooster.ios</key><string>A1234567-1234-4567-89AB-0123456789AB</string>\n  </dict>"
+    );
+  });
+
+  it("exports for the fixed app team without changing the version or limiting beta availability", () => {
+    const plist = exportOptionsPlist({ env: LOCAL_SIGNING, hasKey: true });
+    expect(plist).toContain("<key>destination</key><string>export</string>");
+    expect(plist).toContain("<key>teamID</key><string>6C46GY4Z38</string>");
+    expect(plist).toContain(
+      "<key>method</key><string>app-store-connect</string>"
+    );
+    expect(plist).toContain(
+      "<key>manageAppVersionAndBuildNumber</key><false/>"
+    );
+    expect(plist).toContain("<key>testFlightInternalTestingOnly</key><false/>");
+  });
+
+  it("keeps automatic signing when local selectors are absent", () => {
+    const plist = exportOptionsPlist({ env: {}, hasKey: true });
+    expect(plist).toContain(
+      "<key>signingStyle</key><string>automatic</string>"
+    );
+    expect(plist).not.toContain("<key>signingCertificate</key>");
+    expect(plist).not.toContain("<key>provisioningProfiles</key>");
+  });
+
+  it.each([
+    { PCOB_RELEASE_CERTIFICATE_SHA1: "" },
+    { PCOB_RELEASE_PROFILE_UUID: "" },
+    { PCOB_RELEASE_CERTIFICATE_SHA1: "Apple Distribution" },
+    { PCOB_RELEASE_PROFILE_UUID: "</string><true/>" },
+  ])(
+    "refuses partial or malformed identities before signing (%j)",
+    (override) => {
+      expect(() =>
+        signingMode({ env: { ...LOCAL_SIGNING, ...override }, hasKey: true })
+      ).toThrow("Supply PCOB_RELEASE_CERTIFICATE_SHA1");
+    }
+  );
+
+  it("refuses selectors with an Xcode account or without the API key", () => {
+    expect(() =>
+      exportOptionsPlist({
+        env: { ...LOCAL_SIGNING, PCOB_RELEASE_SIGNING: "xcode-account" },
+        hasKey: true,
+      })
+    ).toThrow("requires PCOB_RELEASE_SIGNING=api-key");
+    expect(() =>
+      exportOptionsPlist({ env: LOCAL_SIGNING, hasKey: false })
+    ).toThrow("needs ASC_KEY_ID");
+  });
+
+  it.each([{ CI: "yes" }, { GITHUB_ACTIONS: "true" }, { BUILDKITE: "1" }])(
+    "refuses explicit local identities in automation (%j)",
+    (automation) => {
+      expect(() =>
+        exportOptionsPlist({
+          env: { ...LOCAL_SIGNING, ...automation },
+          hasKey: true,
+        })
+      ).toThrow("unavailable in automation");
+    }
+  );
 });
 
 describe("build numbers", () => {
@@ -587,6 +667,20 @@ describe("release-cli", () => {
       "api-key"
     );
   }, 15_000);
+
+  it("prints validated manual export options and refuses malformed selectors", () => {
+    const valid = cli(["export-options", "--has-key"], LOCAL_SIGNING);
+    expect(valid.status).toBe(0);
+    expect(valid.stdout).toContain(
+      "<key>signingCertificate</key><string>0123456789ABCDEF0123456789ABCDEF01234567</string>"
+    );
+    const invalid = cli(["export-options", "--has-key"], {
+      ...LOCAL_SIGNING,
+      PCOB_RELEASE_PROFILE_UUID: "wrong",
+    });
+    expect(invalid.status).toBe(1);
+    expect(invalid.stderr).toContain("Supply PCOB_RELEASE_CERTIFICATE_SHA1");
+  });
 
   it("prints the committed analytics key and refuses another", () => {
     expect(cli(["analytics-key"], {}).stdout.trim()).toBe(POSTHOG_PROJECT_KEY);

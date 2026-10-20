@@ -93,8 +93,10 @@ unset EXPO_PUBLIC_POSTHOG_KEY POSTHOG_PROJECT_KEY
 signing_args=()
 if [[ "$has_key" == 1 ]]; then signing_args+=(--has-key); fi
 signing=none
+export_options=""
 if [[ "$destination" == export ]]; then
   signing="$(cli signing ${signing_args[@]+"${signing_args[@]}"})"
+  export_options="$(cli export-options ${signing_args[@]+"${signing_args[@]}"})"
 fi
 
 key_dir=""
@@ -215,23 +217,13 @@ if [[ "$destination" == prepare ]]; then
   exit 0
 fi
 
-auth=(-allowProvisioningUpdates)
+auth=()
+# An explicitly selected installed certificate/profile must not fall back to cloud signing.
+if [[ -z "${PCOB_RELEASE_CERTIFICATE_SHA1:-}" ]]; then auth+=(-allowProvisioningUpdates); fi
 if [[ "$signing" == api-key ]]; then
   auth+=(-authenticationKeyPath "$key_path" -authenticationKeyID "$key_id" -authenticationKeyIssuerID "$issuer_id")
 fi
-cat > "$out/ExportOptions.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>method</key><string>app-store-connect</string>
-  <key>destination</key><string>$destination</string>
-  <key>teamID</key><string>6C46GY4Z38</string>
-  <key>signingStyle</key><string>automatic</string>
-  <key>manageAppVersionAndBuildNumber</key><false/>
-  <key>testFlightInternalTestingOnly</key><false/>
-  <key>uploadSymbols</key><true/>
-</dict></plist>
-PLIST
+printf '%s\n' "$export_options" > "$out/ExportOptions.plist"
 rm -rf "$out/export"
 echo "==> Exporting pcobooster.com $version ($build), destination=$destination, signing=$signing"
 # Local export always uses destination=export. Upload is intentionally unavailable.
