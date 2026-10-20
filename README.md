@@ -32,7 +32,7 @@ bun install --frozen-lockfile
 
 ### 2. Configure local secrets
 
-Development credentials live in Infisical `pcobooster-dev`, which Alchemy reads for stage `local`. With the `agent-dev` machine identity's `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` set, run `bun run secrets:login` once to store it in your default Alchemy profile. Never put a secret value in command arguments, chat, issues, or committed files.
+Development credentials live in Infisical `pcobooster-dev`, which Alchemy reads for stage `local`. With the `agent-dev` machine identity's `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` set, run `bun run setup:infisical` once to store it in your default Alchemy profile. Never put a secret value in command arguments, chat, issues, or committed files.
 
 `bun run dev` signs you in as the owner of the Planning Center sandbox PAT from the Keychain `sandbox` scope (`bun run secrets:set sandbox PLANNING_CENTER_PAT`); `dev:church` uses the Agape PAT from Infisical, read-only. `dev:auth` uses real OAuth and `dev:present` enables presentation mode. The servers bind to `127.0.0.1`; deployed Workers ignore the development bypass. Each stage gets separate D1 data.
 

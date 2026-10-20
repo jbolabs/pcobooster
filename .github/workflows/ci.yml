@@ -265,7 +265,7 @@ jobs:
     permissions:
       contents: read
     environment:
-      name: cloudflare-production
+      name: production
       url: https://pcobooster.com
     concurrency:
       group: cloudflare-prod

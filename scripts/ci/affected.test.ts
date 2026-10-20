@@ -98,6 +98,7 @@ describe("affected validation", () => {
     "scripts/testing/miniflare.ts",
     "scripts/database/local-d1.ts",
     "scripts/secrets/manifest.ts",
+    "stacks/secrets.ts",
     "scripts/cloudflare/verify-deployment.ts",
     ".github/workflows/ci.yml",
     "patches/provider.patch",

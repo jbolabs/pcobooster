@@ -64,7 +64,7 @@ const inheritedCredentialKeys = [
 
 /**
  * Only these keys may be injected into commands in each trust boundary. Alchemy stacks read
- * Infisical directly (`scripts/secrets/infisical.ts`); `local`, `cloud`, `preview`, and `production`
+ * Infisical directly (`stacks/secrets.ts`); `local`, `cloud`, `preview`, and `production`
  * remain for the importer, `secrets:dev`, and the legacy Keychain deploy commands.
  */
 export const scopeKeys: Record<SecretScope, readonly string[]> = {

@@ -24,7 +24,7 @@ import {
   formerDomainRedirect,
   protectZoneEdge,
 } from "./scripts/cloudflare/zones";
-import { infisicalSecrets } from "./scripts/secrets/infisical";
+import { stageSecrets } from "./stacks/secrets";
 
 const workspacePackages = readdirSync(
   path.join(import.meta.dirname, "packages"),
@@ -143,7 +143,7 @@ export default Alchemy.Stack(
     // Stage `local` reads development credentials from Infisical `pcobooster-dev`. Deployed stages
     // read stored secrets by reference and their CI environment, never Infisical: PR stages must
     // not need an identity.
-    secrets: infisicalSecrets(["local"]),
+    secrets: stageSecrets(["local"]),
   },
   Effect.gen(function* infrastructure() {
     const {

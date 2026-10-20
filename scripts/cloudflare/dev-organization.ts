@@ -29,7 +29,7 @@ export const verifyDevelopmentOrganization = Effect.gen(
     if (client === "" || token === "") {
       yield* Effect.die(
         new Error(
-          "The personal access token sign-in needs PLANNING_CENTER_CLIENT and PLANNING_CENTER_PAT. Check that the Alchemy profile reads Infisical pcobooster-dev (bun run secrets:login), or run bun run dev:auth to sign in through Planning Center OAuth."
+          "The personal access token sign-in needs PLANNING_CENTER_CLIENT and PLANNING_CENTER_PAT. Check that the Alchemy profile reads Infisical pcobooster-dev (bun run setup:infisical), or run bun run dev:auth to sign in through Planning Center OAuth."
         )
       );
     }

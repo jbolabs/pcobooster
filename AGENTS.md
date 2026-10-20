@@ -54,13 +54,13 @@
 
 ## Agent secrets (Infisical)
 
-- Each repo has two Infisical projects. `pcobooster-dev` (env `dev`, id `0d496fd4-544e-448a-b685-978847676ec0`) holds development credentials; `pcobooster-prod` (envs `preview`, `prod`, id `a27bbce0-b9f7-41b3-a7a0-c5ae9e004a2f`) holds deployed-tier values. `scripts/secrets/infisical.ts` is the only place in code that names them.
-- The free plan has no environment-scoped roles: the project is the access boundary. Never put prod or preview values in a `*-dev` project, or add a non-`dev` environment to one.
-- Alchemy reads Infisical natively (`Infisical.Secrets`, into Effect Config, not `process.env`; the shell still outranks it). Stage mapping: `prod` reads `pcobooster-prod`/`prod`; `preview` and `staging` read `pcobooster-prod`/`preview`; every other stage, including `pr-*`, maps to `pcobooster-dev`. Only `alchemy.run.ts` stage `local` and `alchemy.secrets.ts` (`prod`, `preview`) declare it. PR previews never read Infisical.
-- Alchemy profiles: the default profile holds `agent-dev` (Universal Auth, Viewer on `*-dev` only); the operator's `admin` profile holds `operator` (Viewer on `*-dev` and `*-prod`) plus Cloudflare. `secrets:plan:*`/`secrets:deploy:*` run with `--profile admin`. `ci-prod` (GitHub OIDC, `main` of any jbolabs repo, Viewer on `*-prod`) is reserved for main-branch jobs; no workflow here uses it yet. Agents never get `*-prod` access.
-- Agent bootstrap: with `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET` in the environment, run `bun run secrets:login` once (Codex `setup.sh` does). Then `bun run dev:church` or `bun run dev:auth` just work. `INFISICAL_TOKEN`, when set, outranks the profile.
-- Scripts outside Alchemy: `bun run secrets:dev <cmd>` loads `pcobooster-dev` with the Infisical CLI and gives `<cmd>` only the `cloud` allowlist, never an `INFISICAL_*` variable.
-- Keychain remains for the `sandbox` PAT (`bun run dev`) and operator-only scopes (`apple`, `mobile-updates`, `analytics-erasure`, `recovery`, `posthog`). The `local`, `cloud`, `preview`, and `production` scopes are legacy; `deploy:*`, `infra:*`, and `alchemy.load.ts` still read the last two.
+- Secrets come from Infisical through Alchemy (`Infisical.Secrets` in each stack). `stacks/secrets.ts` holds the project ids and maps stage → source: `prod` reads `pcobooster-prod`, `pr-*`/CI previews read nothing from Infisical, everything else reads `pcobooster-dev`.
+- Who can read what: Alchemy `default` profile = `agent-dev` (`*-dev` only); `admin` profile = `operator` (all; the owner's Mac only, pass `--profile admin`); CI = `ci-prod` via GitHub OIDC, only in jobs using the `production` environment (main only).
+- Agent setup, once per machine: export `INFISICAL_CLIENT_ID`/`INFISICAL_CLIENT_SECRET`, then `bun run setup:infisical`.
+- Never add prod values to `pcobooster-dev`, never give a PR job the `production` environment, and never read secrets via `process.env` in stacks (use `Config`).
+- pcobooster: only stage `local` (`alchemy.run.ts`) and `alchemy.secrets.ts` declare Infisical. The secrets stack's `preview` tier (and `staging`) map to `pcobooster-prod` env `preview`; the operator runs `secrets:plan:*`/`secrets:deploy:*`, which pass `--profile admin`.
+- `bun run secrets:dev <cmd>` serves non-Alchemy scripts (`pc:check-contracts`): it loads `pcobooster-dev` with the Infisical CLI and gives `<cmd>` only the `cloud` allowlist, never an `INFISICAL_*` variable. The dev PAT is a deliberate grant (the Agape church token, used by `dev:church`).
+- Keychain holds only the `sandbox` PAT (`bun run dev`) and operator scopes (`apple`, `mobile-updates`, `analytics-erasure`, `recovery`, `posthog`); `deploy:*`, `infra:*`, and `alchemy.load.ts` still read the legacy `preview`/`production` scopes.
 
 ## Coding Style & Naming Conventions
 

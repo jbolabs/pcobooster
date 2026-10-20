@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import path from "node:path";
 
-import { infisicalSource } from "./infisical";
+import { infisicalSource } from "../../stacks/secrets";
 import { processExit } from "./manifest";
 
 // `secrets:dev`: development credentials for commands Alchemy does not run (for example

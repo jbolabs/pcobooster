@@ -11,7 +11,7 @@ Deployed application secrets live in Cloudflare Secrets Store. `alchemy.secrets.
 | Non-Alchemy scripts (`secrets:dev`) | Infisical `pcobooster-dev` through the Infisical CLI, allowlisted by the `cloud` scope | The command's own process |
 | Pull request previews | Generated stage secrets and `pcobooster-secrets/preview` references; GitHub environment deployment credentials. Never Infisical | Independent Workers and D1; Cloudflare Access |
 | Staging | `pcobooster-secrets/preview` references; GitHub environment deployment credentials | Independent Workers and D1; Cloudflare Access |
-| Production | `pcobooster-secrets/prod` references; `cloudflare-production` deployment credentials | Retained production Workers and D1 |
+| Production | `pcobooster-secrets/prod` references; `production` deployment credentials | Retained production Workers and D1 |
 | Central secrets stack (`alchemy.secrets.ts`) | Infisical `pcobooster-prod` env `prod` or `preview`, read with the operator's `admin` profile | Cloudflare Secrets Store |
 | Local Apple release tools | Keychain `apple` scope | macOS signing and App Store Connect tools |
 | iOS update publishing | Keychain `mobile-updates` scope | The update signing key `ios:update` signs with; Cloudflare access comes from the operator's Alchemy login |
@@ -19,7 +19,7 @@ Deployed application secrets live in Cloudflare Secrets Store. `alchemy.secrets.
 
 ## Infisical
 
-Infisical is on the free plan, which has no environment-scoped roles, so each project is the access boundary. `scripts/secrets/infisical.ts` names both projects and maps each stage to one.
+Infisical is on the free plan, which has no environment-scoped roles, so each project is the access boundary. `stacks/secrets.ts` names both projects and maps each stage to one.
 
 - `pcobooster-dev`, env `dev`: development `BETTER_AUTH_SECRET`, Planning Center OAuth client ID and secret, `PLANNING_CENTER_CLIENT`, `PLANNING_CENTER_PAT` (the Agape church token: a deliberate grant that acts as its owner on real Planning Center data and shares their rate limit), and `PCOBOOSTER_ADMIN_EMAILS`. Never put preview or production values here.
 - `pcobooster-prod`, envs `prod` and `preview`: the inputs to `alchemy.secrets.ts` and the deployment values.
@@ -31,12 +31,12 @@ Alchemy loads the values into Effect Config (not `process.env`), and the shell o
 | --- | --- | --- |
 | `agent-dev` (Universal Auth) | Viewer on every `*-dev` project | The default Alchemy profile on agent machines and for everyday development |
 | `operator` (Universal Auth) | Viewer on every `*-dev` and `*-prod` project | The operator's `admin` Alchemy profile, alongside its Cloudflare credentials |
-| `ci-prod` (GitHub OIDC, `main` of jbolabs repositories) | Viewer on every `*-prod` project | Not used by this repository's workflows yet |
+| `ci-prod` (GitHub OIDC, subject `repo:jbolabs@305914027/*:environment:production`) | Viewer on every `*-prod` project | The `production` GitHub environment's `INFISICAL_IDENTITY_ID` and `INFISICAL_OIDC_AUDIENCE` variables (`alchemy.ci.ts`); no job reads Infisical yet |
 
 Bootstrap the default profile without putting the secret in arguments or history (`INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` must be set; use `--reconfigure Infisical` instead of `--add` to replace an existing identity):
 
 ```sh
-bun run secrets:login
+bun run setup:infisical
 # = bun alchemy profile edit --add Infisical --method universal-auth --set clientId=env:INFISICAL_CLIENT_ID --set clientSecret=env:INFISICAL_CLIENT_SECRET --no-input
 ```
 

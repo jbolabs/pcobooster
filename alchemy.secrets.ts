@@ -4,12 +4,12 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import * as RemovalPolicy from "alchemy/RemovalPolicy";
 import { Config, Effect, Redacted } from "effect";
 
-import { infisicalSecrets } from "./scripts/secrets/infisical";
 import {
   runtimeSecretPurpose,
   storedRuntimeKeys,
   storeSecretName,
 } from "./scripts/secrets/manifest";
+import { stageSecrets } from "./stacks/secrets";
 
 export default Alchemy.Stack(
   "pcobooster-secrets",
@@ -18,7 +18,7 @@ export default Alchemy.Stack(
     state: Cloudflare.state(),
     // Inputs come from Infisical `pcobooster-prod` (env `prod` or `preview`). The operator runs this
     // stack with `--profile admin` (the `operator` identity plus Cloudflare); agents cannot read it.
-    secrets: infisicalSecrets(["prod", "preview"]),
+    secrets: stageSecrets(["prod", "preview"]),
   },
   Effect.gen(function* runtimeSecrets() {
     const stage = yield* Alchemy.Stage;

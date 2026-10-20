@@ -31,7 +31,7 @@ bun run secrets:migrate --apply
 bun run secrets:set sandbox PLANNING_CENTER_PAT
 
 # Stage `local` reads Infisical pcobooster-dev through the default Alchemy profile.
-bun run secrets:login
+bun run setup:infisical
 bun run dev
 bun run dev:auth
 bun run secrets:run apple -- bun run --cwd apps/mobile ios:testflight
