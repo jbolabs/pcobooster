@@ -36,7 +36,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode, RefObject } from "react";
+import type { ReactElement, ReactNode, RefObject } from "react";
 import { toast } from "sonner";
 
 import { HotkeyChord } from "@/components/hotkey-chord";
@@ -701,14 +701,18 @@ const ChartRecordings = ({
   song,
   arrangement,
   chartKey,
-}: Pick<ChartViewProps, "song" | "arrangement" | "chartKey">) => (
+  children,
+}: Pick<ChartViewProps, "song" | "arrangement" | "chartKey"> & {
+  children: (video: ReactNode, controls: ReactNode) => ReactElement;
+}) => (
   <SongRecordingPlayer
-    key={`${arrangement.id}:${chartKey?.id ?? "lyrics"}`}
     songId={song.id}
     arrangementId={arrangement.id}
     keyId={chartKey?.id ?? null}
     songTitle={song.title}
-  />
+  >
+    {children}
+  </SongRecordingPlayer>
 );
 
 /**
@@ -782,38 +786,51 @@ const ChartReader = ({
         </div>
       </ChartToolbar>
       {accessUnavailable ? <AccessUnavailable /> : null}
-      <PageScrollArea>
-        <div className="flex flex-col items-center pb-4">
-          <div className="flex w-full max-w-[52rem] flex-col">
-            <PlanningCenterPdfPages
-              pdf={pdf}
-              pagesRef={pagesRef}
-              missingLabel={missingChartLabel(chartKey)}
-              missingAction={
-                onEdit === null ? null : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-
-                    onClick={onEdit}
-                  >
-                    Edit chart
-                  </Button>
-                )
-              }
-              fallbackHref={planningCenterArrangementUrl(
-                song.id,
-                arrangement.id
-              )}
-            />
-          </div>
-        </div>
-      </PageScrollArea>
       <ChartRecordings
         song={song}
         arrangement={arrangement}
         chartKey={chartKey}
-      />
+      >
+        {(video, controls) => (
+          <>
+            <div className="flex min-h-0 flex-1 flex-col gap-3 md:flex-row">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <PageScrollArea contained>
+                  <div className="flex flex-col items-center pb-4">
+                    <div className="flex w-full max-w-[52rem] flex-col">
+                      <PlanningCenterPdfPages
+                        pdf={pdf}
+                        pagesRef={pagesRef}
+                        missingLabel={missingChartLabel(chartKey)}
+                        missingAction={
+                          onEdit === null ? null : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+
+                              onClick={onEdit}
+                            >
+                              Edit chart
+                            </Button>
+                          )
+                        }
+                        fallbackHref={planningCenterArrangementUrl(
+                          song.id,
+                          arrangement.id
+                        )}
+                      />
+                    </div>
+                  </div>
+                </PageScrollArea>
+              </div>
+              {video === null ? null : (
+                <aside className="shrink-0 md:w-80 xl:w-96">{video}</aside>
+              )}
+            </div>
+            {controls}
+          </>
+        )}
+      </ChartRecordings>
       {onEdit === null ? null : (
         <>
           {/* A short chart still puts the phone's Edit at the bottom of the screen. */}
@@ -1383,15 +1400,28 @@ const ChartEditor = ({
       {workspace.conflict === null ? null : (
         <ConflictNotice workspace={workspace} />
       )}
-      <div className="flex min-h-0 flex-1 gap-3 md:grid md:grid-cols-2">
-        <EditorPane workspace={workspace} textareaRef={textareaRef} />
-        {isMobile ? null : preview}
-      </div>
       <ChartRecordings
         song={song}
         arrangement={arrangement}
         chartKey={chartKey}
-      />
+      >
+        {(video, controls) => (
+          <>
+            <div className="flex min-h-0 flex-1 flex-col gap-3 md:grid md:grid-cols-2">
+              <EditorPane workspace={workspace} textareaRef={textareaRef} />
+              {isMobile ? (
+                video
+              ) : (
+                <div className="flex min-h-0 min-w-0 flex-col gap-3">
+                  {video}
+                  {preview}
+                </div>
+              )}
+            </div>
+            {controls}
+          </>
+        )}
+      </ChartRecordings>
       <PhoneBottomAction>
         <Button
           size="lg"

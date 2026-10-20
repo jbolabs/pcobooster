@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 import {
   RecordingAudio,
@@ -53,19 +54,28 @@ export const SongRecordingPlayer = ({
   arrangementId,
   keyId,
   songTitle,
+  children,
 }: {
   songId: string;
   arrangementId: string;
   keyId: string | null;
   songTitle: string;
+  children: (video: ReactNode, controls: ReactNode) => ReactElement;
 }) => {
   const files = useSongAttachments(songId, arrangementId);
-  const [selected, setSelected] = useState<string | null>(null);
+  const scope = `${songId}:${arrangementId}:${keyId ?? "lyrics"}`;
+  const [selected, setSelected] = useState<{
+    scope: string;
+    id: string;
+  } | null>(null);
   const recordings = songRecordings(files.data?.attachments ?? [], keyId);
   const current =
-    recordings.find((entry) => entry.id === selected) ?? recordings[0];
+    recordings.find(
+      (entry) => selected?.scope === scope && entry.id === selected.id
+    ) ?? recordings[0];
   if (files.isError) {
-    return (
+    return children(
+      null,
       <p className="text-muted-foreground text-sm">
         Recordings couldn’t load.
         <Button
@@ -81,37 +91,71 @@ export const SongRecordingPlayer = ({
     );
   }
   if (current === undefined) {
-    return files.data?.truncated === true ? (
-      <p className="text-muted-foreground text-xs">
-        Some files weren’t loaded. Check Planning Center for more recordings.
-      </p>
-    ) : null;
+    return children(
+      null,
+      files.data?.truncated === true ? (
+        <p className="text-muted-foreground text-xs">
+          Some files weren’t loaded. Check Planning Center for more recordings.
+        </p>
+      ) : null
+    );
   }
-  return (
+  const playbackKey = `${scope}:${current.id}`;
+  const picker = (
+    <NativeSelect
+      aria-label="Recording"
+      className="w-full sm:max-w-sm"
+      value={current.id}
+      onChange={(event) => {
+        setSelected({ scope, id: event.target.value });
+      }}
+    >
+      {recordings.map((entry) => (
+        <NativeSelectOption key={entry.id} value={entry.id}>
+          {entry.attachment.name}
+          {entry.embedUrl === null ? "" : " · YouTube"}
+        </NativeSelectOption>
+      ))}
+    </NativeSelect>
+  );
+  const video =
+    current.embedUrl === null ? null : (
+      <section
+        aria-label="Linked video"
+        className="flex shrink-0 flex-col gap-1"
+      >
+        <iframe
+          key={playbackKey}
+          // oxlint-disable-next-line react/iframe-missing-sandbox -- Validated youtube-nocookie.com is cross-origin; its player needs scripts and its own origin for media access.
+          sandbox="allow-scripts allow-same-origin allow-presentation"
+          title={current.attachment.name}
+          src={current.embedUrl}
+          allow="encrypted-media; picture-in-picture"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+          className="aspect-video min-h-[200px] w-full"
+        />
+        <a
+          href={current.attachment.linkUrl ?? undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground text-xs underline"
+        >
+          Open in YouTube
+        </a>
+      </section>
+    );
+  const controls = (
     <section
       aria-label="Song recordings"
       className="bg-background flex shrink-0 flex-col gap-2"
     >
-      <NativeSelect
-        aria-label="Recording"
-        className="w-full sm:max-w-sm"
-        value={current.id}
-        onChange={(event) => {
-          setSelected(event.target.value);
-        }}
-      >
-        {recordings.map((entry) => (
-          <NativeSelectOption key={entry.id} value={entry.id}>
-            {entry.attachment.name}
-            {entry.embedUrl === null ? "" : " · YouTube"}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
       {current.embedUrl === null ? (
         <RecordingPlayer
-          key={current.id}
+          key={playbackKey}
           songTitle={songTitle}
           tracks={[current.attachment]}
+          trackControl={picker}
           renderAudio={(props) => (
             <SongAudio
               {...props}
@@ -121,26 +165,8 @@ export const SongRecordingPlayer = ({
           )}
         />
       ) : (
-        <div className="flex flex-col gap-1">
-          <iframe
-            key={current.id}
-            // oxlint-disable-next-line react/iframe-missing-sandbox -- Validated youtube-nocookie.com is cross-origin; its player needs scripts and its own origin for media access.
-            sandbox="allow-scripts allow-same-origin allow-presentation"
-            title={current.attachment.name}
-            src={current.embedUrl}
-            allow="encrypted-media; picture-in-picture"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-            className="aspect-video min-h-[200px] w-full sm:w-80"
-          />
-          <a
-            href={current.attachment.linkUrl ?? undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground text-xs underline"
-          >
-            Open in YouTube
-          </a>
+        <div className="flex min-w-0 items-center border-t pt-2 md:w-72">
+          {picker}
         </div>
       )}
       {files.data?.truncated === true ? (
@@ -150,4 +176,5 @@ export const SongRecordingPlayer = ({
       ) : null}
     </section>
   );
+  return children(video, controls);
 };
