@@ -91,6 +91,15 @@ export const RecordingAudio = ({
 }) => {
   const resumeAt = useRef(0);
   const retried = useRef(false);
+  const [attempt, setAttempt] = useState(0);
+  const handleRetry = async () => {
+    try {
+      await onRetry();
+      setAttempt((current) => current + 1);
+    } catch {
+      onFailed?.();
+    }
+  };
   if (url === undefined) {
     return null;
   }
@@ -101,7 +110,7 @@ export const RecordingAudio = ({
     // oxlint-disable-next-line jsx-a11y/media-has-caption -- Rehearsal tracks are music; there are no captions to offer.
     <audio
       ref={audioRef}
-      key={url}
+      key={`${url}:${String(attempt)}`}
       src={url}
       preload="auto"
       onLoadedMetadata={(event) => {
@@ -122,7 +131,7 @@ export const RecordingAudio = ({
           onFailed?.();
         } else {
           retried.current = true;
-          void onRetry();
+          void handleRetry();
         }
       }}
     />

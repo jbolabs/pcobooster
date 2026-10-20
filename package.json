@@ -83,6 +83,7 @@
     "alchemy": "2.0.0-beta.83",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "effect": "4.0.5",
+    "happy-dom": "^21.0.4",
     "lefthook": "^2.2.1",
     "miniflare": "5.20260921.0-alpha",
     "oxc-parser": "0.154.0",
