@@ -118,7 +118,7 @@ describe("local export options", () => {
       "<key>signingCertificate</key><string>0123456789ABCDEF0123456789ABCDEF01234567</string>"
     );
     expect(plist).toContain(
-      "<key>provisioningProfiles</key><dict>\n    <key>com.pcobooster.ios</key><string>A1234567-1234-4567-89AB-0123456789AB</string>\n  </dict>"
+      "<key>provisioningProfiles</key><dict>\n    <key>com.pcobooster.ios</key><string>a1234567-1234-4567-89ab-0123456789ab</string>\n  </dict>"
     );
   });
 
