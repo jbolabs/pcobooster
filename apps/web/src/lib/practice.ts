@@ -179,29 +179,16 @@ export const PLAYBACK_RATES = [0.5, 0.75, 0.9, 1, 1.1, 1.25] as const;
 
 export interface LoopRegion {
   readonly start: number;
-  readonly end: number | null;
+  readonly end: number;
 }
 
-/**
- * The loop after a press of the loop button at `time`: the first press marks where it starts,
- * the second where it ends (before the start, they swap), and the third clears it.
- */
-export const nextLoop = (
-  loop: LoopRegion | null,
-  time: number
-): LoopRegion | null => {
-  if (loop === null) {
-    return { start: time, end: null };
-  }
-  if (loop.end === null) {
-    if (time === loop.start) {
-      return loop;
-    }
-    return time > loop.start
-      ? { start: loop.start, end: time }
-      : { start: time, end: loop.start };
-  }
-  return null;
+export const LOOP_STEP = 0.1;
+const DEFAULT_PASSAGE_SECONDS = 15;
+
+/** A short passage around the playhead, kept inside the recording. */
+export const initialLoop = (time: number, duration: number): LoopRegion => {
+  const start = Math.max(0, Math.min(time, duration - DEFAULT_PASSAGE_SECONDS));
+  return { start, end: Math.min(duration, start + DEFAULT_PASSAGE_SECONDS) };
 };
 
 /** An arrangement key Planning Center renders a chord chart PDF for. */

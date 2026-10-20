@@ -9,9 +9,10 @@ import {
   RotateCcw,
   RotateCw,
 } from "lucide-react";
-import type { CSSProperties, ReactNode, RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
+import { PlaybackTimeline } from "@/components/practice/playback-timeline";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,8 +26,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HoverLabel } from "@/components/ui/hover-card";
-import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
+import { useAudioLoop } from "@/hooks/use-audio-loop";
 import { usePlanFileLink } from "@/hooks/use-plan-files";
 import { practiceBinding } from "@/lib/app-hotkeys";
 import {
@@ -34,7 +35,8 @@ import {
   RECORDING_FAILURE,
   STOPPED_RECORDING as STOPPED,
   formatPlaybackTime,
-  nextLoop,
+  LOOP_STEP,
+  initialLoop,
 } from "@/lib/practice";
 import type { LoopRegion, PlaybackState } from "@/lib/practice";
 
@@ -166,11 +168,10 @@ const TrackAudio = ({
   );
 };
 
-/** Keeps the shown time moving smoothly while playing, and loops the marked region. */
+/** Keeps the shown time moving smoothly while playing. */
 const usePlaybackClock = (
   audioRef: RefObject<HTMLAudioElement | null>,
   playing: boolean,
-  loop: LoopRegion | null,
   onTime: (time: number) => void
 ) => {
   useEffect((): (() => void) | undefined => {
@@ -181,13 +182,6 @@ const usePlaybackClock = (
     const tick = () => {
       const audio = audioRef.current;
       if (audio !== null) {
-        if (
-          loop !== null &&
-          loop.end !== null &&
-          audio.currentTime >= loop.end
-        ) {
-          audio.currentTime = loop.start;
-        }
         onTime(audio.currentTime);
       }
       frame = requestAnimationFrame(tick);
@@ -196,7 +190,7 @@ const usePlaybackClock = (
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [audioRef, loop, onTime, playing]);
+  }, [audioRef, onTime, playing]);
 };
 
 interface MediaControls {
@@ -254,39 +248,8 @@ const useMediaSession = (
   }, [title, track]);
 };
 
-const loopLabel = (loop: LoopRegion | null): string => {
-  if (loop === null) {
-    return "Loop from here";
-  }
-  return loop.end === null ? "Loop to here" : "Stop looping";
-};
-
-const percentOf = (time: number, duration: number) =>
-  `${String((time / duration) * 100)}%`;
-
-/** The marked loop drawn on the timeline. */
-const LoopMarks = ({
-  loop,
-  duration,
-}: {
-  loop: LoopRegion | null;
-  duration: number;
-}) => {
-  if (loop === null || duration <= 0) {
-    return null;
-  }
-  const region: CSSProperties & Record<`--loop-${string}`, string> = {
-    "--loop-start": percentOf(loop.start, duration),
-    "--loop-width": percentOf((loop.end ?? loop.start) - loop.start, duration),
-  };
-  return (
-    <span
-      aria-hidden
-      className="bg-status-info/70 absolute inset-y-0 left-(--loop-start) w-(--loop-width) min-w-0.5"
-      style={region}
-    />
-  );
-};
+const loopLabel = (loop: LoopRegion | null): string =>
+  loop === null ? "Loop section" : "Stop looping";
 
 const TrackMenu = ({
   tracks,
@@ -385,6 +348,7 @@ const PlayIcon = ({
 /** Back, forward, loop, and speed: the controls a loaded track offers. */
 const TransportControls = ({
   loaded,
+  canLoop,
   loop,
   rate,
   onSeek,
@@ -392,6 +356,7 @@ const TransportControls = ({
   onRate,
 }: {
   loaded: boolean;
+  canLoop: boolean;
   loop: LoopRegion | null;
   rate: number;
   onSeek: (by: number) => void;
@@ -442,7 +407,7 @@ const TransportControls = ({
             size="icon-sm"
             aria-label={loopLabel(loop)}
             aria-pressed={loop !== null}
-            disabled={!loaded}
+            disabled={!canLoop}
             onClick={onLoop}
           />
         }
@@ -457,6 +422,7 @@ const TransportControls = ({
 /** Secondary controls stay in one menu on phones, leaving room for the track title. */
 const PhonePlaybackMenu = ({
   loaded,
+  canLoop,
   loop,
   rate,
   onSeek,
@@ -464,6 +430,7 @@ const PhonePlaybackMenu = ({
   onRate,
 }: {
   loaded: boolean;
+  canLoop: boolean;
   loop: LoopRegion | null;
   rate: number;
   onSeek: (by: number) => void;
@@ -499,7 +466,7 @@ const PhonePlaybackMenu = ({
             <RotateCw />
             Forward 5 seconds
           </DropdownMenuItem>
-          <DropdownMenuItem disabled={!loaded} onClick={onLoop}>
+          <DropdownMenuItem disabled={!canLoop} onClick={onLoop}>
             <Repeat2 />
             {loopLabel(loop)}
           </DropdownMenuItem>
@@ -542,7 +509,8 @@ const usePlayback = (rate: number) => {
   const onTime = useCallback((time: number) => {
     setPlayback((current) => ({ ...current, time }));
   }, []);
-  usePlaybackClock(audioRef, playback.playing, loop, onTime);
+  usePlaybackClock(audioRef, playback.playing, onTime);
+  useAudioLoop(audioRef, loop, playback.status === "ready");
 
   const play = () => {
     if (playback.status === "failed") {
@@ -574,12 +542,15 @@ const usePlayback = (rate: number) => {
   const seek = (by: number) => {
     seekTo((audioRef.current?.currentTime ?? 0) + by);
   };
-  const markLoop = () => {
-    const next = nextLoop(loop, audioRef.current?.currentTime ?? 0);
-    setLoop(next);
-    if (next !== null && next.end !== null) {
-      seekTo(next.start);
+  const toggleLoop = () => {
+    if (playback.duration < LOOP_STEP) {
+      return;
     }
+    setLoop(
+      loop === null
+        ? initialLoop(audioRef.current?.currentTime ?? 0, playback.duration)
+        : null
+    );
   };
   const stop = () => {
     setRequested(false);
@@ -605,7 +576,8 @@ const usePlayback = (rate: number) => {
     toggle,
     seek,
     seekTo,
-    markLoop,
+    toggleLoop,
+    setLoop,
     stop,
   };
 };
@@ -643,6 +615,7 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
   const hotkeys = { enabled: track !== undefined, ignoreInputs: true } as const;
   const loaded = playback.status === "ready";
   const loadedKeys = { enabled: loaded, ignoreInputs: true } as const;
+  const loopable = loaded && playback.duration >= LOOP_STEP;
   useHotkey(practiceBinding("practice.play"), player.toggle, {
     ...hotkeys,
     preventDefault: true,
@@ -661,13 +634,15 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
     },
     loadedKeys
   );
-  useHotkey(practiceBinding("practice.loop"), player.markLoop, loadedKeys);
+  useHotkey(practiceBinding("practice.loop"), player.toggleLoop, {
+    enabled: loopable,
+    ignoreInputs: true,
+  });
 
   if (track === undefined) {
     return null;
   }
   const loading = playback.status === "loading";
-  const timeText = `${formatPlaybackTime(playback.time)} of ${formatPlaybackTime(playback.duration)}`;
 
   return (
     <div className="bg-background sticky bottom-0 z-10">
@@ -707,25 +682,27 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
           </div>
           <PhonePlaybackMenu
             loaded={loaded}
+            canLoop={loopable}
             loop={loop}
             rate={rate}
             onSeek={(by) => {
               player.seek(by);
             }}
             onLoop={() => {
-              player.markLoop();
+              player.toggleLoop();
             }}
             onRate={setRate}
           />
           <TransportControls
             loaded={loaded}
+            canLoop={loopable}
             loop={loop}
             rate={rate}
             onSeek={(by) => {
               player.seek(by);
             }}
             onLoop={() => {
-              player.markLoop();
+              player.toggleLoop();
             }}
             onRate={setRate}
           />
@@ -734,18 +711,16 @@ export const RecordingPlayer = <Track extends RecordingTrack>({
           <span className="text-muted-foreground w-10 shrink-0 text-right text-xs tabular-nums">
             {formatPlaybackTime(playback.time)}
           </span>
-          <Slider
-            variant="scrubber"
-            min={0}
-            max={playback.duration > 0 ? playback.duration : 1}
-            step={0.1}
-            value={playback.time}
+          <PlaybackTimeline
+            time={playback.time}
+            duration={playback.duration}
             disabled={!loaded}
-            thumbLabel="Playback position"
-            thumbValueText={() => timeText}
-            track={<LoopMarks loop={loop} duration={playback.duration} />}
-            onValueChange={(value: number | readonly number[]) => {
-              player.seekTo([value].flat()[0] ?? 0);
+            loop={loop}
+            onSeek={(time) => {
+              player.seekTo(time);
+            }}
+            onLoopChange={(region) => {
+              player.setLoop(region);
             }}
           />
           <span className="text-muted-foreground w-10 shrink-0 text-xs tabular-nums">

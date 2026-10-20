@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { FilePdfReader } from "@/components/schedule/file-pdf-reader";
+import { LoopingAudioPlayer } from "@/components/schedule/looping-audio-player";
 import { PlanFileIconTile } from "@/components/schedule/plan-file-icon";
 import { paneBarClassName } from "@/components/schedule/plan-file-pane-bar";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,7 @@ const FileContent = ({
   data,
   preview,
   canOpen,
+  onRetry,
   onFailed,
 }: {
   file: PlanFile;
@@ -169,6 +171,7 @@ const FileContent = ({
   data: string | undefined;
   preview: boolean;
   canOpen: boolean;
+  onRetry: () => Promise<void>;
   onFailed: () => void;
 }) => {
   if (data !== undefined) {
@@ -195,18 +198,13 @@ const FileContent = ({
   if (kind === "audio") {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
-        <audio
-          key={url}
-          aria-label={file.name}
-          controls
-          preload="metadata"
-          controlsList={file.downloadable ? undefined : "nodownload"}
-          onError={onFailed}
-          className="w-full max-w-md"
-          src={url}
-        >
-          <track kind="captions" />
-        </audio>
+        <LoopingAudioPlayer
+          key={`${file.id}:${url}`}
+          name={file.name}
+          onRetry={onRetry}
+          onFailed={onFailed}
+          url={url}
+        />
       </div>
     );
   }
@@ -339,6 +337,9 @@ export const PlanFileViewer = ({
         data={link.data.data}
         preview={link.data.preview}
         canOpen={canOpen}
+        onRetry={async () => {
+          await link.refetch();
+        }}
         onFailed={() => {
           setMediaFailed(true);
         }}

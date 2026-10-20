@@ -96,7 +96,7 @@ export const PRACTICE_SHORTCUTS = [
   { id: "practice.forward", label: "Forward 5 seconds", binding: "ArrowRight" },
   {
     id: "practice.loop",
-    label: "Loop: mark the start, then the end, then stop",
+    label: "Start or stop looping a section",
     binding: "L",
   },
 ] as const satisfies readonly {
