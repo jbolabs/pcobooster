@@ -213,7 +213,7 @@ const RowContent = (props: RowProps) => {
       </VStack>
       {item.song === null ? null : (
         <NativeLabel font="meta" color="inkSecondary">
-          {item.key?.startingKey ?? item.key?.name ?? "—"}
+          {item.key?.startingKey ?? item.key?.name ?? "No key"}
         </NativeLabel>
       )}
     </HStack>
