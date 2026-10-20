@@ -35,7 +35,7 @@ describe("manual audio recovery", () => {
     let requests = 0;
     vi.stubGlobal(
       "fetch",
-      vi.fn<typeof fetch>(async () => {
+      vi.fn<() => Promise<Response>>(async () => {
         await Promise.resolve();
         requests += 1;
         return Response.json({

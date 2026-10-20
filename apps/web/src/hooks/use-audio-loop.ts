@@ -15,7 +15,8 @@ const resumePlayback = async (audio: HTMLAudioElement) => {
 export const useAudioLoop = (
   audioRef: RefObject<HTMLAudioElement | null>,
   loop: LoopRegion | null,
-  enabled: boolean
+  enabled: boolean,
+  onSeek: (time: number) => void
 ) => {
   useEffect((): (() => void) | undefined => {
     const audio = audioRef.current;
@@ -26,6 +27,7 @@ export const useAudioLoop = (
       if (audio.currentTime >= loop.end || audio.currentTime < loop.start) {
         const { ended } = audio;
         audio.currentTime = loop.start;
+        onSeek(audio.currentTime);
         if (ended) {
           void resumePlayback(audio);
         }
@@ -61,5 +63,5 @@ export const useAudioLoop = (
       audio.removeEventListener("seeked", enforceLoop);
       audio.removeEventListener("ended", enforceLoop);
     };
-  }, [audioRef, enabled, loop]);
+  }, [audioRef, enabled, loop, onSeek]);
 };

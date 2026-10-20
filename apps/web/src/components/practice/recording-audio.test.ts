@@ -156,6 +156,19 @@ describe("shared Practice and chord chart looping", () => {
         ),
         range: container.textContent?.includes("0:30 - 0:45"),
       }).toStrictEqual({ time: 30.1, selected: "true", range: true });
+      const start = container.querySelector('input[aria-label="Loop start"]');
+      if (start === null) {
+        throw new Error("Expected the loop start handle");
+      }
+      await act(async () => {
+        start.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "End", bubbles: true })
+        );
+        await Promise.resolve();
+      });
+      const pausedPlayhead = container.querySelector<HTMLInputElement>(
+        'input[aria-label="Playback position"]'
+      )?.value;
       const end = container.querySelector('input[aria-label="Loop end"]');
       if (end === null) {
         throw new Error("Expected the shared player's loop end handle");
@@ -166,7 +179,7 @@ describe("shared Practice and chord chart looping", () => {
         );
         await Promise.resolve();
       });
-      expect(container.textContent).toContain("0:30 - 2:00");
+      expect(container.textContent).toContain("0:44 - 2:00");
       await act(async () => {
         audio.currentTime = 120;
         Object.defineProperty(audio, "ended", {
@@ -178,9 +191,11 @@ describe("shared Practice and chord chart looping", () => {
       });
       expect({
         time: audio.currentTime,
+        pausedPlayhead,
         playAttempts: play.mock.calls.length,
       }).toStrictEqual({
-        time: 30,
+        time: 44.9,
+        pausedPlayhead: "44.9",
         playAttempts: 2,
       });
       await act(async () => {

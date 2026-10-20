@@ -512,7 +512,7 @@ const usePlayback = (rate: number, autoPlay: boolean) => {
     setPlayback((current) => ({ ...current, time }));
   }, []);
   usePlaybackClock(audioRef, playback.playing, onTime);
-  useAudioLoop(audioRef, loop, playback.status === "ready");
+  useAudioLoop(audioRef, loop, playback.status === "ready", onTime);
 
   const play = () => {
     if (playback.status === "failed") {
