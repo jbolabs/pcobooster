@@ -38,6 +38,7 @@ const buttonSizes = [
   "icon-xs",
   "icon-sm",
   "icon-lg",
+  "icon-xl",
 ] as const;
 
 const sizeKeyPattern = /^ {8}"?([\w-]+)"?:/gmu;

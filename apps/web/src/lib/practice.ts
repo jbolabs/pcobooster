@@ -191,6 +191,27 @@ export const initialLoop = (time: number, duration: number): LoopRegion => {
   return { start, end: Math.min(duration, start + DEFAULT_PASSAGE_SECONDS) };
 };
 
+export type LoopEdge = "start" | "end";
+
+const TENTHS_PER_MINUTE = SECONDS_PER_MINUTE * 10;
+
+/** Absorbs float error so 30.3 stored as 30.2999… still reads 30.3. */
+const TENTH_EPSILON = 1e-6;
+
+/**
+ * A time to the tenth of a second, such as `1:05.2`. It truncates like `formatPlaybackTime`,
+ * so both read the same second.
+ */
+export const formatLoopTime = (seconds: number): string => {
+  const tenths = Number.isFinite(seconds)
+    ? Math.max(0, Math.floor(seconds * 10 + TENTH_EPSILON))
+    : 0;
+  const minutes = Math.floor(tenths / TENTHS_PER_MINUTE);
+  const rest = tenths % TENTHS_PER_MINUTE;
+  const whole = String(Math.floor(rest / 10)).padStart(2, "0");
+  return `${String(minutes)}:${whole}.${String(rest % 10)}`;
+};
+
 /** An arrangement key Planning Center renders a chord chart PDF for. */
 export interface ChartKey {
   readonly id: string;

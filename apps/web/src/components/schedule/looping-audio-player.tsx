@@ -3,7 +3,7 @@ import {
   RecordingPlayer,
 } from "@/components/practice/practice-player";
 
-/** File previews use the same audio timeline as Practice and chord charts. */
+/** File previews play as a now-playing screen on the same timeline as Practice and chord charts. */
 export const LoopingAudioPlayer = ({
   fileId,
   url,
@@ -22,6 +22,7 @@ export const LoopingAudioPlayer = ({
   <RecordingPlayer
     songTitle={name}
     globalControls={false}
+    layout="stage"
     autoPlay={autoPlay}
     tracks={[{ id: fileId, name }]}
     renderAudio={(props) => (

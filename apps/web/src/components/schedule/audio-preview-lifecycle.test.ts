@@ -178,7 +178,7 @@ describe("embedded audio preview ownership and recovery", () => {
       }).toStrictEqual({
         source: "https://audio.example/fresh.mp3",
         time: 40,
-        loop: "Loop 0:40 - 0:55. Adjust the A and B handles to change the loop.",
+        loop: "Loop 0:40 - 0:55. Drag the start and end handles to change the loop.",
       });
     } finally {
       await act(async () => {
