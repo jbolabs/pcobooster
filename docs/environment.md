@@ -52,7 +52,7 @@ The old projects `pcobooster-preview`, `pcobooster-production`, and `worshipadmi
 
 Global names use `pcobooster__<tier>__<purpose>__<KEY>`; bindings keep their familiar key names. Namespace components cannot contain the separator. `scripts/secrets/manifest.ts` defines the keys and command allowlists.
 
-- Production: `BETTER_AUTH_SECRET`, `OAUTH_PROXY_SECRET`, Planning Center OAuth client ID and secret, the three demo credentials, and `POSTHOG_ERASURE_API_KEY` (a PostHog `person:write` key for the [analytics erasure cron](analytics.md#schedule)).
+- Production: `BETTER_AUTH_SECRET`, `OAUTH_PROXY_SECRET`, Planning Center OAuth client ID and secret, the three demo credentials, and `POSTHOG_ERASURE_API_KEY` (a PostHog `person:write` key for the [analytics erasure cron](analytics.md#schedule)). Each comes from Infisical `pcobooster-prod` env `prod` (preview tier: env `preview`) through `bun run secrets:deploy:production` (or `:preview`); see [rollout](ci-cd.md#analytics-erasure-cron).
 - Preview tier: only `OAUTH_PROXY_SECRET` and Planning Center OAuth client ID and secret. Persistent staging consumes this tier too.
 - Each preview or staging signing secret remains an independent `Alchemy.Random` resource, destroyed with its stage. Neither reads the production signing secret.
 - Every centrally owned secret has a retain policy. Product deployments and preview teardown never own its lifecycle.

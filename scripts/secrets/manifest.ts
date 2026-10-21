@@ -31,7 +31,7 @@ export const runtimeSecretKeys = [
   "DEMO_PLANNING_CENTER_CLIENT",
   "DEMO_PLANNING_CENTER_PAT",
   // Production only: the API Worker's analytics erasure cron. A PostHog personal API key limited
-  // to `person:write` on project 614621.
+  // to `person:write` on project 614621, kept in Infisical `pcobooster-prod` env `prod`.
   "POSTHOG_ERASURE_API_KEY",
 ] as const;
 export type RuntimeSecretKey = (typeof runtimeSecretKeys)[number];
