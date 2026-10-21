@@ -199,7 +199,7 @@ const FileContent = ({
   }
   if (kind === "audio") {
     return (
-      <div className="flex flex-1 items-center justify-center p-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
         <LoopingAudioPlayer
           key={`${file.id}:${String(audioPlaybackVersion)}`}
           fileId={file.id}
