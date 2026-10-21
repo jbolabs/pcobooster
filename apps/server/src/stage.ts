@@ -7,6 +7,8 @@ import {
 import * as Alchemy from "alchemy";
 import { Config, Effect } from "effect";
 
+import { trialStagePattern } from "../../../scripts/cloudflare/builds-trial/settings";
+
 const supportedStagePattern = /^(?:prod|staging|local|test|pr-\d+)$/u;
 
 /** Where the API stack test serves the API Worker, clear of every local stage's ports. */
@@ -61,7 +63,7 @@ export const resolveStageSettings = (
   workersSubdomain: string,
   devPortBase: number = DEFAULT_DEV_PORT_BASE
 ): StageSettings => {
-  if (!supportedStagePattern.test(stage)) {
+  if (!supportedStagePattern.test(stage) && !trialStagePattern.test(stage)) {
     throw new Error(`Unsupported deployment stage: ${stage}`);
   }
   const production = stage === "prod";
