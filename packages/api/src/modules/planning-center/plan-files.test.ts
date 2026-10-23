@@ -222,7 +222,15 @@ describe(openPlanFile, () => {
   });
 
   it("rejects a download that isn't a PDF", async () => {
-    const { plans } = planningCenter({ downloadable: true }, { open: SIGNED });
+    const { plans } = planningCenter(
+      {
+        downloadable: true,
+        filename: "Chart.pdf",
+        content_type: "application/pdf",
+        pco_type: "AttachmentS3",
+      },
+      { open: SIGNED }
+    );
     const error = await Effect.runPromise(
       Effect.flip(
         openPlanFile(
@@ -234,6 +242,50 @@ describe(openPlanFile, () => {
     expect(error.message).toBe(
       "This file is not a PDF. Open the original file instead."
     );
+  });
+
+  it("returns a file without a type as a PDF only when its bytes are one", async () => {
+    const untyped = {
+      downloadable: true,
+      filename: "Song - Bb (fixed)",
+      content_type: "application/octet-stream",
+      filetype: "file",
+      pco_type: "AttachmentS3",
+    };
+    const open = async (bytes: Uint8Array | string) =>
+      await Effect.runPromise(
+        openPlanFile(
+          { ...input, as: "pdf" },
+          {
+            plans: planningCenter(untyped, { open: SIGNED }).plans,
+            fetch: respond([new Response(bytes)]),
+          }
+        )
+      );
+    expect([await open(pdfBytes), await open("PK archive")]).toStrictEqual([
+      { url: SIGNED, preview: false, data: btoa("%PDF-1.7 chart") },
+      { url: SIGNED, preview: false },
+    ]);
+  });
+
+  it("opens a Spotify track as its link, though it can't be downloaded", async () => {
+    const { plans } = planningCenter(
+      {
+        downloadable: false,
+        web_streamable: false,
+        filename: "Spotify",
+        content_type: "application/octet-stream",
+        filetype: "audio",
+        pco_type: "AttachmentSpotify",
+      },
+      { open: "https://open.spotify.com/track/abc" }
+    );
+    await expect(
+      Effect.runPromise(openPlanFile(input, { plans, fetch: respond([]) }))
+    ).resolves.toStrictEqual({
+      url: "https://open.spotify.com/track/abc",
+      preview: false,
+    });
   });
 });
 
