@@ -18,7 +18,6 @@ import { PreviewPdfView } from "../../songs/preview-pdf-view";
 import { usePreviewRender } from "../../songs/use-preview-lifecycle";
 import { ReadStatus } from "../read-status";
 import type { PlanIds } from "../reads";
-import { planFileKind } from "./model";
 import { planFileRead } from "./reads";
 
 /** Opening and closing a preview owns the signed link's lifetime. */
@@ -35,7 +34,6 @@ export const PlanFilePreview = ({
   const visible = useReadVisibility();
   const query = useVisibleQuery(planFileRead(context, previewFiles, ids, file));
   const toasts = useToasts();
-  const kind = planFileKind(file);
   const render = usePreviewRender(
     query.data?.uri ?? "",
     query.dataUpdatedAt,
@@ -56,7 +54,8 @@ export const PlanFilePreview = ({
         </View>
       );
     }
-    const { uri } = query.data;
+    // What the file turned out to be: a file without a type may be a PDF.
+    const { uri, kind } = query.data;
     if (kind === "pdf") {
       return (
         <PreviewPdfView

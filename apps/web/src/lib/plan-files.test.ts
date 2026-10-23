@@ -1,10 +1,12 @@
 import type { PlanFile } from "@pcobooster/contracts/http/plan-files";
+import { PLAN_FILE_SAMPLES } from "@pcobooster/contracts/http/plan-files.fixture";
 import type { PlanItem } from "@pcobooster/planning-center-models/types";
 import { describe, expect, it } from "vitest";
 
 import {
   continuingFile,
   groupPlanFiles,
+  opensAsPdf,
   planFileKind,
   sectionPlanFiles,
   youtubeEmbedUrl,
@@ -38,7 +40,58 @@ describe("Plan file types", () => {
     expect(planFileKind({ ...file, filename: "Notes.DOC" })).toBe("document");
     expect(planFileKind({ ...file, filename: "Rehearsal.MP3" })).toBe("audio");
     expect(planFileKind({ ...file, contentType: "image/png" })).toBe("image");
-    expect(planFileKind({ ...file, providerType: "YouTube" })).toBe("link");
+    expect(planFileKind({ ...file, providerType: "AttachmentYoutube" })).toBe(
+      "link"
+    );
+  });
+
+  it("classifies every attachment combination Planning Center returns", () => {
+    expect(
+      Object.fromEntries(
+        PLAN_FILE_SAMPLES.map(({ label, file: sample }) => [
+          label,
+          planFileKind(sample),
+        ])
+      )
+    ).toStrictEqual({
+      "generated chord chart": "pdf",
+      "generated lyrics": "pdf",
+      "generated number chart": "pdf",
+      "generated numeral chart": "pdf",
+      "ChartPro chord chart": "pdf",
+      "ChartPro lyrics": "pdf",
+      "PraiseCharts chart": "pdf",
+      "uploaded PDF": "pdf",
+      // No type but its bytes: the viewer asks for a PDF and falls back to the link.
+      "uploaded PDF without a type": "unknown",
+      "uploaded archive without a type": "unknown",
+      "uploaded Word 97 document": "document",
+      "uploaded Word document": "document",
+      "uploaded zip": "link",
+      "uploaded mp3": "audio",
+      "uploaded m4a": "audio",
+      "uploaded wav": "audio",
+      "uploaded 3gp video": "video",
+      "uploaded mp4 video": "video",
+      "rehearsal mix": "audio",
+      "web link": "link",
+      "YouTube video": "link",
+      "Spotify track": "link",
+    });
+  });
+
+  it("asks for PDF bytes for every file that serves a PDF", () => {
+    expect(
+      PLAN_FILE_SAMPLES.filter(({ file: sample }) => opensAsPdf(sample)).map(
+        ({ label, servesPdf }) => [label, servesPdf]
+      )
+    ).toStrictEqual([
+      ...PLAN_FILE_SAMPLES.filter(({ servesPdf }) => servesPdf).map(
+        ({ label }) => [label, true]
+      ),
+      // Its bytes aren't a PDF, so the server answers with the link alone.
+      ["uploaded archive without a type", false],
+    ]);
   });
 
   it("embeds only validated YouTube IDs on a fixed privacy domain", () => {

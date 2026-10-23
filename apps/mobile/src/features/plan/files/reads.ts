@@ -63,23 +63,30 @@ export const planFileRead = (
       ) {
         throw new Error("This file is too large to preview on this device.");
       }
+      const asksForPdf = kind === "pdf" || kind === "unknown";
       const result = await callForQuery(context, client, (api) =>
         api.planFiles.open({
           params: { ...ids, attachmentId: file.id },
-          query: kind === "pdf" ? { as: "pdf" } : {},
+          query: asksForPdf ? { as: "pdf" } : {},
         })
       );
       const name = safeFileName(file.filename || file.name, "Attachment");
       const folder = `plan-${previewFolderSegment(ids.serviceTypeId, ids.planId, file.id)}`;
-      if (kind === "pdf") {
-        if (result.data === undefined || !isPdfBase64(result.data)) {
+      const pdf =
+        result.data !== undefined && isPdfBase64(result.data)
+          ? result.data
+          : null;
+      // A file without a type is a PDF when its bytes are one; otherwise it opens as its link.
+      if (kind === "pdf" || (kind === "unknown" && pdf !== null)) {
+        if (pdf === null) {
           throw new PreviewError("undrawable");
         }
         return {
+          kind: "pdf" as const,
           uri: writer.writeBase64(
             folder,
             name.endsWith(".pdf") ? name : `${name}.pdf`,
-            result.data
+            pdf
           ),
           name,
         };
@@ -89,12 +96,12 @@ export const planFileRead = (
         throw new PreviewError("insecure-link");
       }
       if (kind === "document") {
-        return { uri: await writer.download(folder, name, url), name };
+        return { kind, uri: await writer.download(folder, name, url), name };
       }
       if (kind === "audio" || kind === "video") {
-        return { uri: await writer.playable(folder, name, url), name };
+        return { kind, uri: await writer.playable(folder, name, url), name };
       }
-      return { uri: url.href, name };
+      return { kind: "link" as const, uri: url.href, name };
     },
     staleTime: (query) => {
       const uri = query.state.data?.uri;

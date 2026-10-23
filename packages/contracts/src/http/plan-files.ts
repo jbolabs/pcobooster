@@ -43,9 +43,37 @@ export const planFilesSchema = Schema.Struct({
   nextOffset: Schema.NullOr(nonNegativeInteger),
 });
 
+/** Attachments that live on another site and open as links, whatever their other fields say. */
+export const PLAN_FILE_LINK_TYPES: ReadonlySet<string> = new Set([
+  "AttachmentLink",
+  "AttachmentYoutube",
+  "AttachmentVimeo",
+  "AttachmentSpotify",
+]);
+
+/** Planning Center calls the file a PDF: by type, extension, or as one of its own chart renders. */
+export const planFileDeclaresPdf = (
+  file: Pick<PlanFile, "contentType" | "filename" | "fileType" | "providerType">
+): boolean =>
+  file.contentType.toLowerCase() === "application/pdf" ||
+  file.filename.toLowerCase().endsWith(".pdf") ||
+  file.fileType.toLowerCase() === "pdf" ||
+  file.providerType.startsWith("AttachmentChart");
+
+/**
+ * A stored file Planning Center gives no type (`application/octet-stream` or none), such as an
+ * upload named without an extension. Only its bytes say what it is.
+ */
+export const planFileIsUntyped = (
+  file: Pick<PlanFile, "contentType" | "providerType">
+): boolean =>
+  !PLAN_FILE_LINK_TYPES.has(file.providerType) &&
+  ["", "application/octet-stream"].includes(file.contentType.toLowerCase());
+
 /**
  * How to open a file: its own link (default), Planning Center's preview of a document, or the
  * PDF itself, fetched by the server so the browser can render it without a cross-origin read.
+ * A file Planning Center doesn't call a PDF comes back as its link alone when it isn't one.
  */
 export const PLAN_FILE_OPEN_MODES = ["link", "preview", "pdf"] as const;
 

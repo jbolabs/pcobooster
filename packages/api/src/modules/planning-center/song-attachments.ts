@@ -3,6 +3,7 @@ import type { PlanningCenterError } from "@pcobooster/api/planning-center/core-c
 import type { PlanningCenterSongsService } from "@pcobooster/api/planning-center/services/songs-service";
 import { ExternalServiceFailure } from "@pcobooster/contracts/faults/external-service-failure";
 import { NotFound } from "@pcobooster/contracts/faults/not-found";
+import { PLAN_FILE_LINK_TYPES } from "@pcobooster/contracts/http/plan-files";
 import type {
   SONG_ATTACHMENT_KINDS,
   songAttachmentLinkInputSchema,
@@ -48,13 +49,6 @@ const notFound = () =>
 /** Planning Center's own chart renders: `AttachmentChart::Chord` per key, `::Lyric` per arrangement. */
 const CHART_TYPE_PREFIX = "AttachmentChart";
 const LYRICS_CHART_TYPE = "AttachmentChart::Lyric";
-/** Files that live on another site. */
-const LINK_TYPES = new Set([
-  "AttachmentLink",
-  "AttachmentYoutube",
-  "AttachmentVimeo",
-  "AttachmentSpotify",
-]);
 
 const PDF_EXTENSIONS = new Set(["pdf"]);
 const IMAGE_EXTENSIONS = new Set([
@@ -168,7 +162,7 @@ export const toSongAttachment = (
   const contentType = text(attributes.content_type);
   const size = attributes.file_size;
   const isLink =
-    LINK_TYPES.has(pcoType) ||
+    PLAN_FILE_LINK_TYPES.has(pcoType) ||
     (filename === "" && text(attributes.linked_url) !== null);
   const linkUrl = isLink
     ? secureLink(text(attributes.linked_url) ?? text(attributes.remote_link))
