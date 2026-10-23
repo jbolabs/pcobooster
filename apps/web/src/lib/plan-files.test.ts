@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   continuingFile,
   groupPlanFiles,
+  opensAsPdf,
   planFileKind,
   sectionPlanFiles,
   youtubeEmbedUrl,
@@ -39,7 +40,9 @@ describe("Plan file types", () => {
     expect(planFileKind({ ...file, filename: "Notes.DOC" })).toBe("document");
     expect(planFileKind({ ...file, filename: "Rehearsal.MP3" })).toBe("audio");
     expect(planFileKind({ ...file, contentType: "image/png" })).toBe("image");
-    expect(planFileKind({ ...file, providerType: "YouTube" })).toBe("link");
+    expect(planFileKind({ ...file, providerType: "AttachmentYoutube" })).toBe(
+      "link"
+    );
   });
 
   it("classifies every attachment combination Planning Center returns", () => {
@@ -79,12 +82,16 @@ describe("Plan file types", () => {
 
   it("asks for PDF bytes for every file that serves a PDF", () => {
     expect(
-      new Set(
-        PLAN_FILE_SAMPLES.filter(({ servesPdf }) => servesPdf).map(
-          ({ file: sample }) => planFileKind(sample)
-        )
+      PLAN_FILE_SAMPLES.filter(({ file: sample }) => opensAsPdf(sample)).map(
+        ({ label, servesPdf }) => [label, servesPdf]
       )
-    ).toStrictEqual(new Set(["pdf", "unknown"]));
+    ).toStrictEqual([
+      ...PLAN_FILE_SAMPLES.filter(({ servesPdf }) => servesPdf).map(
+        ({ label }) => [label, true]
+      ),
+      // Its bytes aren't a PDF, so the server answers with the link alone.
+      ["uploaded archive without a type", false],
+    ]);
   });
 
   it("embeds only validated YouTube IDs on a fixed privacy domain", () => {

@@ -2,6 +2,7 @@ import type { PlanFile } from "@pcobooster/contracts/http/plan-files";
 import {
   AudioLines,
   Clapperboard,
+  File,
   FileMusic,
   FileText,
   Image,
@@ -19,6 +20,7 @@ const kindIcon: Record<FileKind, LucideIcon> = {
   image: Image,
   document: FileText,
   link: Link2,
+  unknown: File,
 };
 
 const isChart = (file: PlanFile) =>

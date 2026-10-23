@@ -252,17 +252,20 @@ describe(openPlanFile, () => {
       filetype: "file",
       pco_type: "AttachmentS3",
     };
-    const open = async (bytes: Uint8Array | string) =>
+    const open = async (body: string) =>
       await Effect.runPromise(
         openPlanFile(
           { ...input, as: "pdf" },
           {
             plans: planningCenter(untyped, { open: SIGNED }).plans,
-            fetch: respond([new Response(bytes)]),
+            fetch: respond([new Response(body)]),
           }
         )
       );
-    expect([await open(pdfBytes), await open("PK archive")]).toStrictEqual([
+    expect([
+      await open("%PDF-1.7 chart"),
+      await open("PK archive"),
+    ]).toStrictEqual([
       { url: SIGNED, preview: false, data: btoa("%PDF-1.7 chart") },
       { url: SIGNED, preview: false },
     ]);

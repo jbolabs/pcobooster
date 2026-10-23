@@ -98,7 +98,11 @@ describe("native plan preparation", () => {
     ).toBe("pdf");
     expect(
       planFileKind(
-        file("recording", { filename: "Rehearsal.M4A", contentType: "" })
+        file("recording", {
+          filename: "Rehearsal.M4A",
+          contentType: "",
+          fileType: "audio",
+        })
       )
     ).toBe("audio");
   });

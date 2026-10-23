@@ -1,26 +1,29 @@
+import {
+  PLAN_FILE_LINK_TYPES,
+  planFileDeclaresPdf,
+  planFileIsUntyped,
+} from "@pcobooster/contracts/http/plan-files";
 import type { PlanFile } from "@pcobooster/contracts/http/plan-files";
 import type { PlanItem } from "@pcobooster/planning-center-models/types";
 
+/** `unknown`: Planning Center gives no type, so the viewer asks for a PDF and falls back to the link. */
 export type FileKind =
   | "pdf"
   | "audio"
   | "video"
   | "image"
   | "document"
-  | "link";
+  | "link"
+  | "unknown";
 export const planFileKind = (file: PlanFile): FileKind => {
   const type = file.contentType.toLowerCase();
   const filename = file.filename.toLowerCase();
   const extension = file.fileType.toLowerCase();
-  if (
-    type === "application/pdf" ||
-    filename.endsWith(".pdf") ||
-    extension === "pdf" ||
-    ["AttachmentChart::Chord", "AttachmentChart::Lyric"].includes(
-      file.providerType
-    )
-  ) {
+  if (planFileDeclaresPdf(file)) {
     return "pdf";
+  }
+  if (PLAN_FILE_LINK_TYPES.has(file.providerType)) {
+    return "link";
   }
   if (
     type.startsWith("audio/") ||
@@ -41,8 +44,11 @@ export const planFileKind = (file: PlanFile): FileKind => {
   if (/\.(?:docx?|pptx?|xlsx?|txt|rtf|pages)$/u.test(filename)) {
     return "document";
   }
-  return "link";
+  return planFileIsUntyped(file) ? "unknown" : "link";
 };
+/** The viewer asks the server for PDF bytes: declared PDFs, and files whose bytes may be one. */
+export const opensAsPdf = (file: PlanFile): boolean =>
+  ["pdf", "unknown"].includes(planFileKind(file));
 export const fileBelongsToItem = (file: PlanFile, item: PlanItem): boolean =>
   (file.ownerType === "Item" && file.ownerId === item.id) ||
   (file.ownerType === "Song" && file.ownerId === item.song?.id) ||
@@ -104,10 +110,13 @@ export const planFileSection = (file: PlanFile): FileSection => {
   if (file.providerType.startsWith("AttachmentChart") || kind === "pdf") {
     return "charts";
   }
-  if (kind === "audio") {
+  if (kind === "audio" || file.providerType === "AttachmentSpotify") {
     return "audio";
   }
-  if (kind === "video" || file.providerType === "AttachmentYoutube") {
+  if (
+    kind === "video" ||
+    ["AttachmentYoutube", "AttachmentVimeo"].includes(file.providerType)
+  ) {
     return "video";
   }
   return "other";

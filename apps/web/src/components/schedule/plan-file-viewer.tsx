@@ -27,7 +27,7 @@ import {
   useOpenPlanFileOriginal,
   usePlanFileLink,
 } from "@/hooks/use-plan-files";
-import { planFileKind, youtubeEmbedUrl } from "@/lib/plan-files";
+import { opensAsPdf, planFileKind, youtubeEmbedUrl } from "@/lib/plan-files";
 import { cn } from "@/lib/utils";
 
 /** The song a viewer dialog is on, which phones show in the file's own bar. */
@@ -285,7 +285,7 @@ export const PlanFileViewer = ({
   trailing?: ReactNode;
 }) => {
   const kind = planFileKind(file);
-  const [pdf, setPdf] = useState(kind === "pdf");
+  const [pdf, setPdf] = useState(() => opensAsPdf(file));
   const [mediaFailed, setMediaFailed] = useState(false);
   const [audioPlaybackVersion, setAudioPlaybackVersion] = useState(0);
   let mode: PlanFileOpenMode = "link";
