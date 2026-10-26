@@ -330,7 +330,7 @@ export const KeyTransitionsClosing = () => (
   </section>
 );
 
-/** A section's heading column beside its content, as the site's other long sections lay out. */
+/** A heading over a section of key change links, as wide as the finder card above it. */
 export const LinkSection = ({
   title,
   intro,
@@ -340,13 +340,17 @@ export const LinkSection = ({
   intro: ReactNode;
   children: ReactNode;
 }) => (
-  <section className="wrap pt-section grid grid-cols-1 gap-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] md:gap-12 lg:gap-24">
-    <div className="grid grid-cols-1 content-start gap-5 self-start md:sticky md:top-24">
-      <h2 className="text-headline">{title}</h2>
-      {intro}
-      <LevelLegend />
+  <section className="wrap pt-section">
+    <div className="mx-auto grid max-w-[920px] grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+        <div className="grid grid-cols-1 gap-3">
+          <h2 className="text-headline">{title}</h2>
+          {intro}
+        </div>
+        <LevelLegend />
+      </div>
+      {children}
     </div>
-    {children}
   </section>
 );
 

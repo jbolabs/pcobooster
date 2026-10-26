@@ -110,17 +110,19 @@ const PairPage = () => {
       <LinkSection
         title="More key changes"
         intro={
-          <TextLink href={KEY_TRANSITIONS_PATH}>
-            Every key change in one place
-          </TextLink>
+          <p className="flex flex-wrap gap-x-6 gap-y-2">
+            {from === to ? null : (
+              <TextLink href={pairPath({ from: to, to: from })}>
+                The other way around: {to} to {from}
+              </TextLink>
+            )}
+            <TextLink href={KEY_TRANSITIONS_PATH}>
+              Every key change in one place
+            </TextLink>
+          </p>
         }
       >
         <div className="grid grid-cols-1 gap-4">
-          {from === to ? null : (
-            <RelatedCard title="The other way around">
-              <PairLinks pairs={[{ from: to, to: from }]} />
-            </RelatedCard>
-          )}
           <RelatedCard title={`From ${from} into`}>
             <PairLinks pairs={others.filter((other) => other.from === from)} />
           </RelatedCard>
