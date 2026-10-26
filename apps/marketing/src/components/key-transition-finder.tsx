@@ -1,8 +1,14 @@
-import { ArrowLeftRight, ArrowRight } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  ArrowUpDown,
+  ChevronRight,
+} from "lucide-react";
 
 import {
-  ALL_KEYS,
   KEY_PAIRS,
+  MAJOR_KEYS,
+  MINOR_KEYS,
   isMinorChoice,
   keyChoicesFor,
   keyLongName,
@@ -104,7 +110,8 @@ export const KeyTransitionFinder = ({
                 onChange({ from: to, to: from });
               }}
             >
-              <ArrowLeftRight aria-hidden="true" />
+              <ArrowUpDown aria-hidden="true" className="md:hidden" />
+              <ArrowLeftRight aria-hidden="true" className="hidden md:block" />
             </Button>
             <KeyPicker
               label="Next song"
@@ -165,23 +172,25 @@ export const KeyTransitionFinder = ({
             ))}
           </ol>
           {alternates.length === 0 ? null : (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground mr-1 text-sm">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span className="text-muted-foreground text-sm">
                 Or move the next song to
               </span>
-              {alternates.map((alternate) => (
-                <Button
-                  key={alternate}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    onChange({ from, to: alternate });
-                  }}
-                >
-                  {alternate}
-                </Button>
-              ))}
+              <span className="flex flex-wrap gap-2">
+                {alternates.map((alternate) => (
+                  <Button
+                    key={alternate}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onChange({ from, to: alternate });
+                    }}
+                  >
+                    {alternate}
+                  </Button>
+                ))}
+              </span>
             </div>
           )}
           <p className="border-border text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-5 pb-1 text-sm">
@@ -211,11 +220,11 @@ export const KeyTransitionsClosing = () => (
 
 /** Plain links to other changes' pages, labelled the way people search ("G to A"). */
 export const PairLinks = ({ pairs }: { pairs: readonly KeyPair[] }) => (
-  <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+  <ul className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-x-4 text-sm">
     {pairs.map((pair) => (
       <li key={pairPath(pair)}>
         <a
-          className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+          className="text-muted-foreground hover:text-foreground block py-1.5 underline-offset-4 hover:underline"
           href={pairPath(pair)}
         >
           {pair.from} to {pair.to}
@@ -225,27 +234,38 @@ export const PairLinks = ({ pairs }: { pairs: readonly KeyPair[] }) => (
   </ul>
 );
 
+const KeyDisclosures = ({ keys }: { keys: readonly KeyChoice[] }) => (
+  <div className="grid grid-cols-1 content-start">
+    {keys.map((from) => (
+      <details key={from} className="border-border group border-t">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 font-medium [&::-webkit-details-marker]:hidden">
+          From {keyLongName(from)}
+          <ChevronRight
+            aria-hidden="true"
+            className="text-muted-foreground size-4 shrink-0 group-open:rotate-90"
+          />
+        </summary>
+        <div className="pb-4">
+          <PairLinks
+            pairs={KEY_PAIRS.filter(
+              (pair) => pair.from === from && pair.to !== from
+            )}
+          />
+        </div>
+      </details>
+    ))}
+  </div>
+);
+
 /** Every change's page, grouped by starting key, so each one is a link away from the finder. */
 export const AllTransitions = () => (
   <section className="wrap pt-section grid grid-cols-1 gap-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] md:gap-12 lg:gap-24">
     <div className="self-start md:sticky md:top-24">
       <h2 className="text-headline">Every key change</h2>
     </div>
-    <div className="grid grid-cols-1 content-start gap-x-8 sm:grid-flow-col sm:grid-cols-2 sm:grid-rows-12">
-      {ALL_KEYS.map((from) => (
-        <details key={from} className="border-border group border-t py-3">
-          <summary className="cursor-pointer font-medium">
-            From {keyLongName(from)}
-          </summary>
-          <div className="pt-4">
-            <PairLinks
-              pairs={KEY_PAIRS.filter(
-                (pair) => pair.from === from && pair.to !== from
-              )}
-            />
-          </div>
-        </details>
-      ))}
+    <div className="grid grid-cols-1 items-start gap-x-8 sm:grid-cols-2">
+      <KeyDisclosures keys={MAJOR_KEYS} />
+      <KeyDisclosures keys={MINOR_KEYS} />
     </div>
   </section>
 );
