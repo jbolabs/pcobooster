@@ -79,10 +79,9 @@ export const scannerProbeRule: Cloudflare.Ruleset.Rule = {
  * datacenter networks: since October 13, 2026 that includes every GitHub runner, so CI verifies
  * production through its workers.dev origin and the Cloudflare API, never through this zone.
  *
- * The AI crawler policy (block training crawlers; allow AI search and assistant fetches) is set
- * by hand with `cf bot-management update --ai-training block --ai-search disabled --ai-user
- * disabled`: Alchemy 2.0.0-beta.79 only exposes the deprecated `aiBotsProtection` toggle. This
- * resource leaves those fields alone because it never sets them.
+ * The AI crawler policy blocks model-training crawlers and leaves AI search crawlers (such as
+ * OAI-SearchBot and Claude-SearchBot) and assistant fetches unblocked, so the public pages can be
+ * found and cited. `disabled` means Cloudflare takes no action on that class.
  */
 export const protectZoneEdge = Effect.fn("protectZoneEdge")(
   function* protectZoneEdge(idPrefix: string, zone: Cloudflare.Zone.Zone) {
@@ -91,6 +90,9 @@ export const protectZoneEdge = Effect.fn("protectZoneEdge")(
       // Cloudflare rejects Bot Fight Mode unless JavaScript detections are on too.
       enableJs: true,
       fightMode: true,
+      aiSearch: "disabled",
+      aiUser: "disabled",
+      aiTraining: "block",
     });
     // Owns the zone's whole custom firewall phase.
     yield* Cloudflare.Ruleset.Ruleset(`${idPrefix}Firewall`, {

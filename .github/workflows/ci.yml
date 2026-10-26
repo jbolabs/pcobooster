@@ -297,6 +297,11 @@ jobs:
             echo "::notice::Skipping the production deploy: main has moved on to $current."
             echo "deploy=false" >> "$GITHUB_OUTPUT"
           fi
+      # Records the live pages so the IndexNow step below submits only what this deploy changed.
+      # Warns and continues on failure; never fails the deploy.
+      - name: Snapshot public pages for IndexNow
+        if: steps.current.outputs.deploy == 'true'
+        run: bun scripts/search/indexnow.ts snapshot https://pcobooster-prod-web.jakebodea.workers.dev "$RUNNER_TEMP/indexnow-before.json"
       - name: Deploy production revision
         if: steps.current.outputs.deploy == 'true'
         run: bun alchemy deploy --stage prod --no-input --yes
@@ -309,6 +314,10 @@ jobs:
       - name: Verify pcobooster.com routes to the production Worker
         if: steps.current.outputs.deploy == 'true'
         run: bun scripts/cloudflare/verify-custom-domains.ts pcobooster-prod-web pcobooster.com www.pcobooster.com
+      # Warns and continues on failure; never fails the deploy.
+      - name: Submit changed public pages to IndexNow
+        if: steps.current.outputs.deploy == 'true'
+        run: bun scripts/search/indexnow.ts submit https://pcobooster-prod-web.jakebodea.workers.dev "$RUNNER_TEMP/indexnow-before.json"
       # Warns and skips when POSTHOG_ANNOTATION_API_KEY is absent; never fails the deploy.
       - name: Mark the deploy on PostHog charts
         if: steps.current.outputs.deploy == 'true'
