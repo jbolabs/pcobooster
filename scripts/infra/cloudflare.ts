@@ -6,7 +6,7 @@
  * store) with a token-administration credential, only `AccountApiToken` calls use
  * `CLOUDFLARE_TOKEN_ADMIN_API_TOKEN`. Everything else keeps the user's Alchemy profile.
  */
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Provider from "alchemy/Provider";
 import type { Redacted } from "effect";
 import { Config, Effect, Layer, Option } from "effect";

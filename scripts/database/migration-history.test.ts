@@ -2,13 +2,13 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
   applyAlchemyFormat,
   MigrationError,
   readMigrationRecords,
-} from "alchemy/SQL/Migrations/index";
-import type { SqlExecutor } from "alchemy/SQL/Migrations/index";
+} from "@alchemy.run/sql/Migrations/index";
+import type { SqlExecutor } from "@alchemy.run/sql/Migrations/index";
+import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 

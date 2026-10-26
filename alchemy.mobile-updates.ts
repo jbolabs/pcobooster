@@ -8,12 +8,12 @@
  */
 import { readFileSync } from "node:fs";
 
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import {
   assetKey,
   publishedUpdateKey,
 } from "@pcobooster/contracts/mobile-updates";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
 import * as State from "alchemy/State";
 import { Config, Effect, Layer } from "effect";
 

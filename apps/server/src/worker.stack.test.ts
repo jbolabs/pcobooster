@@ -13,6 +13,8 @@
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import path from "node:path";
 
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle";
 import { assert } from "@effect/vitest";
 import { demoSessionToken } from "@pcobooster/api/auth/demo-access";
 import { resolveReleaseVersion } from "@pcobooster/api/config/release";
@@ -28,8 +30,6 @@ import { InternalError } from "@pcobooster/contracts/faults/internal-error";
 import { NotFound } from "@pcobooster/contracts/faults/not-found";
 import { RateLimited } from "@pcobooster/contracts/faults/rate-limited";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle";
 import { evalStack } from "alchemy/Stack";
 import * as State from "alchemy/State";
 import * as Test from "alchemy/Test/Vitest";

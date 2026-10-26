@@ -1,3 +1,4 @@
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { clientClosedOutcome } from "@pcobooster/contracts/faults";
 /**
  * What happens to a product call when its caller disconnects. The call runs on its own fiber,
@@ -8,7 +9,6 @@ import { clientClosedOutcome } from "@pcobooster/contracts/faults";
  * for it (`waitUntil` in workerd), and the request answers 499, which no one receives.
  */
 import { API_PREFIX } from "@pcobooster/contracts/http/route";
-import * as Cloudflare from "alchemy/Cloudflare";
 import { Effect, Fiber, Option } from "effect";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";

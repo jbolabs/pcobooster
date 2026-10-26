@@ -1,3 +1,4 @@
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { deploymentTier } from "@pcobooster/api/config/feature-flags";
 import type { ServerEnvironment } from "@pcobooster/api/config/server-config";
 import { resolveServerConfig } from "@pcobooster/api/config/server-config";
@@ -10,7 +11,6 @@ import { PlanningCenterRatePacer } from "@pcobooster/api/planning-center/rate-pa
 import type { SharedReadStore } from "@pcobooster/api/planning-center/services/shared-read-store";
 import { createServerDependencies } from "@pcobooster/api/server";
 import type { FeatureFlagSource } from "@pcobooster/api/server";
-import * as Cloudflare from "alchemy/Cloudflare";
 import { Config, Effect, Layer, Redacted, Scope } from "effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 

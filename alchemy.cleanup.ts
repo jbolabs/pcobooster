@@ -1,11 +1,11 @@
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle";
 /**
  * Teardown for pull request stages. It shares the application stack's name and state but
  * declares no resources, so destroying a stage needs only Cloudflare credentials: no app
  * secrets, no build, and no dependence on configuration that `main` added after the PR opened.
  */
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle";
 import { Effect, Layer } from "effect";
 
 import { isPreviewStage } from "./scripts/cloudflare/stages";

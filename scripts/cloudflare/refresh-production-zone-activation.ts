@@ -9,10 +9,10 @@
  */
 import { isDeepStrictEqual } from "node:util";
 
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import { isoDateTimeWithOffset } from "@pcobooster/contracts/http/schema";
 import * as Alchemist from "alchemy/Alchemist";
 import { AuthProviders } from "alchemy/Auth/AuthProvider";
-import * as Cloudflare from "alchemy/Cloudflare";
 import * as Provider from "alchemy/Provider";
 import * as State from "alchemy/State";
 import { Context, Effect, Layer, Option, Schema } from "effect";
@@ -165,7 +165,10 @@ if (import.meta.main) {
     Effect.gen(function* refreshZoneActivation() {
       // The app stack also loads app secrets and prepares build inputs. Resolve only the
       // same default Cloudflare store and provider services needed for this single zone read.
-      const store = yield* Alchemist.State.store({ backend: "cloudflare" });
+      const store = yield* Alchemist.State.store({
+        _tag: "Provider",
+        backend: "cloudflare",
+      });
       const context = Context.merge(
         yield* Effect.context(),
         yield* Layer.build(

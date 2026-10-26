@@ -9,13 +9,15 @@
     "test:load": "vitest run --root ../.. --config apps/server/vitest.load.config.ts"
   },
   "dependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.84",
+    "@alchemy.run/drizzle": "2.0.0-beta.84",
     "@opentelemetry/api": "^1.9.0",
     "@pcobooster/api": "workspace:*",
     "@pcobooster/config": "workspace:*",
     "@pcobooster/contracts": "workspace:*",
-    "alchemy": "2.0.0-beta.83",
+    "alchemy": "2.0.0-beta.84",
     "better-auth": "1.7.10",
-    "effect": "4.0.5"
+    "effect": "4.0.6"
   },
   "devDependencies": {
     "@pcobooster/client": "workspace:*",

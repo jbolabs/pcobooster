@@ -67,10 +67,15 @@
     "drizzle-orm": "1.0.0-rc.5-ab785fc"
   },
   "devDependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.84",
+    "@alchemy.run/drizzle": "2.0.0-beta.84",
+    "@alchemy.run/github": "2.0.0-beta.84",
+    "@alchemy.run/infisical": "2.0.0-beta.84",
+    "@alchemy.run/sql": "2.0.0-beta.84",
     "@cloudflare/workers-types": "5.20261016.1",
-    "@effect/platform-bun": "4.0.5",
-    "@effect/platform-node": "4.0.5",
-    "@effect/vitest": "4.0.5",
+    "@effect/platform-bun": "4.0.6",
+    "@effect/platform-node": "4.0.6",
+    "@effect/vitest": "4.0.6",
     "@pcobooster/analytics": "workspace:*",
     "@pcobooster/api": "workspace:*",
     "@pcobooster/client": "workspace:*",
@@ -80,9 +85,9 @@
     "@shadcn/lint": "0.2.1",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
-    "alchemy": "2.0.0-beta.83",
+    "alchemy": "2.0.0-beta.84",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
-    "effect": "4.0.5",
+    "effect": "4.0.6",
     "happy-dom": "^21.0.4",
     "lefthook": "^2.2.1",
     "miniflare": "5.20260921.0-alpha",
@@ -103,7 +108,8 @@
   },
   "packageManager": "bun@1.4.2",
   "patchedDependencies": {
-    "better-auth@1.7.10": "patches/better-auth@1.7.10.patch"
+    "better-auth@1.7.10": "patches/better-auth@1.7.10.patch",
+    "@alchemy.run/cloudflare@2.0.0-beta.84": "patches/@alchemy.run%2Fcloudflare@2.0.0-beta.84.patch"
   },
   "trustedDependencies": [
     "esbuild",

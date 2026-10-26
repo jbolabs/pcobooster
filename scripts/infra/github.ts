@@ -1,5 +1,6 @@
+import * as GitHub from "@alchemy.run/github";
 /**
- * GitHub pieces of the CI control plane that `alchemy/GitHub` does not cover on its own.
+ * GitHub pieces of the CI control plane that `@alchemy.run/github` does not cover on its own.
  *
  * - `GitHubRuleset` manages a repository ruleset with GitHub's own rule payloads. Alchemy's
  *   `GitHub.Ruleset` cannot express merge queues or allowed merge methods, and it cannot find an
@@ -13,7 +14,6 @@ import { Resource } from "alchemy";
 import type { ResourceClassLike, ResourceLike } from "alchemy";
 import { Unowned } from "alchemy/AdoptPolicy";
 import { isResolved } from "alchemy/Diff";
-import * as GitHub from "alchemy/GitHub";
 import * as Provider from "alchemy/Provider";
 import { Effect, Layer, Option, Schema } from "effect";
 import { FetchHttpClient } from "effect/http";
