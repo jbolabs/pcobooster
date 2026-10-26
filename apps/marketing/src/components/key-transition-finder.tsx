@@ -1,27 +1,85 @@
-import {
-  ArrowLeftRight,
-  ArrowRight,
-  ArrowUpDown,
-  ChevronRight,
-} from "lucide-react";
+import type { KeyTransitionLevel } from "@pcobooster/planning-center-models/key-transition-advice";
+import { ArrowLeftRight, ArrowRight } from "lucide-react";
+import type { ReactNode } from "react";
 
 import {
   KEY_PAIRS,
   MAJOR_KEYS,
   MINOR_KEYS,
   isMinorChoice,
-  keyChoicesFor,
   keyLongName,
   pairPath,
-  switchMode,
 } from "../lib/key-transition-pages";
 import type { KeyChoice, KeyPair } from "../lib/key-transition-pages";
-import { LEVELS, keyTransitionAdvice } from "../lib/key-transition-tool";
+import {
+  LEVELS,
+  keyChangeLevel,
+  keyTransitionAdvice,
+} from "../lib/key-transition-tool";
 import { ActionLink, TextLink } from "./site";
-import { Button } from "./ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "./ui/accordion";
+import { Badge } from "./ui/badge";
+import { Button, LinkButton } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+} from "./ui/select";
 
-const KeyPicker = ({
+const KEY_GROUPS = [
+  { label: "Major", keys: MAJOR_KEYS },
+  { label: "Minor", keys: MINOR_KEYS },
+] as const;
+
+const LEVEL_ORDER: readonly KeyTransitionLevel[] = [
+  "smooth",
+  "worth-a-look",
+  "rough",
+];
+
+const LevelDot = ({ level }: { level: KeyTransitionLevel }) => (
+  <span
+    aria-hidden="true"
+    className={`size-2 shrink-0 rounded-full ${LEVELS[level].dot}`}
+  />
+);
+
+/** What the dots on the key change links mean. */
+const LevelLegend = () => (
+  <ul className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
+    {LEVEL_ORDER.map((level) => (
+      <li key={level} className="inline-flex items-center gap-1.5">
+        <LevelDot level={level} />
+        {LEVELS[level].label}
+      </li>
+    ))}
+  </ul>
+);
+
+/** The key's name with its mode set apart ("Bb" and "major"); phones show the short "Bbm". */
+const KeyName = ({ choice }: { choice: KeyChoice }) => {
+  const minor = isMinorChoice(choice);
+  return (
+    <>
+      {minor ? choice.slice(0, -1) : choice}
+      {minor ? <span className="sm:hidden">m</span> : null}
+      <span className="text-muted-foreground ml-1.5 hidden text-base tracking-normal sm:inline">
+        {minor ? "minor" : "major"}
+      </span>
+    </>
+  );
+};
+
+const KeySelect = ({
   label,
   value,
   onChange,
@@ -29,52 +87,90 @@ const KeyPicker = ({
   label: string;
   value: KeyChoice;
   onChange: (choice: KeyChoice) => void;
-}) => {
-  const minor = isMinorChoice(value);
-  return (
-    <div className="grid min-w-0 grid-cols-1 gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-base font-medium">{label}</p>
-        <fieldset className="flex gap-1">
-          <legend className="sr-only">{label} mode</legend>
-          {[false, true].map((option) => (
-            <Button
-              key={String(option)}
-              type="button"
-              size="sm"
-              variant={option === minor ? "secondary" : "ghost"}
-              aria-pressed={option === minor}
-              onClick={() => {
-                if (option !== minor) {
-                  onChange(switchMode(value));
-                }
-              }}
-            >
-              {option ? "Minor" : "Major"}
-            </Button>
-          ))}
-        </fieldset>
-      </div>
-      <fieldset className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-        <legend className="sr-only">{label} key</legend>
-        {keyChoicesFor(minor).map((choice) => (
-          <Button
-            key={choice}
-            type="button"
-            variant={choice === value ? "default" : "outline"}
-            aria-pressed={choice === value}
-            aria-label={`${label}: ${choice}`}
-            onClick={() => {
-              onChange(choice);
-            }}
-          >
-            {choice}
-          </Button>
+}) => (
+  <Select<KeyChoice>
+    value={value}
+    onValueChange={(choice) => {
+      if (choice !== null) {
+        onChange(choice);
+      }
+    }}
+  >
+    <SelectTrigger aria-label={`${label}: ${keyLongName(value)}`} size="field">
+      <span className="grid min-w-0 grid-cols-1 gap-0.5 text-left">
+        <span className="text-muted-foreground text-xs font-medium">
+          {label}
+        </span>
+        <span className="font-book truncate text-2xl tracking-tight">
+          <KeyName choice={value} />
+        </span>
+      </span>
+    </SelectTrigger>
+    <SelectContent className="min-w-64">
+      <div className="grid grid-cols-2 gap-x-1">
+        {KEY_GROUPS.map((group) => (
+          <SelectGroup key={group.label}>
+            <SelectLabel>{group.label}</SelectLabel>
+            {group.keys.map((choice) => (
+              <SelectItem key={choice} value={choice}>
+                {choice}
+              </SelectItem>
+            ))}
+          </SelectGroup>
         ))}
-      </fieldset>
-    </div>
+      </div>
+    </SelectContent>
+  </Select>
+);
+
+/**
+ * A link to another change's page. It stays a real link, so every pair is crawlable, and on
+ * the finder it can instead update the pair in place.
+ */
+const PairChip = ({
+  pair,
+  children,
+  onSelect,
+}: {
+  pair: KeyPair;
+  children: ReactNode;
+  onSelect?: (pair: KeyPair) => void;
+}) => {
+  const level = keyChangeLevel(pair.from, pair.to);
+  return (
+    <LinkButton
+      href={pairPath(pair)}
+      variant="outline"
+      size="sm"
+      title={LEVELS[level].label}
+      className="pointer-coarse:h-10"
+      onClick={
+        onSelect === undefined
+          ? undefined
+          : (event) => {
+              event.preventDefault();
+              onSelect(pair);
+            }
+      }
+    >
+      <LevelDot level={level} />
+      {children}
+    </LinkButton>
   );
 };
+
+/** Links to other changes' pages, labelled the way people search ("G to A"). */
+export const PairLinks = ({ pairs }: { pairs: readonly KeyPair[] }) => (
+  <ul className="text-foreground flex flex-wrap gap-2">
+    {pairs.map((pair) => (
+      <li key={pairPath(pair)}>
+        <PairChip pair={pair}>
+          {pair.from} to {pair.to}
+        </PairChip>
+      </li>
+    ))}
+  </ul>
+);
 
 /**
  * Two key pickers and the advice for the change between them. The page owns the pair: the
@@ -92,114 +188,130 @@ export const KeyTransitionFinder = ({
     <section aria-label="Key transition finder" className="wrap mt-12 md:mt-16">
       <Card className="mx-auto max-w-[920px]">
         <CardContent>
-          <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-6">
-            <KeyPicker
-              label="First song"
-              value={from}
-              onChange={(choice) => {
-                onChange({ from: choice, to });
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label="Swap the two keys"
-              className="justify-self-center md:mt-10"
-              onClick={() => {
-                onChange({ from: to, to: from });
-              }}
+          <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 md:gap-4">
+              <KeySelect
+                label="First song"
+                value={from}
+                onChange={(choice) => {
+                  onChange({ from: choice, to });
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Swap the two keys"
+                onClick={() => {
+                  onChange({ from: to, to: from });
+                }}
+              >
+                <ArrowLeftRight aria-hidden="true" />
+              </Button>
+              <KeySelect
+                label="Next song"
+                value={to}
+                onChange={(choice) => {
+                  onChange({ from, to: choice });
+                }}
+              />
+            </div>
+            <div
+              className="border-border grid grid-cols-1 gap-6 border-t pt-6"
+              aria-live="polite"
             >
-              <ArrowUpDown aria-hidden="true" className="md:hidden" />
-              <ArrowLeftRight aria-hidden="true" className="hidden md:block" />
-            </Button>
-            <KeyPicker
-              label="Next song"
-              value={to}
-              onChange={(choice) => {
-                onChange({ from, to: choice });
-              }}
-            />
+              <div className="grid grid-cols-1 gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  <h2 className="font-book flex items-center gap-3 text-3xl tracking-tight md:text-4xl">
+                    {from}
+                    <ArrowRight
+                      aria-hidden="true"
+                      className="text-muted-foreground size-6"
+                    />
+                    <span className="sr-only"> into </span>
+                    {to}
+                  </h2>
+                  <Badge variant="outline">
+                    <LevelDot level={rating.level} />
+                    {level.label}
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground text-base">
+                  {rating.reason}.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                <h3 className="text-muted-foreground text-sm font-medium">
+                  {suggestions.length === 1
+                    ? "One way to play it"
+                    : `${suggestions.length} ways to play it`}
+                </h3>
+                <ol className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {suggestions.map((suggestion, index) => (
+                    <li
+                      key={suggestion.id}
+                      className="bg-muted/60 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-3xl p-5"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="bg-background ring-foreground/10 text-foreground flex size-6 items-center justify-center rounded-full text-xs font-semibold ring-1"
+                      >
+                        {index + 1}
+                      </span>
+                      <h4 className="text-base leading-6 font-medium">
+                        {suggestion.title}
+                      </h4>
+                      <p className="text-muted-foreground col-start-2 text-sm leading-relaxed">
+                        {suggestion.segments.map((segment, segmentIndex) =>
+                          segment.kind === "chord" ? (
+                            // oxlint-disable-next-line react/no-array-index-key -- segments are a fixed sentence
+                            <strong
+                              key={segmentIndex}
+                              className="bg-background text-foreground ring-foreground/10 rounded-md px-1 py-px font-semibold ring-1"
+                            >
+                              {segment.text}
+                            </strong>
+                          ) : (
+                            // oxlint-disable-next-line react/no-array-index-key -- segments are a fixed sentence
+                            <span key={segmentIndex}>{segment.text}</span>
+                          )
+                        )}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              {alternates.length === 0 ? null : (
+                <div className="bg-brand-soft/50 grid grid-cols-1 gap-3 rounded-3xl p-5 md:flex md:items-center md:justify-between">
+                  <p className="text-sm">
+                    <span className="font-medium">Want it smoother?</span>{" "}
+                    <span className="text-muted-foreground">
+                      Move the next song to a nearby key.
+                    </span>
+                  </p>
+                  <ul className="flex flex-wrap gap-2">
+                    {alternates.map((alternate) => (
+                      <li key={alternate}>
+                        <PairChip
+                          pair={{ from, to: alternate }}
+                          onSelect={onChange}
+                        >
+                          {alternate}
+                        </PairChip>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="border-border text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-5 text-sm">
+                PCOBooster checks every key change in your Planning Center plan.
+                <TextLink href="/services" data-analytics-cta="key-transitions">
+                  Open PCOBooster
+                </TextLink>
+              </p>
+            </div>
           </div>
         </CardContent>
-        <div
-          className="border-border mx-6 grid grid-cols-1 gap-6 border-t pt-8"
-          aria-live="polite"
-        >
-          <div className="grid grid-cols-1 gap-2">
-            <h2 className="flex flex-wrap items-center gap-x-4 gap-y-2 text-3xl tracking-tight">
-              <span>
-                {from}{" "}
-                <ArrowRight aria-hidden="true" className="inline size-6" />
-                <span className="sr-only"> into </span> {to}
-              </span>
-              <span className="text-muted-foreground inline-flex items-center gap-2 text-sm font-medium tracking-normal">
-                <span
-                  aria-hidden="true"
-                  className={`size-2.5 rounded-full ${level.dot}`}
-                />
-                {level.label}
-              </span>
-            </h2>
-            <p className="text-muted-foreground">{rating.reason}.</p>
-          </div>
-          <ol className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {suggestions.map((suggestion) => (
-              <li
-                key={suggestion.id}
-                className="bg-muted rounded-2xl px-5 py-4"
-              >
-                <h3 className="mb-1 text-base font-medium">
-                  {suggestion.title}
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  {suggestion.segments.map((segment, index) =>
-                    segment.kind === "chord" ? (
-                      // oxlint-disable-next-line react/no-array-index-key -- segments are a fixed sentence
-                      <strong
-                        key={index}
-                        className="text-foreground font-semibold"
-                      >
-                        {segment.text}
-                      </strong>
-                    ) : (
-                      // oxlint-disable-next-line react/no-array-index-key -- segments are a fixed sentence
-                      <span key={index}>{segment.text}</span>
-                    )
-                  )}
-                </p>
-              </li>
-            ))}
-          </ol>
-          {alternates.length === 0 ? null : (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="text-muted-foreground text-sm">
-                Or move the next song to
-              </span>
-              <span className="flex flex-wrap gap-2">
-                {alternates.map((alternate) => (
-                  <Button
-                    key={alternate}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      onChange({ from, to: alternate });
-                    }}
-                  >
-                    {alternate}
-                  </Button>
-                ))}
-              </span>
-            </div>
-          )}
-          <p className="border-border text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-5 pb-1 text-sm">
-            PCOBooster checks every key change in your Planning Center plan.
-            <TextLink href="/services" data-analytics-cta="key-transitions">
-              Open PCOBooster
-            </TextLink>
-          </p>
-        </div>
       </Card>
     </section>
   );
@@ -218,54 +330,61 @@ export const KeyTransitionsClosing = () => (
   </section>
 );
 
-/** Plain links to other changes' pages, labelled the way people search ("G to A"). */
-export const PairLinks = ({ pairs }: { pairs: readonly KeyPair[] }) => (
-  <ul className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-x-4 text-sm">
-    {pairs.map((pair) => (
-      <li key={pairPath(pair)}>
-        <a
-          className="text-muted-foreground hover:text-foreground block py-1.5 underline-offset-4 hover:underline"
-          href={pairPath(pair)}
-        >
-          {pair.from} to {pair.to}
-        </a>
-      </li>
-    ))}
-  </ul>
-);
-
-const KeyDisclosures = ({ keys }: { keys: readonly KeyChoice[] }) => (
-  <div className="grid grid-cols-1 content-start">
-    {keys.map((from) => (
-      <details key={from} className="border-border group border-t">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 font-medium [&::-webkit-details-marker]:hidden">
-          From {keyLongName(from)}
-          <ChevronRight
-            aria-hidden="true"
-            className="text-muted-foreground size-4 shrink-0 group-open:rotate-90"
-          />
-        </summary>
-        <div className="pb-4">
-          <PairLinks
-            pairs={KEY_PAIRS.filter(
-              (pair) => pair.from === from && pair.to !== from
-            )}
-          />
-        </div>
-      </details>
-    ))}
-  </div>
-);
-
-/** Every change's page, grouped by starting key, so each one is a link away from the finder. */
-export const AllTransitions = () => (
+/** A section's heading column beside its content, as the site's other long sections lay out. */
+export const LinkSection = ({
+  title,
+  intro,
+  children,
+}: {
+  title: string;
+  intro: ReactNode;
+  children: ReactNode;
+}) => (
   <section className="wrap pt-section grid grid-cols-1 gap-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] md:gap-12 lg:gap-24">
-    <div className="self-start md:sticky md:top-24">
-      <h2 className="text-headline">Every key change</h2>
+    <div className="grid grid-cols-1 content-start gap-5 self-start md:sticky md:top-24">
+      <h2 className="text-headline">{title}</h2>
+      {intro}
+      <LevelLegend />
     </div>
-    <div className="grid grid-cols-1 items-start gap-x-8 sm:grid-cols-2">
-      <KeyDisclosures keys={MAJOR_KEYS} />
-      <KeyDisclosures keys={MINOR_KEYS} />
-    </div>
+    {children}
   </section>
+);
+
+/**
+ * Every change's page, grouped by starting key, so each one is a link away from the finder.
+ * Closed panels stay in the prerendered HTML, so search engines still read every link.
+ */
+export const AllTransitions = () => (
+  <LinkSection
+    title="Every key change"
+    intro={
+      <p className="text-muted-foreground max-w-[420px]">
+        Each pair of keys has its own page with the advice for that change.
+      </p>
+    }
+  >
+    <div className="grid grid-cols-1 items-start gap-x-10 gap-y-8 sm:grid-cols-2">
+      {KEY_GROUPS.map((group) => (
+        <div key={group.label} className="grid grid-cols-1 gap-2">
+          <h3 className="text-muted-foreground text-sm font-medium">
+            From a {group.label.toLowerCase()} key
+          </h3>
+          <Accordion multiple>
+            {group.keys.map((from) => (
+              <AccordionItem key={from} value={from}>
+                <AccordionTrigger>From {keyLongName(from)}</AccordionTrigger>
+                <AccordionContent variant="links">
+                  <PairLinks
+                    pairs={KEY_PAIRS.filter(
+                      (pair) => pair.from === from && pair.to !== from
+                    )}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      ))}
+    </div>
+  </LinkSection>
 );

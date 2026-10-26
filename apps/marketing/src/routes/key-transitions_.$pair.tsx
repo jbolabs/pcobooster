@@ -1,16 +1,25 @@
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 import {
   KeyTransitionFinder,
   KeyTransitionsClosing,
+  LinkSection,
   PairLinks,
 } from "../components/key-transition-finder";
 import { TextLink } from "../components/site";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import {
   KEY_PAIRS,
   KEY_TRANSITIONS_PATH,
   keyLongName,
   pairFromSlug,
+  isSameKey,
   pairPath,
   pairSlug,
 } from "../lib/key-transition-pages";
@@ -49,6 +58,23 @@ const pairSummary = ({ from, to }: KeyPair) => {
   };
 };
 
+const RelatedCard = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) => (
+  <Card size="sm">
+    <CardHeader>
+      <CardTitle>
+        <h3>{title}</h3>
+      </CardTitle>
+    </CardHeader>
+    <CardContent>{children}</CardContent>
+  </Card>
+);
+
 const PairPage = () => {
   const pair = Route.useLoaderData();
   const navigate = useNavigate();
@@ -81,30 +107,28 @@ const PairPage = () => {
           });
         }}
       />
-      <section className="wrap pt-section grid grid-cols-1 gap-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] md:gap-12 lg:gap-24">
-        <div className="self-start md:sticky md:top-24">
-          <h2 className="text-headline mb-5">More key changes</h2>
+      <LinkSection
+        title="More key changes"
+        intro={
           <TextLink href={KEY_TRANSITIONS_PATH}>
             Every key change in one place
           </TextLink>
-        </div>
-        <div className="grid grid-cols-1 gap-8">
+        }
+      >
+        <div className="grid grid-cols-1 gap-4">
           {from === to ? null : (
-            <div className="border-border grid grid-cols-1 gap-3 border-t pt-6">
-              <h3 className="text-lg font-medium">The other way around</h3>
+            <RelatedCard title="The other way around">
               <PairLinks pairs={[{ from: to, to: from }]} />
-            </div>
+            </RelatedCard>
           )}
-          <div className="border-border grid grid-cols-1 gap-3 border-t pt-6">
-            <h3 className="text-lg font-medium">From {from} into</h3>
+          <RelatedCard title={`From ${from} into`}>
             <PairLinks pairs={others.filter((other) => other.from === from)} />
-          </div>
-          <div className="border-border grid grid-cols-1 gap-3 border-t pt-6">
-            <h3 className="text-lg font-medium">Into {to} from</h3>
+          </RelatedCard>
+          <RelatedCard title={`Into ${to} from`}>
             <PairLinks pairs={others.filter((other) => other.to === to)} />
-          </div>
+          </RelatedCard>
         </div>
-      </section>
+      </LinkSection>
       <KeyTransitionsClosing />
     </main>
   );
@@ -125,6 +149,8 @@ export const Route = createFileRoute("/key-transitions_/$pair")({
       title,
       description,
       pathname: pairPath(loaderData),
+      // Two songs in one key is a real choice in the finder, but too thin a page to rank.
+      noindex: isSameKey(loaderData),
       preview: {
         ...socialPreviewOf("/key-transitions"),
         title: `${title} | PCOBooster`,

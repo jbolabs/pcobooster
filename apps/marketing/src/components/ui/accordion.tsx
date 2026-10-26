@@ -1,4 +1,6 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import { PlusIcon } from "lucide-react";
 
@@ -49,23 +51,35 @@ const AccordionTrigger = ({
  * Closed answers stay in the prerendered HTML (`hidden="until-found"`), so search engines read
  * them and find-in-page opens the matching question.
  */
+const accordionContentVariants = cva("pb-6", {
+  variants: {
+    variant: {
+      // Prose answers, such as the FAQ.
+      default:
+        "text-muted-foreground [&_a]:hover:text-foreground max-w-150 md:pr-10 [&_a]:underline [&_a]:underline-offset-3",
+      // A panel of link buttons, such as every key change from one key.
+      links: "",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+  },
+});
+
 const AccordionContent = ({
   className,
+  variant = "default",
   children,
   ...props
-}: AccordionPrimitive.Panel.Props) => (
+}: AccordionPrimitive.Panel.Props &
+  VariantProps<typeof accordionContentVariants>) => (
   <AccordionPrimitive.Panel
     data-slot="accordion-content"
     hiddenUntilFound
     className="ease-snappy h-(--accordion-panel-height) overflow-hidden transition-[height] duration-250 data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none"
     {...props}
   >
-    <div
-      className={cn(
-        "text-muted-foreground [&_a]:hover:text-foreground max-w-150 pb-6 md:pr-10 [&_a]:underline [&_a]:underline-offset-3",
-        className
-      )}
-    >
+    <div className={cn(accordionContentVariants({ variant }), className)}>
       {children}
     </div>
   </AccordionPrimitive.Panel>

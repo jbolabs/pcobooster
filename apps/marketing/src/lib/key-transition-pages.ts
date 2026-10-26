@@ -46,13 +46,6 @@ export const keyChoicesFor = (minor: boolean): readonly KeyChoice[] =>
 export const isMinorChoice = (choice: KeyChoice): boolean =>
   choice.endsWith("m");
 
-/** The same tonic in the other mode, by position in the list: G and Gm, Db and C#m. */
-export const switchMode = (choice: KeyChoice): KeyChoice => {
-  const minor = isMinorChoice(choice);
-  const index = keyChoicesFor(minor).indexOf(choice);
-  return keyChoicesFor(!minor)[index] ?? choice;
-};
-
 const ACCIDENTAL_WORDS = new Map([
   ["b", "flat"],
   ["#", "sharp"],
@@ -89,6 +82,9 @@ export interface KeyPair {
   from: KeyChoice;
   to: KeyChoice;
 }
+
+/** Both songs in one key: the finder offers it, but search engines skip its page. */
+export const isSameKey = ({ from, to }: KeyPair): boolean => from === to;
 
 export const pairSlug = ({ from, to }: KeyPair): string =>
   `${keySlug(from)}-to-${keySlug(to)}`;
