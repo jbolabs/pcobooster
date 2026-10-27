@@ -12,29 +12,59 @@ const Accordion = ({ className, ...props }: AccordionPrimitive.Root.Props) => (
   />
 );
 
+const accordionItemVariants = cva("", {
+  variants: {
+    variant: {
+      default: "border-border border-b first:border-t",
+      // Rows without rules, for a quiet list such as every key change.
+      plain: "",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+  },
+});
+
 const AccordionItem = ({
   className,
+  variant = "default",
   ...props
-}: AccordionPrimitive.Item.Props) => (
+}: AccordionPrimitive.Item.Props &
+  VariantProps<typeof accordionItemVariants>) => (
   <AccordionPrimitive.Item
     data-slot="accordion-item"
-    className={cn("border-border border-b first:border-t", className)}
+    className={cn(accordionItemVariants({ variant }), className)}
     {...props}
   />
 );
 
+const accordionTriggerVariants = cva(
+  "group/accordion-trigger text-body focus-visible:ring-ring/30 flex flex-1 cursor-pointer items-center justify-between gap-6 text-left font-medium outline-none focus-visible:rounded-md focus-visible:ring-3 aria-disabled:pointer-events-none aria-disabled:opacity-50 md:text-base",
+  {
+    variants: {
+      size: {
+        default: "py-5",
+        // Short rows, such as a long list of keys.
+        compact: "py-2.5",
+      },
+    },
+    defaultVariants: {
+      size: "default",
+    },
+  }
+);
+
 const AccordionTrigger = ({
   className,
+  size = "default",
   children,
   ...props
-}: AccordionPrimitive.Trigger.Props) => (
+}: AccordionPrimitive.Trigger.Props &
+  VariantProps<typeof accordionTriggerVariants>) => (
   <AccordionPrimitive.Header className="flex">
     <AccordionPrimitive.Trigger
       data-slot="accordion-trigger"
-      className={cn(
-        "group/accordion-trigger text-body focus-visible:ring-ring/30 flex flex-1 cursor-pointer items-center justify-between gap-6 py-5 text-left font-medium outline-none focus-visible:rounded-md focus-visible:ring-3 aria-disabled:pointer-events-none aria-disabled:opacity-50 md:text-base",
-        className
-      )}
+      className={cn(accordionTriggerVariants({ size }), className)}
       {...props}
     >
       {children}

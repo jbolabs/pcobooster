@@ -9,12 +9,6 @@ import {
 } from "../components/key-transition-finder";
 import { TextLink } from "../components/site";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import {
   KEY_PAIRS,
   KEY_TRANSITIONS_PATH,
   keyLongName,
@@ -58,21 +52,17 @@ const pairSummary = ({ from, to }: KeyPair) => {
   };
 };
 
-const RelatedCard = ({
+const RelatedLinks = ({
   title,
   children,
 }: {
   title: string;
   children: ReactNode;
 }) => (
-  <Card size="sm">
-    <CardHeader>
-      <CardTitle>
-        <h3>{title}</h3>
-      </CardTitle>
-    </CardHeader>
-    <CardContent>{children}</CardContent>
-  </Card>
+  <div className="grid grid-cols-1 gap-3">
+    <h3 className="text-base font-medium">{title}</h3>
+    {children}
+  </div>
 );
 
 const PairPage = () => {
@@ -122,13 +112,13 @@ const PairPage = () => {
           </p>
         }
       >
-        <div className="grid grid-cols-1 gap-4">
-          <RelatedCard title={`From ${from} into`}>
+        <div className="grid grid-cols-1 gap-10">
+          <RelatedLinks title={`From ${from} into`}>
             <PairLinks pairs={others.filter((other) => other.from === from)} />
-          </RelatedCard>
-          <RelatedCard title={`Into ${to} from`}>
+          </RelatedLinks>
+          <RelatedLinks title={`Into ${to} from`}>
             <PairLinks pairs={others.filter((other) => other.to === to)} />
-          </RelatedCard>
+          </RelatedLinks>
         </div>
       </LinkSection>
       <KeyTransitionsClosing />

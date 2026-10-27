@@ -26,9 +26,15 @@ const SelectValue = ({ className, ...props }: SelectPrimitive.Value.Props) => (
 );
 
 const selectTriggerVariants = cva(
-  "border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/30 data-popup-open:bg-muted flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-2xl border px-4 text-sm outline-none select-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "focus-visible:border-ring focus-visible:ring-ring/30 flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-2xl border px-4 text-sm outline-none select-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
+      variant: {
+        default:
+          "border-border bg-background hover:bg-muted data-popup-open:bg-muted",
+        // A filled field with no outline, for quiet layouts such as the key finder.
+        soft: "bg-muted/70 hover:bg-muted data-popup-open:bg-muted border-transparent",
+      },
       size: {
         default: "h-9",
         // A labelled field showing a large value, such as the key finder's song keys.
@@ -36,6 +42,7 @@ const selectTriggerVariants = cva(
       },
     },
     defaultVariants: {
+      variant: "default",
       size: "default",
     },
   }
@@ -43,6 +50,7 @@ const selectTriggerVariants = cva(
 
 const SelectTrigger = ({
   className,
+  variant = "default",
   size = "default",
   children,
   ...props
@@ -50,8 +58,9 @@ const SelectTrigger = ({
   VariantProps<typeof selectTriggerVariants>) => (
   <SelectPrimitive.Trigger
     data-slot="select-trigger"
+    data-variant={variant}
     data-size={size}
-    className={cn(selectTriggerVariants({ size }), className)}
+    className={cn(selectTriggerVariants({ variant, size }), className)}
     {...props}
   >
     {children}
