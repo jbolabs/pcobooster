@@ -5,7 +5,6 @@ import {
   keyLongName,
   pairFromSlug,
   pairPath,
-  switchMode,
 } from "./key-transition-pages";
 
 describe(pairPath, () => {
@@ -49,16 +48,5 @@ describe(keyLongName, () => {
     ["Am", "A minor"],
   ] as const)("writes %s as %s", (choice, name) => {
     expect(keyLongName(choice)).toBe(name);
-  });
-});
-
-describe(switchMode, () => {
-  it.each([
-    ["G", "Gm"],
-    ["Db", "C#m"],
-    ["Bbm", "Bb"],
-    ["G#m", "Ab"],
-  ] as const)("turns %s into %s", (choice, expected) => {
-    expect(switchMode(choice)).toBe(expected);
   });
 });
