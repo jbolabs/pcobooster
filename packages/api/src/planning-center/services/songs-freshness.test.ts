@@ -67,7 +67,7 @@ describe("song cache freshness", () => {
     const plans = new PlanningCenterPlanItemsService(core);
     await Effect.runPromise(songs.getSongSchedules("20", "2025-10-18"));
     await Effect.runPromise(
-      plans.updatePlanItem("30", "31", "32", { key_id: "22" })
+      plans.updatePlanItem("30", "31", "32", { key_id: "22", length: 0 })
     );
     const refreshed = await Effect.runPromise(
       songs.getSongSchedules("20", "2025-10-18")

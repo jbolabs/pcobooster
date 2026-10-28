@@ -25,9 +25,14 @@ interface PlanItemResponse {
   included: PCResource[];
 }
 
+/** A plan-item update must explicitly preserve or clear its duration. */
+export type PlanItemUpdateAttributes = JsonObject & {
+  readonly length: number | null;
+};
+
 const buildItemPayload = (attributes: JsonObject, id?: string) => {
   const safeAttributes = { ...attributes };
-  if (attributes.item_type === "header") {
+  if (attributes.item_type === "header" || attributes.length === null) {
     safeAttributes.length = 0;
   } else if (isNumber(attributes.length)) {
     safeAttributes.length = clampPlanItemLength(attributes.length);
@@ -108,7 +113,7 @@ export class PlanningCenterPlanItemsService {
     serviceTypeId: string,
     planId: string,
     itemId: string,
-    attributes: JsonObject
+    attributes: PlanItemUpdateAttributes
   ): Effect.Effect<PlanItemResponse, PlanningCenterError> {
     return this.core
       .fetch(

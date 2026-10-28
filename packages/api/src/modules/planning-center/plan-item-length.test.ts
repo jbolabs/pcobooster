@@ -86,7 +86,9 @@ describe("plan item length limits", () => {
       )
     );
     const result = await Effect.runPromise(
-      commitUpdatePlanItem(prepared, service)
+      commitUpdatePlanItem(prepared, service, {
+        getArrangement: () => Effect.die(new Error("Not a song")),
+      })
     );
     expect(result).toMatchObject({ id: "h", title: "Updated", length: 0 });
   });
@@ -148,9 +150,15 @@ describe("plan item length limits", () => {
     await Effect.runPromise(
       service.updatePlanItem("s", "p", "i", { length: -2 })
     );
+    await Effect.runPromise(service.createPlanItem("s", "p", { length: null }));
+    await Effect.runPromise(
+      service.updatePlanItem("s", "p", "i", { length: null })
+    );
     await Effect.runPromise(service.reorderPlanItems("s", "p", ["h", "i"]));
     expect(bodies).toStrictEqual([
       { data: { type: "Item", attributes: { length: 86_400 } } },
+      { data: { type: "Item", id: "i", attributes: { length: 0 } } },
+      { data: { type: "Item", attributes: { length: 0 } } },
       { data: { type: "Item", id: "i", attributes: { length: 0 } } },
       {
         data: { type: "PlanItemReorder", attributes: { sequence: ["h", "i"] } },
