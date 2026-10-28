@@ -885,12 +885,13 @@ export class PlanningCenterCoreClient {
         ? execute
         : Effect.acquireUseRelease(
             reserveSlot(pacer, cacheScope, context, method),
-            (waitMs) => {
-              const send = pacer.withSendPermit(cacheScope, execute);
-              return waitMs === 0
-                ? send
-                : Effect.andThen(Effect.sleep(Duration.millis(waitMs)), send);
-            },
+            (waitMs) =>
+              waitMs === 0
+                ? execute
+                : Effect.andThen(
+                    Effect.sleep(Duration.millis(waitMs)),
+                    execute
+                  ),
             // A granted reservation is released after the response, a
             // failure, or an interruption; responses also report the window.
             (_waitMs, exit) =>
@@ -986,12 +987,20 @@ export class PlanningCenterCoreClient {
             "application/json"
           );
     const sentAttributes = describeSentAttributes(options.body);
-    const attemptRequest = (context: AttemptContext) =>
-      this.attempt(request, {
+    const { cacheScope } = this;
+    const attemptRequest = (context: AttemptContext) => {
+      const attempt = this.attempt(request, {
         ...context,
         sentAttributes,
         readAction: options.readAction,
       });
+      // The permit comes before the pacing slot, so a queued request is paced by what the
+      // responses ahead of it reported (a 429's block included), and its wait for a permit
+      // does not count against the attempt's timeout.
+      return context.pacer === undefined
+        ? attempt
+        : context.pacer.withSendPermit(cacheScope, attempt);
+    };
     return Effect.gen(function* sendWithRetries() {
       const pacer = Option.getOrUndefined(
         yield* Effect.serviceOption(PlanningCenterPacing)

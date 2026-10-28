@@ -1486,14 +1486,62 @@ describe("Planning Center pacing and accounting", () => {
     expect(counts).toStrictEqual({ atOnce: 12, afterOneAnswer: 13 });
   });
 
+  it("holds a queued read behind a 429 that answers while it waits for a send permit", async () => {
+    const answers: ((response: Response) => void)[] = [];
+    const sent: string[] = [];
+    const fetch = fetchMock().mockImplementation(async (input) => {
+      sent.push(urlOf(input));
+      const { promise, resolve } = Promise.withResolvers<Response>();
+      answers.push(resolve);
+      return await promise;
+    });
+    const scope = limits();
+    const client = pacedClient(fetch);
+    const counts = await Effect.runPromise(
+      Effect.gen(function* queuedBehindBlock() {
+        const fiber = yield* Effect.forkChild(
+          Effect.forEach(
+            Array.from({ length: 13 }, (_, index) => index),
+            (index) => client.fetch(`/services/v2/people/${index}`),
+            { concurrency: "unbounded" }
+          )
+        );
+        yield* settle;
+        const atOnce = sent.length;
+        answers.shift()?.(
+          jsonResponse(
+            { error: "Rate limited" },
+            { status: 429, headers: { "retry-after": "12" } }
+          )
+        );
+        yield* settle;
+        // The queued read takes the freed permit but must not send into the block.
+        const duringBlock = sent.length;
+        for (const answer of answers.splice(0)) {
+          answer(jsonResponse({ data: person }));
+        }
+        yield* TestClock.adjust("12 seconds");
+        yield* settle;
+        for (const answer of answers.splice(0)) {
+          answer(jsonResponse({ data: person }));
+        }
+        yield* Fiber.join(fiber);
+        return { atOnce, duringBlock, total: sent.length };
+      }).pipe(withLimits(scope), Effect.provide(TestClock.layer()))
+    );
+    expect(counts).toStrictEqual({ atOnce: 12, duringBlock: 12, total: 14 });
+  });
+
   it.each([1, 40])(
     "keeps concurrent paced sends within budget %i",
     async (budget) => {
       const fetch = fetchMock().mockImplementation(
         async () => await Promise.resolve(jsonResponse({ data: person }))
       );
+      // Every read wakes at once, so the in-flight cap must not stagger them.
       const scope = limits(
-        new PlanningCenterRequestAccounting({ requestBudget: budget })
+        new PlanningCenterRequestAccounting({ requestBudget: budget }),
+        new PlanningCenterRatePacer({ maxInFlight: budget + 1 })
       );
       const reserve = scope.pacer.reserve.bind(scope.pacer);
       vi.spyOn(scope.pacer, "reserve").mockImplementation((...args) => {
