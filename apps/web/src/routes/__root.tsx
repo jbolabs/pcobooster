@@ -2,6 +2,10 @@ import interLatinUrl from "@fontsource-variable/inter/files/inter-latin-wght-nor
 
 import "@fontsource-variable/geist-mono/wght.css";
 import "@fontsource-variable/inter/wght.css";
+// Chord chart fonts; browsers fetch them only for a chart editor that lacks the system font.
+import "@fontsource-variable/noto-sans/wght.css";
+import "@fontsource/arimo/400.css";
+import "@fontsource/tinos/400.css";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   HeadContent,

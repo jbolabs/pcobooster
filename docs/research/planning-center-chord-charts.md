@@ -31,6 +31,7 @@ Services renders every chart PDF itself, and the API exposes them as virtual att
 From [Special codes for lyrics and chords](https://help.planningcenter.com/en/139441-special-codes-for-lyrics-and-chords.html) and [Use the Lyrics & Chords editor](https://help.planningcenter.com/en/139440-use-the-lyrics---chords-editor.html):
 
 - `[G]` inline ChordPro chords are transposed and stay aligned. Chords written on the line above lyrics work too, but can drift when fonts or keys change.
+- Services prints a chord line as typed, in the chart's font, with chords bold in the chord color. In a proportional font such as the default Times-Roman a space is narrower than most letters, so a chord lands over whichever lyric its spaces reach in that font, not over the same column. The editor therefore edits in the chart's own font (`apps/web/src/components/songs/chord-chart-print-style.ts`).
 - Section headings are section names on their own line in capitals: `VERSE 1`, `CHORUS`.
 - `COLUMN_BREAK` and `PAGE_BREAK` break the layout; `{{ PAGE_BREAK }}` applies to chord charts only.
 - `{ note }` prints on chord and lyric PDFs; `{{ note }}` prints on chord charts only.
