@@ -22,7 +22,8 @@ export interface ChartTextEdit {
 
 /**
  * Wraps the selection in `style`'s tags, or removes them when they already surround it
- * (just outside the selection, or as its first and last characters). An empty selection
+ * (just outside the selection, or as its first and last characters) as one pair: a closing
+ * tag between them, as in `<b>a</b> <b>b</b>`, means they belong to different pairs. An empty selection
  * gets an empty pair with the caret between, so typing continues in the style.
  */
 export const toggleChartTextStyle = (
@@ -36,7 +37,8 @@ export const toggleChartTextStyle = (
   const selected = text.slice(selectionStart, selectionEnd);
   const wrappedOutside =
     text.slice(selectionStart - open.length, selectionStart) === open &&
-    text.slice(selectionEnd, selectionEnd + close.length) === close;
+    text.slice(selectionEnd, selectionEnd + close.length) === close &&
+    !selected.includes(close);
   if (wrappedOutside) {
     return {
       from: selectionStart - open.length,
@@ -46,12 +48,13 @@ export const toggleChartTextStyle = (
       selectionEnd: selectionEnd - open.length,
     };
   }
+  const inner = selected.slice(open.length, -close.length);
   const wrappedInside =
     selected.length >= open.length + close.length &&
     selected.startsWith(open) &&
-    selected.endsWith(close);
+    selected.endsWith(close) &&
+    !inner.includes(close);
   if (wrappedInside) {
-    const inner = selected.slice(open.length, -close.length);
     return {
       from: selectionStart,
       to: selectionEnd,

@@ -32,6 +32,22 @@ describe(toggleChartTextStyle, () => {
     });
   });
 
+  it("wraps a selection of separately bolded words instead of unpairing their tags", () => {
+    const text = "<b>Amazing</b> <b>grace</b>";
+    expect(apply(text, toggleChartTextStyle(text, 0, 27, "b"))).toStrictEqual({
+      text: "<b><b>Amazing</b> <b>grace</b></b>",
+      selected: [3, 30],
+    });
+  });
+
+  it("wraps the words between two bolded words instead of unpairing the tags around them", () => {
+    const text = "<b>Amazing</b> <b>grace</b>";
+    expect(apply(text, toggleChartTextStyle(text, 3, 23, "b"))).toStrictEqual({
+      text: "<b><b>Amazing</b> <b>grace</b></b>",
+      selected: [6, 26],
+    });
+  });
+
   it("adds italic inside bold instead of removing the bold", () => {
     const text = "<b>grace</b>";
     expect(apply(text, toggleChartTextStyle(text, 3, 8, "i"))).toStrictEqual({
