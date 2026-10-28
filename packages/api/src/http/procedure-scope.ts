@@ -26,7 +26,12 @@ import { PlanningCenterAccounting } from "@pcobooster/api/planning-center/accoun
 import { PlanningCenterPacing } from "@pcobooster/api/planning-center/pacing";
 import type { PlanningCenterRatePacer } from "@pcobooster/api/planning-center/rate-pacer";
 import { PlanningCenterRequestAccounting } from "@pcobooster/api/planning-center/request-accounting";
+import type { DroppedPlanningCenterRow } from "@pcobooster/api/planning-center/request-accounting";
 import { PLANNING_CENTER_REQUEST_CAP } from "@pcobooster/api/planning-center/request-budget";
+import {
+  PlanningCenterRowsDroppedError,
+  groupDroppedRows,
+} from "@pcobooster/api/planning-center/rows-dropped-error";
 import { Server, serverDependenciesForRequest } from "@pcobooster/api/server";
 import type { ServerDependencies } from "@pcobooster/api/server";
 import { ClientOutdated } from "@pcobooster/contracts/faults/client-outdated";
@@ -206,6 +211,27 @@ export const writeOutcome = (
 };
 
 /**
+ * Reports the rows a procedure dropped, one handled event per endpoint, resource type, and
+ * failing fields, grouped apart from its failures; never fails.
+ */
+export const reportDroppedRows = (
+  report: ReportProcedureFailure | null,
+  fields: ProcedureLogFields,
+  rows: readonly DroppedPlanningCenterRow[]
+): Effect.Effect<void> =>
+  report === null || rows.length === 0
+    ? Effect.void
+    : Effect.forEach(
+        groupDroppedRows(rows),
+        (group) =>
+          report({
+            fields: { ...fields, code: "PROVIDER_ROWS_DROPPED" },
+            error: new PlanningCenterRowsDroppedError(group),
+          }),
+        { discard: true }
+      );
+
+/**
  * The non-obvious parts:
  * - Identity comes from the workerd request's own headers (cookie, bearer, account, demo).
  * - Writes run uninterruptibly, so a disconnect cannot cut a provider write or its audit short;
@@ -293,10 +319,10 @@ export const ProcedureScopeLive = (
           Effect.suspend(() => {
             const outcome = procedureOutcome(exit);
             retryAfter = retryAfterSeconds(outcome);
-            return writeOutcome(
-              isolate.report,
-              procedureLogFields(call, outcome, now()),
-              outcome
+            const fields = procedureLogFields(call, outcome, now());
+            return Effect.andThen(
+              writeOutcome(isolate.report, fields, outcome),
+              reportDroppedRows(isolate.report, fields, accounting.droppedRows)
             );
           })
         ),

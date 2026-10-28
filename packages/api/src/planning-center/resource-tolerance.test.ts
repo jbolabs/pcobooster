@@ -2,11 +2,18 @@
  * Planning Center leaves fields out and sends `null` where its docs promise values, and one
  * church's odd row must not fail a whole read. Every fixture value here is made up.
  */
+import { planningCenterFault } from "@pcobooster/api/application/planning-center-access";
+import type { ProcedureLogFields } from "@pcobooster/api/http/outcome";
+import { reportDroppedRows } from "@pcobooster/api/http/procedure-scope";
+import { toPostHogExceptionCapture } from "@pcobooster/api/modules/analytics/posthog-exception";
+import type { ReportedRequestError } from "@pcobooster/api/modules/analytics/posthog-exception";
+import { PlanningCenterAccounting } from "@pcobooster/api/planning-center/accounting";
 import { createBasicPlanningCenterClient } from "@pcobooster/api/planning-center/core-client";
 import type {
   PlanningCenterCoreClient,
   PlanningCenterError,
 } from "@pcobooster/api/planning-center/core-client";
+import { PlanningCenterRequestAccounting } from "@pcobooster/api/planning-center/request-accounting";
 import { httpClientFor } from "@pcobooster/api/testing/http-client";
 import { recordLogs } from "@pcobooster/api/testing/logs";
 import { testPlanningCenterToken } from "@pcobooster/api/testing/server";
@@ -61,7 +68,6 @@ const resources = {
       },
       tags: { data: [] },
     },
-    links: { self: `https://example.test/team_positions/${id}` },
   }),
   NeededPosition: (id: string): JsonObject => ({
     type: "NeededPosition",
@@ -366,5 +372,126 @@ describe("Planning Center collections with null or missing fields", () => {
     expect(error?.message).toBe(
       "Planning Center returned an invalid response (data: Expected array | object)"
     );
+  });
+
+  it("tells error tracking which field broke, without its values", async () => {
+    const unreadable = await failureOf(
+      clientAnswering({ data: PRIVATE }).fetchCollection("/services/v2/fixture")
+    );
+    if (unreadable === undefined) {
+      throw new Error("An unreadable collection fails");
+    }
+    const capture = toPostHogExceptionCapture(
+      "key",
+      {
+        error: planningCenterFault(unreadable),
+        code: "BAD_GATEWAY",
+        path: "/api/v1/service-types/:serviceTypeId/plans/:planId/team-positions",
+        method: "GET",
+        requestId: "request-1",
+        procedure: "catalog.teamPositions",
+      },
+      new Date("2026-10-28T17:06:52.000Z")
+    );
+    expect(capture.properties).toMatchObject({
+      $exception_list: [
+        {
+          type: "PlanningCenterApiError",
+          value:
+            "Planning Center returned an invalid response (data: Expected array | object)",
+        },
+      ],
+    });
+    expect(JSON.stringify(capture)).not.toContain(PRIVATE);
+  });
+
+  it("tells error tracking which rows a successful read dropped, without their values", async () => {
+    const accounting = new PlanningCenterRequestAccounting();
+    await Effect.runPromise(
+      clientAnswering(
+        collection([
+          resources.TeamPosition("1"),
+          { ...resources.TeamPosition("2"), id: null },
+          { ...resources.TeamPosition("3"), id: { name: PRIVATE } },
+          { ...resources.TeamPosition("4"), type: null },
+        ])
+      )
+        .fetchCollection("/services/v2/service_types/12345/team_positions")
+        .pipe(Effect.provideService(PlanningCenterAccounting, accounting))
+    );
+    const fields: ProcedureLogFields = {
+      procedure: "catalog.teamPositions",
+      requestId: "request-1",
+      method: "GET",
+      route:
+        "/api/v1/service-types/:serviceTypeId/plans/:planId/team-positions",
+      status: 200,
+      code: null,
+      durationMs: 120,
+      priority: "interactive",
+      client: null,
+      appRelease: null,
+      kind: "read",
+      planningCenterRequests: 1,
+      rateLimitPauses: 0,
+      rateLimitPauseMs: 0,
+      rateLimitRejections: 0,
+      rateLimited429s: 0,
+      budgetExhausted: false,
+      requestBudget: 40,
+    };
+    const reported: ReportedRequestError[] = [];
+    await Effect.runPromise(
+      reportDroppedRows(
+        ({ fields: sent, error }) =>
+          Effect.sync(() => {
+            reported.push({
+              error,
+              code: sent.code ?? "UNHANDLED",
+              path: sent.route ?? "unknown",
+              method: sent.method ?? "unknown",
+              requestId: sent.requestId,
+              procedure: sent.procedure,
+            });
+          }),
+        fields,
+        accounting.droppedRows
+      )
+    );
+    const captures = reported.map((report) =>
+      toPostHogExceptionCapture(
+        "key",
+        report,
+        new Date("2026-10-28T17:06:52.000Z")
+      )
+    );
+    expect(captures.map(({ properties }) => properties)).toMatchObject([
+      {
+        error_code: "PROVIDER_ROWS_DROPPED",
+        $exception_level: "warning",
+        $exception_fingerprint:
+          "api:/api/v1/service-types/:serviceTypeId/plans/:planId/team-positions:PROVIDER_ROWS_DROPPED:/services/v2/service_types/:id/team_positions:TeamPosition:data[].id: Expected string",
+        $exception_list: [
+          {
+            type: "PlanningCenterRowsDroppedError",
+            value:
+              "Dropped 2 TeamPosition row(s) from /services/v2/service_types/:id/team_positions it could not read (data[].id: Expected string)",
+          },
+        ],
+        provider: "planning-center",
+        provider_endpoint: "/services/v2/service_types/:id/team_positions",
+        provider_resource_type: "TeamPosition",
+        provider_fields: ["data[].id: Expected string"],
+        provider_rows: 2,
+      },
+      {
+        $exception_fingerprint:
+          "api:/api/v1/service-types/:serviceTypeId/plans/:planId/team-positions:PROVIDER_ROWS_DROPPED:/services/v2/service_types/:id/team_positions:unknown:data[].type: Expected string",
+        provider_resource_type: "unknown",
+        provider_fields: ["data[].type: Expected string"],
+        provider_rows: 1,
+      },
+    ]);
+    expect(JSON.stringify(captures)).not.toContain(PRIVATE);
   });
 });

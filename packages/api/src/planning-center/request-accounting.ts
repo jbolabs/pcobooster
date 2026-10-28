@@ -1,5 +1,6 @@
 import type { PlanningCenterRateLimitInfo } from "@pcobooster/api/planning-center/api-error";
 import type { PlanningCenterRateSnapshot } from "@pcobooster/api/planning-center/rate-pacer";
+import type { DroppedRow } from "@pcobooster/api/planning-center/resource-schemas";
 import type { RequestPriority } from "@pcobooster/contracts/request-priority";
 
 /** A request's path and query parameter names; never values, tokens, or bodies. */
@@ -40,6 +41,14 @@ export interface PlanningCenterRequestTotals {
   readonly subrequestLimitHits: number;
 }
 
+/** A row Planning Center sent that could not be read, and the endpoint that sent it. */
+export interface DroppedPlanningCenterRow extends DroppedRow {
+  readonly endpoint: string;
+}
+
+/** Bounds memory when a whole collection is unreadable; reports group rows by field anyway. */
+const DROPPED_ROWS_KEPT = 200;
+
 export interface PlanningCenterRequestAccountingOptions {
   /**
    * Planning Center requests this invocation may send before the client
@@ -65,6 +74,7 @@ export class PlanningCenterRequestAccounting {
   private rateLimitRejections = 0;
   private subrequestLimitHits = 0;
   private workerLimitReached = false;
+  private readonly dropped: DroppedPlanningCenterRow[] = [];
 
   constructor(options: PlanningCenterRequestAccountingOptions = {}) {
     this.requestBudget = options.requestBudget;
@@ -96,6 +106,17 @@ export class PlanningCenterRequestAccounting {
       rateLimitRejections: this.rateLimitRejections,
       subrequestLimitHits: this.subrequestLimitHits,
     };
+  }
+
+  /** Rows this invocation dropped because they could not be read, the first few kept. */
+  get droppedRows(): readonly DroppedPlanningCenterRow[] {
+    return this.dropped;
+  }
+
+  recordDroppedRows(endpoint: string, rows: readonly DroppedRow[]): void {
+    for (const row of rows.slice(0, DROPPED_ROWS_KEPT - this.dropped.length)) {
+      this.dropped.push({ ...row, endpoint });
+    }
   }
 
   recordRequest(): void {

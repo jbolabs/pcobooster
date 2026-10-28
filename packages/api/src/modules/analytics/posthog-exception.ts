@@ -1,5 +1,6 @@
 import { createPostHogCaptureSender } from "@pcobooster/api/modules/analytics/posthog-capture";
 import type { PostHogCaptureBody } from "@pcobooster/api/modules/analytics/posthog-capture";
+import { PlanningCenterRowsDroppedError } from "@pcobooster/api/planning-center/rows-dropped-error";
 import { InvalidInput } from "@pcobooster/contracts/faults/invalid-input";
 
 const EXCEPTION_MESSAGE_MAX_LENGTH = 500;
@@ -70,6 +71,10 @@ interface ExceptionEntry {
 
 interface ProviderExceptionProperties {
   provider?: "planning-center";
+  provider_endpoint?: string;
+  provider_resource_type?: string;
+  provider_fields?: readonly string[];
+  provider_rows?: number;
   provider_status?: 422;
   provider_errors?: NonNullable<InvalidInput["providerRejection"]>["errors"];
 }
@@ -111,14 +116,30 @@ export const toPostHogExceptionCapture = (
     providerProperties.provider_status = 422;
     providerProperties.provider_errors = rejection.errors;
   }
+  const dropped =
+    reported.error instanceof PlanningCenterRowsDroppedError
+      ? reported.error.group
+      : undefined;
+  if (dropped !== undefined) {
+    providerProperties.provider = "planning-center";
+    providerProperties.provider_endpoint = dropped.endpoint;
+    providerProperties.provider_resource_type = dropped.resourceType;
+    providerProperties.provider_fields = dropped.fields;
+    providerProperties.provider_rows = dropped.rows;
+  }
   const properties = {
     ...providerProperties,
     source: "server",
     $process_person_profile: false,
-    $exception_level: "error",
+    // The read succeeded without the rows, so it is a warning, not a failure.
+    $exception_level: dropped === undefined ? "error" : "warning",
     $exception_list: [exception],
-    // One issue per procedure and failure kind, so varying messages don't split it.
-    $exception_fingerprint: `api:${reported.path}:${code}`,
+    // One issue per procedure and failure kind, so varying messages don't split it; dropped
+    // rows also split by what broke, so each new Planning Center shape is its own issue.
+    $exception_fingerprint:
+      dropped === undefined
+        ? `api:${reported.path}:${code}`
+        : `api:${reported.path}:${code}:${dropped.endpoint}:${dropped.resourceType}:${dropped.fields.join(",")}`,
     error_code: code,
     path: reported.path,
     method: reported.method,
