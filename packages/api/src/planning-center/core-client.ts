@@ -10,7 +10,7 @@ import { PlanningCenterPaginationError } from "@pcobooster/api/planning-center/p
 import { PlanningCenterRateLimitError } from "@pcobooster/api/planning-center/rate-limit-error";
 import {
   DEFAULT_MAX_RATE_LIMIT_WAIT_MS,
-  DEFAULT_MAX_WRITE_RATE_LIMIT_WAIT_MS,
+  PLANNING_CENTER_WINDOW_WAIT_MS,
 } from "@pcobooster/api/planning-center/rate-pacer";
 import type { PlanningCenterRatePacer } from "@pcobooster/api/planning-center/rate-pacer";
 import { PlanningCenterReadOnlyError } from "@pcobooster/api/planning-center/read-only-error";
@@ -27,6 +27,7 @@ import {
   isTooManySubrequestsError,
 } from "@pcobooster/api/planning-center/subrequest-limit-error";
 import { PLANNING_CENTER_USER_AGENT } from "@pcobooster/api/planning-center/user-agent";
+import type { RequestPriority } from "@pcobooster/contracts/request-priority";
 import {
   isNonEmptyString,
   isString,
@@ -212,16 +213,43 @@ export const buildPlanningCenterUrl = (
 const isReadMethod = (method: HttpMethod): boolean =>
   method === "GET" || method === "HEAD";
 
-/** A Retry-After longer than an interactive request should wait. */
-const exceedsRetryAfterCap = (retryAfterSeconds: number | undefined): boolean =>
-  retryAfterSeconds !== undefined &&
-  retryAfterSeconds * MS_PER_SECOND > DEFAULT_MAX_RATE_LIMIT_WAIT_MS;
+/**
+ * Longest rate-limit wait a read resends after. An interactive read waits out up to one
+ * window: resending costs one request, while failing hands the browser a retry that reruns
+ * the whole procedure and every request it already made. Speculative reads fail fast, so
+ * work nobody is waiting on never holds a connection through a window.
+ */
+const readRateLimitWaitCapMs = (priority: RequestPriority): number =>
+  priority === "speculative"
+    ? DEFAULT_MAX_RATE_LIMIT_WAIT_MS
+    : PLANNING_CENTER_WINDOW_WAIT_MS;
 
-const isRetryableError = (error: AttemptError): boolean => {
+const exceedsRetryAfterCap = (
+  retryAfterSeconds: number | undefined,
+  priority: RequestPriority
+): boolean =>
+  retryAfterSeconds !== undefined &&
+  retryAfterSeconds * MS_PER_SECOND > readRateLimitWaitCapMs(priority);
+
+const isRetryableError = (
+  error: AttemptError,
+  priority: RequestPriority
+): boolean => {
   if (error instanceof PlanningCenterApiError) {
     return (
       RETRYABLE_STATUS_CODES.has(error.status) &&
-      !(error.status === 429 && exceedsRetryAfterCap(error.retryAfterSeconds))
+      !(
+        error.status === 429 &&
+        exceedsRetryAfterCap(error.retryAfterSeconds, priority)
+      )
+    );
+  }
+  if (error instanceof PlanningCenterRateLimitError) {
+    // The pacer sent nothing, so waiting out its block costs no budget. A speculative
+    // hold-back is the caller's to resend at interactive priority.
+    return (
+      error.reason === "budget" &&
+      !exceedsRetryAfterCap(error.retryAfterSeconds, priority)
     );
   }
   if (!(error instanceof PlanningCenterNetworkError)) {
@@ -236,6 +264,9 @@ const isRetryableError = (error: AttemptError): boolean => {
 
 /** `retry` is 1 for the first retry. */
 const retryDelayMs = (retry: number, error: AttemptError): number => {
+  if (error instanceof PlanningCenterRateLimitError) {
+    return Math.max(error.retryAfterSeconds, 1) * MS_PER_SECOND;
+  }
   if (!(error instanceof PlanningCenterApiError)) {
     return retry * 300;
   }
@@ -255,26 +286,28 @@ const describePlanningCenterEndpoint = (
   };
 };
 
-const isRateLimitedResponse = (error: AttemptError): boolean =>
-  error instanceof PlanningCenterApiError && error.status === 429;
+/** A 429 or pacer rejection, whose `info` line comes from the attempt. */
+const isRateLimited = (error: AttemptError): boolean =>
+  error instanceof PlanningCenterRateLimitError ||
+  (error instanceof PlanningCenterApiError && error.status === 429);
 
 /**
  * Idempotent reads retry transient failures; writes retry only a 429 (see
- * `rateLimitedWriteRetry`). A read's 429 is
- * retried only when its Retry-After fits the interactive wait cap; its
- * `info` line comes from the attempt.
+ * `rateLimitedWriteRetry`). A read's 429 or pacer rejection is retried only
+ * when its Retry-After fits `readRateLimitWaitCapMs`.
  */
 const transientReadRetries = (
   endpoint: PlanningCenterEndpoint,
-  method: HttpMethod
+  method: HttpMethod,
+  priority: RequestPriority
 ) =>
   Schedule.recurs(MAX_RETRIES).pipe(
     Schedule.setInputType<AttemptError>(),
-    Schedule.while(({ input }) => isRetryableError(input)),
+    Schedule.while(({ input }) => isRetryableError(input, priority)),
     Schedule.addDelay(({ attempt, input }) => {
       const delayMs = retryDelayMs(attempt, input);
       const delay = Effect.succeed(Duration.millis(delayMs));
-      return isRateLimitedResponse(input)
+      return isRateLimited(input)
         ? delay
         : Effect.andThen(
             log.warn("Planning Center request failed, retrying", {
@@ -297,7 +330,7 @@ const isRetryableWriteRateLimit = (error: AttemptError): boolean =>
   error instanceof PlanningCenterApiError &&
   error.status === 429 &&
   (error.retryAfterSeconds ?? 0) * MS_PER_SECOND <=
-    DEFAULT_MAX_WRITE_RATE_LIMIT_WAIT_MS;
+    PLANNING_CENTER_WINDOW_WAIT_MS;
 
 const MAX_WRITE_RATE_LIMIT_RETRIES = 1;
 
@@ -314,10 +347,11 @@ const rateLimitedWriteRetry = Schedule.recurs(
 const willRetryRateLimit = (
   method: HttpMethod,
   attempt: number,
-  error: AttemptError
+  error: AttemptError,
+  priority: RequestPriority
 ): boolean =>
   isReadMethod(method)
-    ? attempt <= MAX_RETRIES && isRetryableError(error)
+    ? attempt <= MAX_RETRIES && isRetryableError(error, priority)
     : attempt <= MAX_WRITE_RATE_LIMIT_RETRIES &&
       isRetryableWriteRateLimit(error);
 
@@ -851,13 +885,12 @@ export class PlanningCenterCoreClient {
         ? execute
         : Effect.acquireUseRelease(
             reserveSlot(pacer, cacheScope, context, method),
-            (waitMs) =>
-              waitMs === 0
-                ? execute
-                : Effect.andThen(
-                    Effect.sleep(Duration.millis(waitMs)),
-                    execute
-                  ),
+            (waitMs) => {
+              const send = pacer.withSendPermit(cacheScope, execute);
+              return waitMs === 0
+                ? send
+                : Effect.andThen(Effect.sleep(Duration.millis(waitMs)), send);
+            },
             // A granted reservation is released after the response, a
             // failure, or an interruption; responses also report the window.
             (_waitMs, exit) =>
@@ -901,7 +934,12 @@ export class PlanningCenterCoreClient {
           attempt: context.attempt,
           retryAfterSeconds: error.retryAfterSeconds,
           rateLimit: error.rateLimit,
-          willRetry: willRetryRateLimit(method, context.attempt, error),
+          willRetry: willRetryRateLimit(
+            method,
+            context.attempt,
+            error,
+            accounting?.priority ?? "interactive"
+          ),
         });
       } else if (isWrite) {
         // Retain provider details and redacted inputs independently of the user-facing message.
@@ -972,7 +1010,14 @@ export class PlanningCenterCoreClient {
         });
       });
       return yield* isReadMethod(method)
-        ? Effect.retry(nextAttempt, transientReadRetries(description, method))
+        ? Effect.retry(
+            nextAttempt,
+            transientReadRetries(
+              description,
+              method,
+              accounting?.priority ?? "interactive"
+            )
+          )
         : Effect.retry(nextAttempt, rateLimitedWriteRetry);
     });
   }
