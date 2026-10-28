@@ -176,7 +176,7 @@ export const KeyTransitionPopover = ({
           <NotebookPen className="size-3.5 shrink-0" aria-hidden />
           Tap an idea to add it to notes.
         </p>
-        <ul className="flex flex-col gap-1 px-4 py-2">
+        <ul className="mt-1 flex flex-col gap-1 p-1">
           {suggestions.map((suggestion) => {
             const note = suggestionNote(suggestion);
             const added = notes.includes(note);
@@ -188,7 +188,6 @@ export const KeyTransitionPopover = ({
                   trigger={
                     <Item
                       size="xs"
-                      className="-mx-3 w-[calc(100%+1.5rem)]"
                       render={
                         <button
                           type="button"

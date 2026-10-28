@@ -62,6 +62,10 @@ export default defineConfig({
     "local/menu-label-inside-group": "error",
     // Controls get their look from components/ui primitives, not call sites.
     "local/prefer-shared-controls": "error",
+    // Nested corners stay concentric: inner radius <= outer radius minus padding.
+    "local/concentric-radius": "error",
+    // A rounded element in a rounded corner sits as far from the side as from the edge.
+    "local/even-corner-inset": "error",
   },
   overrides: [
     {

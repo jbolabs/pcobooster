@@ -18,6 +18,8 @@ import {
   scrollContainerOverscrollRule,
   fieldKeyboardHintsRule,
   gridTracksShrinkRule,
+  concentricRadiusRule,
+  evenCornerInsetRule,
 } from "./oxlint-plugin-local.mjs";
 
 RuleTester.describe = describe;
@@ -1062,6 +1064,133 @@ ruleTester.run(
           },
         ],
         output: `<div className="grid grid-cols-[auto_minmax(0,1fr)] md:grid-cols-[minmax(0,1.15fr)_minmax(0,380px)_minmax(0,2fr)]" />`,
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "concentric-radius",
+  concentricRadiusRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "item radius equals container radius minus padding",
+        code: `<div className="rounded-3xl p-1"><div className="rounded-2xl" /></div>`,
+      },
+      {
+        name: "tighter item radius",
+        code: `<div className="rounded-3xl p-1.5"><div className="rounded-xl" /></div>`,
+      },
+      {
+        name: "pills and avatars do not hug the corner",
+        code: `<div className="rounded-3xl p-1.5"><span className="rounded-full" /></div>`,
+      },
+      {
+        name: "state-only radius is not a resting corner",
+        code: `<div className="rounded-3xl p-1.5"><div className="data-open:rounded-3xl" /></div>`,
+      },
+      {
+        name: "wrapper with siblings does not reach the corners",
+        code: `
+        <Command>
+          <CommandInput />
+          <div className="p-1.5"><div className="rounded-2xl" /></div>
+        </Command>
+      `,
+      },
+    ],
+    invalid: [
+      {
+        name: "menu item rounder than the padded popup allows",
+        code: `<div className="rounded-3xl p-1.5"><button className="rounded-2xl" /></div>`,
+        errors: [{ messageId: "tooRound" }],
+      },
+      {
+        name: "mapped rows inside a primitive's resting corner",
+        code: `
+        <DropdownMenuContent>
+          {dates.map((date) => <DropdownMenuItem key={date} className="rounded-2xl" />)}
+        </DropdownMenuContent>
+      `,
+        errors: [{ messageId: "tooRound" }],
+      },
+      {
+        name: "padding of a lone square wrapper counts toward the inset",
+        code: `
+        <PopoverContent>
+          <div className="p-1.5"><div className="rounded-3xl" /></div>
+        </PopoverContent>
+      `,
+        errors: [{ messageId: "tooRound" }],
+      },
+      {
+        name: "primitive popup and items declared in separate components",
+        code: `
+        const Content = () => <MenuPrimitive.Popup className="rounded-3xl p-1.5" />;
+        const Item = () => <MenuPrimitive.Item className="rounded-2xl px-3" />;
+      `,
+        errors: [{ messageId: "tooRound" }],
+      },
+    ],
+  }
+);
+
+ruleTester.run(
+  "even-corner-inset",
+  evenCornerInsetRule as Parameters<typeof ruleTester.run>[1],
+  {
+    valid: [
+      {
+        name: "even padding around corner rows",
+        code: `<div className="rounded-3xl p-1.5"><div className="rounded-xl" /></div>`,
+      },
+      {
+        name: "rows in the middle of a popover do not touch its edges",
+        code: `
+        <PopoverContent>
+          <Header />
+          <ul className="px-4 py-2"><li className="rounded-xl" /></ul>
+          <Footer />
+        </PopoverContent>
+      `,
+      },
+    ],
+    invalid: [
+      {
+        name: "uneven padding around a corner element",
+        code: `<div className="rounded-3xl px-1.5 py-3"><div className="rounded-xl" /></div>`,
+        errors: [{ messageId: "uneven" }],
+      },
+      {
+        name: "rows bled sideways but not vertically, through a trigger prop and a map",
+        code: `
+        <ResponsivePopoverContent>
+          <Header />
+          <ul className="px-4 py-2">
+            {ideas.map((idea) => {
+              const note = noteFor(idea);
+              return (
+                <li key={note}>
+                  <HoverLabel trigger={<Item size="xs" className="-mx-3" />} />
+                </li>
+              );
+            })}
+          </ul>
+          {tip ? null : <Alternates />}
+        </ResponsivePopoverContent>
+      `,
+        errors: [{ messageId: "uneven" }],
+      },
+      {
+        name: "element returned from a render callback prop",
+        code: `<div className="rounded-3xl px-4 py-2"><Trigger render={() => <button className="rounded-xl" />} /></div>`,
+        errors: [{ messageId: "uneven" }],
+      },
+      {
+        name: "shared primitive row with its resting corner",
+        code: `<div className="rounded-3xl px-4 py-2"><DropdownMenuItem /></div>`,
+        errors: [{ messageId: "uneven" }],
       },
     ],
   }
