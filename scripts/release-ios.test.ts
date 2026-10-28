@@ -109,7 +109,8 @@ const releaseSteps = () => {
     .slice(1);
 };
 
-describe("release-ios.sh before it builds", () => {
+// Real CLI launches and throwaway checkouts need headroom on shared CI runners.
+describe("release-ios.sh before it builds", { timeout: 30_000 }, () => {
   it.each([
     {},
     {

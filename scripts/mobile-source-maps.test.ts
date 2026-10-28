@@ -335,7 +335,8 @@ const composeRun = (debugId: string, offset: number, indexed = false) => {
 
 const OTHER_DEBUG_ID = "9a3e6d70-5b6c-4f27-8d4c-2d6f0b1c3e4a";
 
-describe("maps from two composition runs", () => {
+// Real CLI launches and throwaway checkouts need headroom on shared CI runners.
+describe("maps from two composition runs", { timeout: 30_000 }, () => {
   it("composes SDK 58 indexed packager output with its recorded identity intact", () => {
     const run = composeRun(DEBUG_ID, 1, true);
     expect({

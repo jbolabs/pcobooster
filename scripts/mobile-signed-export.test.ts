@@ -356,7 +356,8 @@ const fixture = () => {
   };
 };
 
-describe("the signed export gate", () => {
+// Real CLI launches and throwaway checkouts need headroom on shared CI runners.
+describe("the signed export gate", { timeout: 30_000 }, () => {
   it("binds a matching distribution IPA to its archive, symbols, maps, and evidence", () => {
     const { input, paths, unpacked } = fixture();
     const identity = verifySignedExport(input);
