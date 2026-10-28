@@ -78,12 +78,14 @@ const SongPreview = ({
   planId,
   planDate,
   previousSong,
+  onOpenPlan,
 }: {
   song: SongCatalogEntry;
   serviceTypeId: string | null;
   planId: string | null;
   planDate: Date;
   previousSong: PreviousSong | null;
+  onOpenPlan: () => void;
 }) => {
   const history = useSongHistory(song.id);
   const options = useSongOptions(song.id, serviceTypeId);
@@ -140,6 +142,7 @@ const SongPreview = ({
         planId={planId}
         planDate={planDate}
         previewRows={PREVIEW_HISTORY_ROWS}
+        onOpenPlan={onOpenPlan}
       />
     </div>
   );
@@ -262,6 +265,7 @@ const TappedSongPreview = ({
   planId: string | null;
   planDate: Date;
   previousSong: PreviousSong | null;
+  onOpenPlan: () => void;
 }) => (
   <div className="flex h-[min(34rem,60svh)] min-h-0 flex-col">
     <div className="p-1">
@@ -353,6 +357,9 @@ export const AddSongPalette = ({
     onChooseSong(song);
     setOpen(false);
   };
+  const close = () => {
+    setOpen(false);
+  };
 
   return (
     <CommandDialog
@@ -375,6 +382,7 @@ export const AddSongPalette = ({
           planId={planId}
           planDate={serviceDate}
           previousSong={previousSong}
+          onOpenPlan={close}
         />
       )}
       <Command
@@ -435,6 +443,7 @@ export const AddSongPalette = ({
                 planId={planId}
                 planDate={serviceDate}
                 previousSong={previousSong}
+                onOpenPlan={close}
               />
             </div>
           )}
