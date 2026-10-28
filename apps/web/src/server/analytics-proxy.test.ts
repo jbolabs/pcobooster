@@ -50,6 +50,7 @@ describe(proxyAnalytics, () => {
         headers: {
           "content-type": "application/octet-stream",
           "content-encoding": "gzip",
+          origin: "https://pcobooster.com",
           "x-forwarded-for": "192.0.2.8",
         },
         bytes: [31, 139, 8, 0, 255],
@@ -84,6 +85,7 @@ describe(proxyAnalytics, () => {
       expect({
         url: requests[0]?.url,
         method: requests[0]?.method,
+        origin: requests[0]?.headers.get("origin"),
         body: await response.text(),
         cacheControl: response.headers.get("cache-control"),
         contentType: response.headers.get("content-type"),
@@ -91,6 +93,7 @@ describe(proxyAnalytics, () => {
       }).toStrictEqual({
         url: `https://us-assets.i.posthog.com${path}`,
         method: "GET",
+        origin: "https://pcobooster.com",
         body: "asset",
         cacheControl: "public, max-age=3600",
         contentType: "text/javascript",
