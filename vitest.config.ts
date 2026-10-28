@@ -22,9 +22,12 @@ export default defineConfig({
       "scripts/**/*.test.ts",
       "stacks/**/*.test.ts",
     ],
-    // Turborepo runs packages in parallel. Bound each package's workers so auth and workerd
-    // fixtures keep CPU time while other suites start, without serializing the package gate.
-    maxWorkers: 4,
+    // Turborepo runs packages in parallel, up to half the cores (turbo.json `concurrency`).
+    // Bound each package's workers so auth and workerd fixtures keep CPU time while other
+    // suites start, without serializing the package gate. Locally two per package keeps a
+    // full `bun run ci` near one worker per core, so several agents' runs don't freeze the
+    // machine; CI runners do nothing else and keep four.
+    maxWorkers: process.env.CI === "true" ? 4 : 2,
     environment: "node",
     globals: true,
     clearMocks: true,
