@@ -1,4 +1,5 @@
 import {
+  CHORD_CHART_PDF_MAX_BYTES,
   bytesToBase64,
   readPdfBytes,
 } from "@pcobooster/api/modules/planning-center/chord-charts";
@@ -8,6 +9,10 @@ import type { PlanningCenterPlansService } from "@pcobooster/api/planning-center
 import { ExternalServiceFailure } from "@pcobooster/contracts/faults/external-service-failure";
 import { Forbidden } from "@pcobooster/contracts/faults/forbidden";
 import { NotFound } from "@pcobooster/contracts/faults/not-found";
+import {
+  PLAN_FILE_LINK_TYPES,
+  planFileDeclaresPdf,
+} from "@pcobooster/contracts/http/plan-files";
 import type {
   PlanFile,
   PlanFileLink,
@@ -41,9 +46,6 @@ const notFound = () =>
 
 const failure = (message: string, cause?: unknown) =>
   new ExternalServiceFailure({ message, service: "planning-center", cause });
-
-/** Files that live on another site open as links, whatever their download setting. */
-const LINK_TYPES = new Set(["AttachmentLink", "AttachmentYoutube"]);
 
 export const normalizePlanFile = (resource: PCResource): PlanFile => {
   const { attributes } = resource;
@@ -190,19 +192,41 @@ const downloadProviderFile = (
 
 const PDF_SIGNATURE = "%PDF-";
 
-const readProviderPdf = (url: string, fetch: typeof globalThis.fetch) =>
+/**
+ * The file's PDF, base64 encoded. A file Planning Center calls a PDF must be one; any other
+ * file is null when it is too large to be a chart or isn't a PDF, and opens as its link.
+ */
+export const readProviderPdf = (
+  url: string,
+  declaredPdf: boolean,
+  fetch: typeof globalThis.fetch
+) =>
   Effect.gen(function* readPdf() {
     const response = yield* downloadProviderFile(url, fetch);
+    const declaredSize = Number(response.headers.get("Content-Length"));
+    if (!declaredPdf && declaredSize > CHORD_CHART_PDF_MAX_BYTES) {
+      yield* Effect.promise(async () => {
+        try {
+          await response.body?.cancel();
+        } catch {
+          // Stopping the download is best effort; the size already decides the answer.
+        }
+      });
+      return null;
+    }
     const bytes = yield* readPdfBytes(response);
     if (
-      new TextDecoder().decode(bytes.subarray(0, PDF_SIGNATURE.length)) !==
+      new TextDecoder().decode(bytes.subarray(0, PDF_SIGNATURE.length)) ===
       PDF_SIGNATURE
     ) {
-      return yield* failure(
-        "This file is not a PDF. Open the original file instead."
-      );
+      return bytesToBase64(bytes);
     }
-    return bytesToBase64(bytes);
+    if (!declaredPdf) {
+      return null;
+    }
+    return yield* failure(
+      "This file is not a PDF. Open the original file instead."
+    );
   });
 
 /**
@@ -234,7 +258,7 @@ export const openPlanFile = (
       (input.as === "preview" || (!file.downloadable && !file.streamable));
     if (
       !(file.downloadable || file.streamable || preview) &&
-      !LINK_TYPES.has(file.providerType)
+      !PLAN_FILE_LINK_TYPES.has(file.providerType)
     ) {
       return yield* new Forbidden({
         message:
@@ -255,5 +279,6 @@ export const openPlanFile = (
     if (input.as !== "pdf" || preview) {
       return { url, preview };
     }
-    return { url, preview, data: yield* readProviderPdf(url, fetch) };
+    const data = yield* readProviderPdf(url, planFileDeclaresPdf(file), fetch);
+    return data === null ? { url, preview } : { url, preview, data };
   });

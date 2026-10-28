@@ -1,8 +1,10 @@
 import { isPlanningCenterPathId } from "@pcobooster/api/modules/planning-center/path-ids";
+import { readProviderPdf } from "@pcobooster/api/modules/planning-center/plan-files";
 import type { PlanningCenterError } from "@pcobooster/api/planning-center/core-client";
 import type { PlanningCenterSongsService } from "@pcobooster/api/planning-center/services/songs-service";
 import { ExternalServiceFailure } from "@pcobooster/contracts/faults/external-service-failure";
 import { NotFound } from "@pcobooster/contracts/faults/not-found";
+import { PLAN_FILE_LINK_TYPES } from "@pcobooster/contracts/http/plan-files";
 import type {
   SONG_ATTACHMENT_KINDS,
   songAttachmentLinkInputSchema,
@@ -48,13 +50,6 @@ const notFound = () =>
 /** Planning Center's own chart renders: `AttachmentChart::Chord` per key, `::Lyric` per arrangement. */
 const CHART_TYPE_PREFIX = "AttachmentChart";
 const LYRICS_CHART_TYPE = "AttachmentChart::Lyric";
-/** Files that live on another site. */
-const LINK_TYPES = new Set([
-  "AttachmentLink",
-  "AttachmentYoutube",
-  "AttachmentVimeo",
-  "AttachmentSpotify",
-]);
 
 const PDF_EXTENSIONS = new Set(["pdf"]);
 const IMAGE_EXTENSIONS = new Set([
@@ -168,7 +163,7 @@ export const toSongAttachment = (
   const contentType = text(attributes.content_type);
   const size = attributes.file_size;
   const isLink =
-    LINK_TYPES.has(pcoType) ||
+    PLAN_FILE_LINK_TYPES.has(pcoType) ||
     (filename === "" && text(attributes.linked_url) !== null);
   const linkUrl = isLink
     ? secureLink(text(attributes.linked_url) ?? text(attributes.remote_link))
@@ -280,13 +275,15 @@ export const getSongAttachments = (
   });
 
 /**
- * Planning Center's short-lived signed link to one stored file (its `open` action). The server
- * never downloads the file: audio and video stream on the device, and documents download there
- * without this app's credentials.
+ * Planning Center's short-lived signed link to one stored file (its `open` action). Audio and
+ * video stream on the device, and documents download there without this app's credentials.
+ * `as: "pdf"` also returns the file when it is a PDF, read from Planning Center's storage only,
+ * since its signed links download PDFs rather than show them.
  */
 export const getSongAttachmentLink = (
   input: SongAttachmentLinkInput,
-  songs: Pick<SongAttachmentsService, "openChartAttachment">
+  songs: Pick<SongAttachmentsService, "openChartAttachment">,
+  fetch: typeof globalThis.fetch
 ): Effect.Effect<
   SongAttachmentLink,
   PlanningCenterError | NotFound | ExternalServiceFailure
@@ -313,5 +310,9 @@ export const getSongAttachmentLink = (
         service: "planning-center",
       });
     }
-    return { url };
+    if (input.as !== "pdf") {
+      return { url };
+    }
+    const data = yield* readProviderPdf(url, false, fetch);
+    return data === null ? { url } : { url, data };
   });

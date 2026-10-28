@@ -40,6 +40,12 @@ describe(isChordLine, () => {
     expect(isChordLine("G -//- D (3x)")).toBeTruthy();
   });
 
+  it("accepts pushes, beat counts, lone bass notes, and parenthesized chords", () => {
+    expect(isChordLine("Am7    Bm7     | Em / * D/E / / |")).toBeTruthy();
+    expect(isChordLine("     /D      C     D   Em 4,3")).toBeTruthy();
+    expect(isChordLine("(Em)  D/F#   G      D")).toBeTruthy();
+  });
+
   it("rejects lyric lines", () => {
     expect(isChordLine("Be thou my vision")).toBeFalsy();
     expect(isChordLine("A mighty fortress")).toBeFalsy();
@@ -58,6 +64,15 @@ describe(transposeChordChartText, () => {
         keyG
       )
     ).toBe("VERSE\n[G]Beyond [Em]all\nG    D\nLyrics here");
+  });
+
+  it("transposes chord lines that carry pushes and beat counts", () => {
+    if (keyE === null || keyG === null) {
+      throw new Error("Test keys did not parse");
+    }
+    expect(
+      transposeChordChartText("(Em)  /B   E * 4,3\nLyrics here", keyE, keyG)
+    ).toBe("(Gm)  /D   G * 4,3\nLyrics here");
   });
 
   it("keeps trailing spaces and Windows line endings on chord lines", () => {

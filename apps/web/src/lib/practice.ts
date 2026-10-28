@@ -179,29 +179,37 @@ export const PLAYBACK_RATES = [0.5, 0.75, 0.9, 1, 1.1, 1.25] as const;
 
 export interface LoopRegion {
   readonly start: number;
-  readonly end: number | null;
+  readonly end: number;
 }
 
+export const LOOP_STEP = 0.1;
+const DEFAULT_PASSAGE_SECONDS = 15;
+
+/** A short passage around the playhead, kept inside the recording. */
+export const initialLoop = (time: number, duration: number): LoopRegion => {
+  const start = Math.max(0, Math.min(time, duration - DEFAULT_PASSAGE_SECONDS));
+  return { start, end: Math.min(duration, start + DEFAULT_PASSAGE_SECONDS) };
+};
+
+export type LoopEdge = "start" | "end";
+
+const TENTHS_PER_MINUTE = SECONDS_PER_MINUTE * 10;
+
+/** Absorbs float error so 30.3 stored as 30.2999… still reads 30.3. */
+const TENTH_EPSILON = 1e-6;
+
 /**
- * The loop after a press of the loop button at `time`: the first press marks where it starts,
- * the second where it ends (before the start, they swap), and the third clears it.
+ * A time to the tenth of a second, such as `1:05.2`. It truncates like `formatPlaybackTime`,
+ * so both read the same second.
  */
-export const nextLoop = (
-  loop: LoopRegion | null,
-  time: number
-): LoopRegion | null => {
-  if (loop === null) {
-    return { start: time, end: null };
-  }
-  if (loop.end === null) {
-    if (time === loop.start) {
-      return loop;
-    }
-    return time > loop.start
-      ? { start: loop.start, end: time }
-      : { start: time, end: loop.start };
-  }
-  return null;
+export const formatLoopTime = (seconds: number): string => {
+  const tenths = Number.isFinite(seconds)
+    ? Math.max(0, Math.floor(seconds * 10 + TENTH_EPSILON))
+    : 0;
+  const minutes = Math.floor(tenths / TENTHS_PER_MINUTE);
+  const rest = tenths % TENTHS_PER_MINUTE;
+  const whole = String(Math.floor(rest / 10)).padStart(2, "0");
+  return `${String(minutes)}:${whole}.${String(rest % 10)}`;
 };
 
 /** An arrangement key Planning Center renders a chord chart PDF for. */

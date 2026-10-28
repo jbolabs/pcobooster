@@ -166,3 +166,23 @@ export const recoverPlanningCenterFailure =
         Effect.sync(fallback)
       );
     });
+
+/**
+ * Runs optional diagnostics only after an operation has failed. Diagnostic failures,
+ * including spent budgets, cannot replace the original failure or become product data.
+ * Interruptions and defects still propagate; this is not a read fallback.
+ */
+export const withPlanningCenterFailureDiagnostics =
+  <Failure, DiagnosticFailure, DiagnosticRequirements>(
+    diagnose: (
+      failure: Failure
+    ) => Effect.Effect<void, DiagnosticFailure, DiagnosticRequirements>
+  ) =>
+  <Value, Requirements>(
+    self: Effect.Effect<Value, Failure, Requirements>
+  ): Effect.Effect<Value, Failure, Requirements | DiagnosticRequirements> =>
+    Effect.tapError(self, (failure) =>
+      diagnose(failure).pipe(
+        Effect.match({ onSuccess: () => null, onFailure: () => null })
+      )
+    );

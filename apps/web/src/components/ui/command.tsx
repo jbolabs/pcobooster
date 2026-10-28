@@ -20,7 +20,7 @@ const Command = ({
   <CommandPrimitive
     data-slot="command"
     className={cn(
-      "bg-popover text-popover-foreground flex size-full flex-col overflow-hidden rounded-4xl p-1",
+      "bg-popover text-popover-foreground flex size-full flex-col overflow-hidden rounded-3xl p-1 in-data-[slot=dialog-content]:rounded-4xl",
       className
     )}
     {...props}

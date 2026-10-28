@@ -38,6 +38,7 @@ const buttonSizes = [
   "icon-xs",
   "icon-sm",
   "icon-lg",
+  "icon-xl",
 ] as const;
 
 const sizeKeyPattern = /^ {8}"?([\w-]+)"?:/gmu;
@@ -116,6 +117,8 @@ const rawOverlayAllowed: Record<string, string> = {
     'the full-screen file viewer (`variant="viewer"`)',
   "components/sidebar-feedback.tsx":
     "the desktop sidebar's feedback form; phones use mobile-feedback-dialog",
+  "components/songs/song-file-viewer.tsx":
+    'the full-screen file viewer (`variant="viewer"`)',
 };
 
 const rawOverlayImportPattern =

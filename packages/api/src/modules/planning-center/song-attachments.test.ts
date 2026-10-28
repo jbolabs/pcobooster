@@ -69,6 +69,10 @@ const createSongs = (keys: readonly PCResource[] = [key("550111", "55011")]) =>
     ),
   }) satisfies SongAttachmentsService;
 
+/** Link-only opens never download the file. */
+const noDownload: typeof globalThis.fetch = async () =>
+  await Promise.reject(new Error("Unexpected download"));
+
 describe(storedFileKind, () => {
   it.each([
     ["application/pdf", "chart", "pdf"],
@@ -235,12 +239,59 @@ describe(getSongAttachments, () => {
 });
 
 describe(getSongAttachmentLink, () => {
+  it("returns a PDF's bytes from Planning Center's storage, so the app shows it", async () => {
+    const songs = createSongs();
+    songs.openChartAttachment.mockReturnValue(
+      Effect.succeed("https://pco-files.s3.amazonaws.com/901.pdf?sig=abc")
+    );
+    const link = await Effect.runPromise(
+      getSongAttachmentLink(
+        {
+          songId: "5501",
+          arrangementId: "55011",
+          attachmentId: "901",
+          as: "pdf",
+        },
+        songs,
+        async () => await Promise.resolve(new Response("%PDF-1.7 chart"))
+      )
+    );
+    expect(link).toStrictEqual({
+      url: "https://pco-files.s3.amazonaws.com/901.pdf?sig=abc",
+      // base64 of "%PDF-1.7 chart"
+      data: "JVBERi0xLjcgY2hhcnQ=",
+    });
+  });
+
+  it("answers with the link alone when the file asked for as a PDF isn't one", async () => {
+    const songs = createSongs();
+    songs.openChartAttachment.mockReturnValue(
+      Effect.succeed("https://pco-files.s3.amazonaws.com/901?sig=abc")
+    );
+    const link = await Effect.runPromise(
+      getSongAttachmentLink(
+        {
+          songId: "5501",
+          arrangementId: "55011",
+          attachmentId: "901",
+          as: "pdf",
+        },
+        songs,
+        async () => await Promise.resolve(new Response("<html>login</html>"))
+      )
+    );
+    expect(link).toStrictEqual({
+      url: "https://pco-files.s3.amazonaws.com/901?sig=abc",
+    });
+  });
+
   it("opens an arrangement's file or a key's file at its own path", async () => {
     const songs = createSongs();
     const link = await Effect.runPromise(
       getSongAttachmentLink(
         { songId: "5501", arrangementId: "55011", attachmentId: "901" },
-        songs
+        songs,
+        noDownload
       )
     );
     await Effect.runPromise(
@@ -251,7 +302,8 @@ describe(getSongAttachmentLink, () => {
           attachmentId: "902",
           keyId: "550111",
         },
-        songs
+        songs,
+        noDownload
       )
     );
     expect(
@@ -277,7 +329,8 @@ describe(getSongAttachmentLink, () => {
           await Effect.runPromiseExit(
             getSongAttachmentLink(
               { songId: "5501", arrangementId: "55011", ...ids },
-              songs
+              songs,
+              noDownload
             )
           )
       )
@@ -294,7 +347,8 @@ describe(getSongAttachmentLink, () => {
     const exit = await Effect.runPromiseExit(
       getSongAttachmentLink(
         { songId: "5501", arrangementId: "55011", attachmentId: "901" },
-        songs
+        songs,
+        noDownload
       )
     );
     expect(JSON.stringify(exit)).toContain("secure link");
@@ -308,7 +362,8 @@ describe(getSongAttachmentLink, () => {
     const exit = await Effect.runPromiseExit(
       getSongAttachmentLink(
         { songId: "5501", arrangementId: "55011", attachmentId: "901" },
-        songs
+        songs,
+        noDownload
       )
     );
     expect(Exit.isFailure(exit)).toBeTruthy();

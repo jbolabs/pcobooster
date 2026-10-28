@@ -21,7 +21,6 @@ import { verifyDevelopmentOrganization } from "./scripts/cloudflare/dev-organiza
 import { prepareCloudflareBuild } from "./scripts/cloudflare/prepare";
 import {
   allowUniversalSslIssuers,
-  formerDomainRedirect,
   protectZoneEdge,
 } from "./scripts/cloudflare/zones";
 import { stageSecrets } from "./stacks/secrets";
@@ -155,10 +154,6 @@ export default Alchemy.Stack(
       yield* allowUniversalSslIssuers("", zone, "pcobooster.com");
       yield* protectZoneEdge("", zone);
     }
-    // Serves nothing until the registrar delegates the domain to this zone's nameservers.
-    const formerZone = production
-      ? yield* formerDomainRedirect(publicOrigin)
-      : undefined;
     const database = yield* Database;
     // Effect-native: it reads its own settings and binds the database (`apps/server/src/worker.ts`).
     const api = yield* Api;
@@ -194,7 +189,6 @@ export default Alchemy.Stack(
       web: web.url,
       databaseId: database.databaseId,
       nameServers: zone?.nameServers,
-      formerDomainNameServers: formerZone?.nameServers,
     };
   })
 );

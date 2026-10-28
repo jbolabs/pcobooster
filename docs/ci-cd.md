@@ -1,6 +1,6 @@
 # CI/CD
 
-The Cloudflare workflow separates secretless validation from deployment: labeled pull requests deploy previews, and merges to `main` deploy staging and then production. `ci` runs dependency review, strict linting, typechecks, and tests. `cloudflare-build` runs the product's Vite Worker build (with the prerendered marketing site staged into the product) without credentials. Both run for pull requests and again on the merged commit on `main`, where they gate the staging and production deploys.
+The Cloudflare workflow separates secretless validation from deployment: labeled pull requests deploy previews, and merges to `main` deploy staging and then production. `quality` runs dependency review, strict linting, and typechecks alongside three test lanes: application, Worker integration, and repository guards. The required `ci` gate succeeds only when quality and every test lane succeed. `cloudflare-build` runs the product's Vite Worker build (with the prerendered marketing site staged into the product) without credentials. Both run for pull requests and again on the merged commit on `main`, where they gate the staging and production deploys.
 
 Run the local gates before opening a pull request:
 
@@ -14,7 +14,11 @@ Use Node 24 and the pinned Bun version. Actions are pinned to immutable commits 
 
 During development, use `bun run ci:affected --base origin/main` for lint, affected typechecks and tests, and repository guards. `--dry-run` shows the selected tasks without executing checks. The base is resolved to its merge base with `HEAD`; committed, staged, unstaged, and untracked changes are included. For a stacked PR, use its preceding branch. An unavailable base fails instead of narrowing validation. Shared toolchain, TypeScript, test-fixture, workflow, or scope-selection changes run all packages. Final PR proof still requires the full local gates above.
 
-PR validation restores `.turbo/cache` through GitHub Actions' cache service, partitioned by job, OS, architecture, toolchain/configuration, and revision. The cache action runs only in the secretless `ci` and `cloudflare-build` jobs; deployments build from source. GitHub's branch/ref cache boundaries keep PR-written entries out of `main`. On `main` and manual runs, `TURBO_FORCE` bypasses restored results so every gate executes afresh before deployment and seeds the next PR's cache.
+PR validation restores `.turbo/cache` through GitHub Actions' cache service, partitioned by job and test lane, OS, architecture, toolchain/configuration, and revision. The cache action runs only in the secretless quality, test, and `cloudflare-build` jobs; deployments build from source. GitHub's branch/ref cache boundaries keep PR-written entries out of `main`. On `main` and manual runs, `TURBO_FORCE` bypasses restored results so every gate executes afresh before deployment and seeds the next PR's cache.
+
+Test execution does not depend on upstream test execution: source-only `test:inputs` tasks carry transitive hashes without running another suite. The lane selector partitions the conservative affected Turbo plan, with root guards always selected; empty lanes explicitly exit instead of passing an empty filter to Turbo. Local tests run repository guards first, then two concurrent packages with two Vitest workers per package; other Turbo commands default to half the available cores. Worker integration runs select available TCP ports and distinct Worker registry names rather than sharing ports 3010/3011 across checkouts. Independent review can run alongside validation; avoid starting a second full CI/build/proof run for the same revision.
+
+The Bun package cache lives in a fresh runner directory keyed by the exact lockfile, platform, and Bun version, without a fallback to older locks. This prevents unrelated historical packages from accumulating in a shared cache. Frozen installs and the uncached patch check remain required.
 
 Root tests and typechecks hash all repository inputs: these gates inspect and import files across workspace boundaries. Root scripts, shared TypeScript configuration, and toolchain configuration participate in every task hash, since packages import script types and fixtures; package tests also hash Vitest configuration. Mobile declares its build-time design-token dependency so token edits select and invalidate its checks. `test:install` checks the installed dependency patches outside Turbo on every `bun run test`, since a source cache key cannot establish the state of `node_modules`.
 
@@ -24,9 +28,9 @@ Shared steps live in composite actions:
 - `.github/actions/turbo-cache` restores and saves content-addressed validation results. Bump its cache namespace when changing the cache trust policy; rollback is to remove its two workflow uses, leaving all validation commands and merge gates in place.
 - Deployment jobs receive encrypted secrets from their declared GitHub environment; app secret values stay in Cloudflare.
 
-The `ci` job also runs checksum-verified `actionlint`. Run it locally when you edit workflows.
+The `quality` job also runs checksum-verified `actionlint`. Run it locally when you edit workflows.
 
-Concurrency is set per job. A new push to a pull request cancels that PR's older `ci` and `cloudflare-build` jobs. Deploy and cleanup jobs share a per-stage group that never cancels, so an Alchemy state update is never interrupted.
+Concurrency is set per job. A new push to a pull request cancels that PR's older quality, test, and `cloudflare-build` jobs. Deploy and cleanup jobs share a per-stage group that never cancels, so an Alchemy state update is never interrupted.
 
 `scripts/check-patches.test.ts` runs in `bun run test`. It fails if any installed copy of a patched dependency is missing a line the patch adds, for example after a stale Bun cache.
 
@@ -75,7 +79,9 @@ Cloudflare Access protects it, and every pull request preview the same way. `alc
 
 Merge equals deploy. A push to `main` deploys production after `ci`, `cloudflare-build`, and the `staging` deploy pass. So does a manual CI run on `main` with `deploy_production`. `production` accepts only the `main` branch and has no approval gate. When newer `main` has superseded the revision, the job ends green without reading production secrets or deploying; the newer revision's own run deploys it. Staging and labeled previews skip superseded (or closed) revisions the same way. Post-deploy verification then fails the run unless production's Workers serve the merged commit and pcobooster.com routes to them ([deploy verification](#preview-lifecycle)). The required checks on the pull request, then the same checks on the merged commit, are the only gates before production, so keep them strict.
 
-After verification, the job marks the release on PostHog charts. It skips with a warning when `POSTHOG_ANNOTATION_API_KEY` is absent; see [analytics](analytics.md#deploy-annotations). PostHog dashboards are applied separately with `bun run posthog:deploy`, never by CI.
+After verification, the job tells IndexNow (Bing, Yandex, and the search tools built on Bing's index) which public pages the deploy changed. Before the deploy, `scripts/search/indexnow.ts snapshot` digests every sitemap page through the workers.dev origin; afterwards `submit` digests them again and submits the new and changed URLs under the key file `apps/web/public/<key>.txt`. The first deploy that serves the key submits every page. Failures warn and never fail the job. Google does not use IndexNow; it reads the sitemap submitted in Search Console.
+
+The job then marks the release on PostHog charts. It skips with a warning when `POSTHOG_ANNOTATION_API_KEY` is absent; see [analytics](analytics.md#deploy-annotations). PostHog dashboards are applied separately with `bun run posthog:deploy`, never by CI.
 
 The production GitHub environment accepts only `main` and supplies its own Cloudflare token. Runtime app secrets live in the account store, referenced from the production secrets stack; local PATs and migration-only `DATABASE_URL` are never injected.
 
@@ -91,12 +97,12 @@ A deploy you run yourself (`bun run deploy:production`, `bun run infra:deploy`) 
 
 ### Analytics erasure cron
 
-The production API Worker carries the hourly [analytics erasure](analytics.md#schedule) Cron Trigger, and its deploy references `pcobooster__prod__analytics__POSTHOG_ERASURE_API_KEY`. A production deploy fails before uploading the Worker if that secret is not stored, so store it first:
+The production API Worker carries the hourly [analytics erasure](analytics.md#schedule) Cron Trigger (`17 * * * *`, `ANALYTICS_ERASURE_CRON` in `apps/server/src/analytics-erasure-schedule.ts`). Its deploy references `pcobooster__prod__analytics__POSTHOG_ERASURE_API_KEY` in the `pcobooster-secrets` stack's `prod` stage. Alchemy fails the deploy at plan time (`Reference to … in stack 'pcobooster-secrets' and stage 'prod' not found`) only when that stack's state has no such secret; it does not check the value. A stored secret that is empty or unreadable deploys fine, and every hourly run then reports `ANALYTICS_ERASURE_NOT_CONFIGURED` instead of erasing. To store or rotate the key:
 
-1. Create a PostHog personal API key with only the `person:write` scope, limited to project 614621. Save it in the production Keychain scope: `bun run secrets:set production POSTHOG_ERASURE_API_KEY --stdin`.
-2. `bun run secrets:plan:production` must show exactly one created secret, `pcobooster__prod__analytics__POSTHOG_ERASURE_API_KEY`, and no other change. After Jake approves, `bun run secrets:deploy:production`. From then on that command requires the key, like every other production runtime secret.
-3. Merge. The production deploy reconciles D1 migrations (including `analytics_erasure_requests`) before the API Worker uploads, because the Worker's `DB` binding is a props-level dependency on the database; the cron ships with that Worker.
-4. Verify: the Worker's Settings → Triggers lists `17 * * * *`; the next hour's Workers Logs show `Analytics erasure run` with counts; PostHog shows no `cron:analytics-erasure` exception. `bun run analytics:erase -- --database-id <id>` shows the queue's counts read-only.
+1. Create a PostHog personal API key with only the `person:write` scope, limited to project 614621. Add it as `POSTHOG_ERASURE_API_KEY` in Infisical project `pcobooster-prod`, environment `prod` (the source `alchemy.secrets.ts` reads for stage `prod`; see `stacks/secrets.ts`).
+2. Plan the secrets stack: `bun run secrets:plan:production` (it runs `bun alchemy deploy alchemy.secrets.ts --stage prod --profile admin --dry-run --no-input`). It fails if Infisical lacks the key. Expect only `pcobooster__prod__analytics__POSTHOG_ERASURE_API_KEY` to be created or updated. After Jake approves, `bun run secrets:deploy:production`. A changed value updates the secret in place, keeping its id. Run both without application keys exported: the shell outranks Infisical.
+3. Redeploy the API Worker so production carries the cron and the reference: a merge to `main`, or a manual CI run with `gh workflow run ci.yml --ref main -f deploy_production=true` (or `bun run deploy:production`, which still loads the legacy Keychain `production` scope). Confirm the deploy with Jake. The cron reads the secret on every run, so after an in-place rotation the next run uses the new value even without a redeploy. The production deploy reconciles D1 migrations (including `analytics_erasure_requests`) before the API Worker uploads, because the Worker's `DB` binding is a props-level dependency on the database.
+4. Verify: the API Worker's Settings → Triggers lists `17 * * * *`; after the next :17 run, Workers Logs show `Analytics erasure run` with counts (not `Analytics erasure run needs attention` or `Analytics erasure secret read failed`); PostHog shows no new `$exception` with `path` `cron:analytics-erasure`. `bun run analytics:erase -- --database-id <id>` shows the queue's counts read-only.
 
 Rolling back the Worker removes the trigger; queued requests wait in D1 and resume on the next deploy that carries it.
 

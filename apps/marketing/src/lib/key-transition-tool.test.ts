@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { keyTransitionAdvice } from "./key-transition-tool";
+import { keyChangeLevel, keyTransitionAdvice } from "./key-transition-tool";
 
 const adviceLines = (
   from: Parameters<typeof keyTransitionAdvice>[0],
@@ -60,5 +60,18 @@ describe(keyTransitionAdvice, () => {
       kind: "relative",
       reason: "Relative key: same key signature",
     });
+  });
+});
+
+describe(keyChangeLevel, () => {
+  it.each([
+    // The relative major shares every note with E minor.
+    ["Em", "C", "smooth"],
+    // A minor third apart, sharing only D.
+    ["G", "Bb", "worth-a-look"],
+    // A tritone apart: the farthest two keys can be.
+    ["G", "Db", "rough"],
+  ] as const)("rates %s into %s as %s", (from, to, level) => {
+    expect(keyChangeLevel(from, to)).toBe(level);
   });
 });

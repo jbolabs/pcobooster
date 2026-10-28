@@ -73,7 +73,7 @@ export const SelectionPickerCommandItem = ({
 }: ComponentProps<typeof CommandItem> & { selected: boolean }) => (
   <CommandItem
     data-assigned={selected ? "true" : "false"}
-    className="text-muted-foreground hover:bg-muted/30 hover:text-foreground data-[assigned=true]:bg-background data-[assigned=true]:text-foreground data-[assigned=true]:ring-foreground/10 data-[selected=true]:bg-muted/30 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left font-normal outline-none data-[assigned=true]:shadow-xs data-[assigned=true]:ring-1 [&>svg:last-child]:hidden"
+    className="text-muted-foreground hover:bg-muted/30 hover:text-foreground data-[assigned=true]:bg-background data-[assigned=true]:text-foreground data-[assigned=true]:ring-foreground/10 data-[selected=true]:bg-muted/30 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left font-normal outline-none data-[assigned=true]:shadow-xs data-[assigned=true]:ring-1 [&>svg:last-child]:hidden"
     {...props}
   />
 );

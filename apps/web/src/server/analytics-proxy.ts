@@ -38,6 +38,9 @@ export const proxyAnalytics = async (
       headers.set(name, value);
     }
   }
+  // PostHog turns replay on only for an Origin in the project's recording domains, and
+  // browsers omit Origin on same-origin GETs such as the remote config script.
+  headers.set("origin", incoming.origin);
   // Cloudflare supplies this header; never trust a caller's X-Forwarded-For chain.
   const ip = request.headers.get("cf-connecting-ip");
   if (ip !== null) {

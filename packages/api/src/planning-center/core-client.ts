@@ -10,7 +10,7 @@ import { PlanningCenterPaginationError } from "@pcobooster/api/planning-center/p
 import { PlanningCenterRateLimitError } from "@pcobooster/api/planning-center/rate-limit-error";
 import {
   DEFAULT_MAX_RATE_LIMIT_WAIT_MS,
-  DEFAULT_MAX_WRITE_RATE_LIMIT_WAIT_MS,
+  PLANNING_CENTER_WINDOW_WAIT_MS,
 } from "@pcobooster/api/planning-center/rate-pacer";
 import type { PlanningCenterRatePacer } from "@pcobooster/api/planning-center/rate-pacer";
 import { PlanningCenterReadOnlyError } from "@pcobooster/api/planning-center/read-only-error";
@@ -19,14 +19,20 @@ import type {
   PlanningCenterRequestAccounting,
 } from "@pcobooster/api/planning-center/request-accounting";
 import {
-  pcCollectionResponseSchema,
-  pcResourceResponseSchema,
+  decodeCollectionResponse,
+  decodeResourceResponse,
+  describeDecodeIssues,
+} from "@pcobooster/api/planning-center/resource-schemas";
+import type {
+  DecodedBody,
+  JsonBodyDecoder,
 } from "@pcobooster/api/planning-center/resource-schemas";
 import {
   PlanningCenterSubrequestLimitError,
   isTooManySubrequestsError,
 } from "@pcobooster/api/planning-center/subrequest-limit-error";
 import { PLANNING_CENTER_USER_AGENT } from "@pcobooster/api/planning-center/user-agent";
+import type { RequestPriority } from "@pcobooster/contracts/request-priority";
 import {
   isNonEmptyString,
   isString,
@@ -164,16 +170,21 @@ interface SentResponse {
 const endpointUrl = (endpoint: string): string =>
   new URL(endpoint, PC_BASE_URL).toString();
 
+/** Names where decoding failed, so the report shows which field Planning Center changed. */
 const invalidProviderResponse = (
   status: number,
-  cause: unknown
-): PlanningCenterApiError =>
-  new PlanningCenterApiError({
-    message: "Planning Center returned an invalid response",
+  cause: Schema.SchemaError
+): PlanningCenterApiError => {
+  const where = describeDecodeIssues(cause.issue)
+    .map(({ path, message }) => (path === "" ? message : `${path}: ${message}`))
+    .join("; ");
+  return new PlanningCenterApiError({
+    message: `Planning Center returned an invalid response (${where})`,
     status,
     code: "INVALID_RESPONSE",
     cause,
   });
+};
 
 const attemptTimedOut = (): PlanningCenterNetworkError =>
   new PlanningCenterNetworkError({
@@ -212,16 +223,43 @@ export const buildPlanningCenterUrl = (
 const isReadMethod = (method: HttpMethod): boolean =>
   method === "GET" || method === "HEAD";
 
-/** A Retry-After longer than an interactive request should wait. */
-const exceedsRetryAfterCap = (retryAfterSeconds: number | undefined): boolean =>
-  retryAfterSeconds !== undefined &&
-  retryAfterSeconds * MS_PER_SECOND > DEFAULT_MAX_RATE_LIMIT_WAIT_MS;
+/**
+ * Longest rate-limit wait a read resends after. An interactive read waits out up to one
+ * window: resending costs one request, while failing hands the browser a retry that reruns
+ * the whole procedure and every request it already made. Speculative reads fail fast, so
+ * work nobody is waiting on never holds a connection through a window.
+ */
+const readRateLimitWaitCapMs = (priority: RequestPriority): number =>
+  priority === "speculative"
+    ? DEFAULT_MAX_RATE_LIMIT_WAIT_MS
+    : PLANNING_CENTER_WINDOW_WAIT_MS;
 
-const isRetryableError = (error: AttemptError): boolean => {
+const exceedsRetryAfterCap = (
+  retryAfterSeconds: number | undefined,
+  priority: RequestPriority
+): boolean =>
+  retryAfterSeconds !== undefined &&
+  retryAfterSeconds * MS_PER_SECOND > readRateLimitWaitCapMs(priority);
+
+const isRetryableError = (
+  error: AttemptError,
+  priority: RequestPriority
+): boolean => {
   if (error instanceof PlanningCenterApiError) {
     return (
       RETRYABLE_STATUS_CODES.has(error.status) &&
-      !(error.status === 429 && exceedsRetryAfterCap(error.retryAfterSeconds))
+      !(
+        error.status === 429 &&
+        exceedsRetryAfterCap(error.retryAfterSeconds, priority)
+      )
+    );
+  }
+  if (error instanceof PlanningCenterRateLimitError) {
+    // The pacer sent nothing, so waiting out its block costs no budget. A speculative
+    // hold-back is the caller's to resend at interactive priority.
+    return (
+      error.reason === "budget" &&
+      !exceedsRetryAfterCap(error.retryAfterSeconds, priority)
     );
   }
   if (!(error instanceof PlanningCenterNetworkError)) {
@@ -236,6 +274,9 @@ const isRetryableError = (error: AttemptError): boolean => {
 
 /** `retry` is 1 for the first retry. */
 const retryDelayMs = (retry: number, error: AttemptError): number => {
+  if (error instanceof PlanningCenterRateLimitError) {
+    return Math.max(error.retryAfterSeconds, 1) * MS_PER_SECOND;
+  }
   if (!(error instanceof PlanningCenterApiError)) {
     return retry * 300;
   }
@@ -255,26 +296,28 @@ const describePlanningCenterEndpoint = (
   };
 };
 
-const isRateLimitedResponse = (error: AttemptError): boolean =>
-  error instanceof PlanningCenterApiError && error.status === 429;
+/** A 429 or pacer rejection, whose `info` line comes from the attempt. */
+const isRateLimited = (error: AttemptError): boolean =>
+  error instanceof PlanningCenterRateLimitError ||
+  (error instanceof PlanningCenterApiError && error.status === 429);
 
 /**
  * Idempotent reads retry transient failures; writes retry only a 429 (see
- * `rateLimitedWriteRetry`). A read's 429 is
- * retried only when its Retry-After fits the interactive wait cap; its
- * `info` line comes from the attempt.
+ * `rateLimitedWriteRetry`). A read's 429 or pacer rejection is retried only
+ * when its Retry-After fits `readRateLimitWaitCapMs`.
  */
 const transientReadRetries = (
   endpoint: PlanningCenterEndpoint,
-  method: HttpMethod
+  method: HttpMethod,
+  priority: RequestPriority
 ) =>
   Schedule.recurs(MAX_RETRIES).pipe(
     Schedule.setInputType<AttemptError>(),
-    Schedule.while(({ input }) => isRetryableError(input)),
+    Schedule.while(({ input }) => isRetryableError(input, priority)),
     Schedule.addDelay(({ attempt, input }) => {
       const delayMs = retryDelayMs(attempt, input);
       const delay = Effect.succeed(Duration.millis(delayMs));
-      return isRateLimitedResponse(input)
+      return isRateLimited(input)
         ? delay
         : Effect.andThen(
             log.warn("Planning Center request failed, retrying", {
@@ -291,15 +334,15 @@ const transientReadRetries = (
 
 /**
  * Planning Center answers 429 before acting on a request, so resending a rate-limited write
- * cannot apply it twice. It is resent once, when its Retry-After fits the write wait cap.
+ * cannot apply it twice. It is resent at most twice, when its Retry-After fits the write wait cap.
  */
 const isRetryableWriteRateLimit = (error: AttemptError): boolean =>
   error instanceof PlanningCenterApiError &&
   error.status === 429 &&
   (error.retryAfterSeconds ?? 0) * MS_PER_SECOND <=
-    DEFAULT_MAX_WRITE_RATE_LIMIT_WAIT_MS;
+    PLANNING_CENTER_WINDOW_WAIT_MS;
 
-const MAX_WRITE_RATE_LIMIT_RETRIES = 1;
+const MAX_WRITE_RATE_LIMIT_RETRIES = 2;
 
 const rateLimitedWriteRetry = Schedule.recurs(
   MAX_WRITE_RATE_LIMIT_RETRIES
@@ -314,10 +357,11 @@ const rateLimitedWriteRetry = Schedule.recurs(
 const willRetryRateLimit = (
   method: HttpMethod,
   attempt: number,
-  error: AttemptError
+  error: AttemptError,
+  priority: RequestPriority
 ): boolean =>
   isReadMethod(method)
-    ? attempt <= MAX_RETRIES && isRetryableError(error)
+    ? attempt <= MAX_RETRIES && isRetryableError(error, priority)
     : attempt <= MAX_WRITE_RATE_LIMIT_RETRIES &&
       isRetryableWriteRateLimit(error);
 
@@ -554,15 +598,16 @@ const readResponseText = (
 ): Effect.Effect<string, PlanningCenterNetworkError> =>
   Effect.mapError(response.text, networkFailure);
 
-/** Parses a JSON body and decodes it, failing with the schema's issue when either step fails. */
-type JsonBodyDecoder<Output> = (
-  text: string
-) => Result.Result<Output, Schema.SchemaError>;
-
-const decodeResourceResponse: JsonBodyDecoder<PCApiResponse<PCResource>> =
-  Schema.decodeUnknownResult(Schema.fromJsonString(pcResourceResponseSchema));
-const decodeCollectionResponse: JsonBodyDecoder<PCApiResponse<PCResource[]>> =
-  Schema.decodeUnknownResult(Schema.fromJsonString(pcCollectionResponseSchema));
+const readAttemptBody = ({ response, startedAt }: SentResponse) =>
+  Effect.gen(function* readWithinAttempt() {
+    const elapsedMs = (yield* Clock.currentTimeMillis) - startedAt;
+    return yield* readResponseText(response).pipe(
+      Effect.timeoutOrElse({
+        duration: Duration.millis(Math.max(ATTEMPT_TIMEOUT_MS - elapsedMs, 0)),
+        orElse: () => Effect.fail(attemptTimedOut()),
+      })
+    );
+  });
 
 /**
  * Reads the JSON body within whatever remains of the attempt's time budget and decodes it with
@@ -574,17 +619,9 @@ const readJsonBody =
   ({
     response,
     startedAt,
-  }: SentResponse): Effect.Effect<Output, AttemptError> =>
+  }: SentResponse): Effect.Effect<DecodedBody<Output>, AttemptError> =>
     Effect.gen(function* readJson() {
-      const elapsedMs = (yield* Clock.currentTimeMillis) - startedAt;
-      const text = yield* readResponseText(response).pipe(
-        Effect.timeoutOrElse({
-          duration: Duration.millis(
-            Math.max(ATTEMPT_TIMEOUT_MS - elapsedMs, 0)
-          ),
-          orElse: () => Effect.fail(attemptTimedOut()),
-        })
-      );
+      const text = yield* readAttemptBody({ response, startedAt });
       if (response.status === 204 || text.trim() === "") {
         return yield* Effect.fail(
           new PlanningCenterApiError({
@@ -845,7 +882,13 @@ export class PlanningCenterCoreClient {
         )
       );
       return { response, startedAt };
-    });
+    }).pipe(
+      // Waiting for provider budget is not network time.
+      Effect.timeoutOrElse({
+        duration: Duration.millis(ATTEMPT_TIMEOUT_MS),
+        orElse: () => Effect.fail(attemptTimedOut()),
+      })
+    );
     const paced =
       pacer === undefined
         ? execute
@@ -884,7 +927,7 @@ export class PlanningCenterCoreClient {
       if (response.status >= 200 && response.status < 300) {
         return sent;
       }
-      const responseBody = yield* readResponseText(response);
+      const responseBody = yield* readAttemptBody(sent);
       const error = buildApiError(
         response.status,
         responseBody,
@@ -901,10 +944,15 @@ export class PlanningCenterCoreClient {
           attempt: context.attempt,
           retryAfterSeconds: error.retryAfterSeconds,
           rateLimit: error.rateLimit,
-          willRetry: willRetryRateLimit(method, context.attempt, error),
+          willRetry: willRetryRateLimit(
+            method,
+            context.attempt,
+            error,
+            accounting?.priority ?? "interactive"
+          ),
         });
       } else if (isWrite) {
-        // The toast shows only Planning Center's words; this keeps what was sent beside them.
+        // Retain provider details and redacted inputs independently of the user-facing message.
         yield* log.warn("Planning Center rejected a write", {
           endpoint,
           method,
@@ -914,12 +962,7 @@ export class PlanningCenterCoreClient {
         });
       }
       return yield* Effect.fail(error);
-    }).pipe(
-      Effect.timeoutOrElse({
-        duration: Duration.millis(ATTEMPT_TIMEOUT_MS),
-        orElse: () => Effect.fail(attemptTimedOut()),
-      })
-    );
+    });
   }
 
   private send(
@@ -948,12 +991,20 @@ export class PlanningCenterCoreClient {
             "application/json"
           );
     const sentAttributes = describeSentAttributes(options.body);
-    const attemptRequest = (context: AttemptContext) =>
-      this.attempt(request, {
+    const { cacheScope } = this;
+    const attemptRequest = (context: AttemptContext) => {
+      const attempt = this.attempt(request, {
         ...context,
         sentAttributes,
         readAction: options.readAction,
       });
+      // The permit comes before the pacing slot, so a queued request is paced by what the
+      // responses ahead of it reported (a 429's block included), and its wait for a permit
+      // does not count against the attempt's timeout.
+      return context.pacer === undefined
+        ? attempt
+        : context.pacer.withSendPermit(cacheScope, attempt);
+    };
     return Effect.gen(function* sendWithRetries() {
       const pacer = Option.getOrUndefined(
         yield* Effect.serviceOption(PlanningCenterPacing)
@@ -972,7 +1023,14 @@ export class PlanningCenterCoreClient {
         });
       });
       return yield* isReadMethod(method)
-        ? Effect.retry(nextAttempt, transientReadRetries(description, method))
+        ? Effect.retry(
+            nextAttempt,
+            transientReadRetries(
+              description,
+              method,
+              accounting?.priority ?? "interactive"
+            )
+          )
         : Effect.retry(nextAttempt, rateLimitedWriteRetry);
     });
   }
@@ -990,7 +1048,28 @@ export class PlanningCenterCoreClient {
     options: PlanningCenterRequestOptions,
     decode: JsonBodyDecoder<Output>
   ): Effect.Effect<Output, PlanningCenterError> {
-    return Effect.flatMap(this.send(endpoint, options), readJsonBody(decode));
+    return this.send(endpoint, options).pipe(
+      Effect.flatMap(readJsonBody(decode)),
+      Effect.flatMap(({ value, dropped }) => {
+        if (dropped.length === 0) {
+          return Effect.succeed(value);
+        }
+        const described = describePlanningCenterEndpoint(endpoint);
+        return Effect.gen(function* reportDropped() {
+          const accounting = yield* Effect.serviceOption(
+            PlanningCenterAccounting
+          );
+          if (Option.isSome(accounting)) {
+            accounting.value.recordDroppedRows(described.path, dropped);
+          }
+          yield* log.warn("Dropped Planning Center rows it could not read", {
+            endpoint: described,
+            dropped,
+          });
+          return value;
+        });
+      })
+    );
   }
 
   fetch(

@@ -812,27 +812,30 @@ describe(PlanningCenterCoreClient, () => {
     expect(fetch.mock.calls[1]?.[1]?.signal?.aborted).toBeTruthy();
   });
 
-  it("retries a transient GET failure after a backoff", async () => {
-    const fetch = fetchMock()
-      .mockResolvedValueOnce(
-        jsonResponse({ error: "Temporarily unavailable" }, { status: 503 })
-      )
-      .mockResolvedValueOnce(jsonResponse({ data: person }));
-    const result = await Effect.runPromise(
-      Effect.gen(function* retryAfterBackoff() {
-        const fiber = yield* Effect.forkChild(
-          basicClient(fetch).fetch("/services/v2/people/1")
-        );
-        yield* settle;
-        yield* TestClock.adjust("499 millis");
-        expect(fetch).toHaveBeenCalledOnce();
-        yield* TestClock.adjust("1 millis");
-        return yield* Fiber.join(fiber);
-      }).pipe(Effect.provide(TestClock.layer()))
-    );
-    expect(result.data.id).toBe("1");
-    expect(fetch).toHaveBeenCalledTimes(2);
-  });
+  it.each([502, 503])(
+    "retries a transient %i read after a backoff",
+    async (status) => {
+      const fetch = fetchMock()
+        .mockResolvedValueOnce(
+          jsonResponse({ error: "Temporarily unavailable" }, { status })
+        )
+        .mockResolvedValueOnce(jsonResponse({ data: person }));
+      const result = await Effect.runPromise(
+        Effect.gen(function* retryAfterBackoff() {
+          const fiber = yield* Effect.forkChild(
+            basicClient(fetch).fetch("/services/v2/people/1")
+          );
+          yield* settle;
+          yield* TestClock.adjust("499 millis");
+          expect(fetch).toHaveBeenCalledOnce();
+          yield* TestClock.adjust("1 millis");
+          return yield* Fiber.join(fiber);
+        }).pipe(Effect.provide(TestClock.layer()))
+      );
+      expect(result.data.id).toBe("1");
+      expect(fetch).toHaveBeenCalledTimes(2);
+    }
+  );
 
   it("waits for Retry-After before retrying a rate-limited read", async () => {
     const fetch = fetchMock()
@@ -890,7 +893,7 @@ describe(PlanningCenterCoreClient, () => {
     ]);
   });
 
-  it("resends a rate-limited write only once", async () => {
+  it("resends a rate-limited write at most twice", async () => {
     const fetch = fetchMock().mockImplementation(
       async () =>
         await Promise.resolve(
@@ -912,11 +915,47 @@ describe(PlanningCenterCoreClient, () => {
         );
         yield* settle;
         yield* TestClock.adjust("1 second");
+        yield* settle;
+        yield* TestClock.adjust("1 second");
         return yield* Fiber.join(fiber);
       }).pipe(Effect.provide(TestClock.layer()))
     );
     expect(failure).toMatchObject({ status: 429 });
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps a write pending through the incident's 12-second then 1-second rate limits", async () => {
+    const fetch = fetchMock()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { error: "Rate limited" },
+          { status: 429, headers: { "retry-after": "12" } }
+        )
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { error: "Rate limited" },
+          { status: 429, headers: { "retry-after": "1" } }
+        )
+      )
+      .mockResolvedValueOnce(jsonResponse({ data: person }));
+    const result = await Effect.runPromise(
+      Effect.gen(function* saveAfterRepeatedRateLimits() {
+        const write = yield* Effect.forkChild(
+          basicClient(fetch).fetch("/services/v2/people/1", {
+            method: "PATCH",
+            body: {},
+          })
+        );
+        yield* settle;
+        yield* TestClock.adjust("12 seconds");
+        yield* settle;
+        yield* TestClock.adjust("1 second");
+        return yield* Fiber.join(write);
+      }).pipe(Effect.provide(TestClock.layer()))
+    );
+    expect(result.data.id).toBe("1");
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   it("gives up on a read after two retries", async () => {
@@ -1064,6 +1103,60 @@ const pacedClient = (fetch: FetchMock): PlanningCenterCoreClient =>
   );
 
 describe("Planning Center pacing and accounting", () => {
+  it("still times out a stalled write after 15 seconds of network time", async () => {
+    const fetch = fetchMock().mockImplementation(
+      async () => await Promise.withResolvers<Response>().promise
+    );
+    const failure = await Effect.runPromise(
+      Effect.gen(function* stalledWrite() {
+        const write = yield* Effect.forkChild(
+          Effect.flip(
+            basicClient(fetch).fetch("/services/v2/people/1", {
+              method: "PATCH",
+              body: {},
+            })
+          )
+        );
+        yield* settle;
+        yield* TestClock.adjust("15 seconds");
+        return yield* Fiber.join(write);
+      }).pipe(Effect.provide(TestClock.layer()))
+    );
+    expect(failure).toMatchObject({
+      _tag: "PlanningCenterNetworkError",
+      cause: {
+        name: "TimeoutError",
+        message: "Planning Center request timed out",
+      },
+    });
+  });
+
+  it("lets a write wait a full rate window before starting its network timeout", async () => {
+    const fetch = fetchMock().mockResolvedValue(jsonResponse({ data: person }));
+    const pacer = new PlanningCenterRatePacer();
+    const scope = limits(undefined, pacer);
+    const client = pacedClient(fetch);
+    const result = await Effect.runPromise(
+      Effect.gen(function* saveAfterWindow() {
+        const now = yield* Clock.currentTimeMillis;
+        pacer.reserve(client.getCacheScope(), now, "read");
+        pacer.complete(client.getCacheScope(), now, {
+          status: 200,
+          rateLimit: { limit: 100, count: 100, period: "20" },
+        });
+        const write = yield* Effect.forkChild(
+          client.fetch("/services/v2/people/1", { method: "PATCH", body: {} })
+        );
+        yield* settle;
+        yield* TestClock.adjust("20 seconds");
+        return yield* Fiber.join(write);
+      }).pipe(withLimits(scope), Effect.provide(TestClock.layer()))
+    );
+    expect(result.data.id).toBe("1");
+    expect(scope.accounting.totals.pacedWaitMs).toBe(20_000);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
   it("spreads concurrent reads over the rest of the reported window", async () => {
     const fetch = fetchMock().mockImplementation(
       async () => await Promise.resolve(rateLimitedResponse(70))
@@ -1348,14 +1441,197 @@ describe("Planning Center pacing and accounting", () => {
     });
   });
 
+  it("waits out a 429 whose Retry-After fits one Planning Center window, then resends the read", async () => {
+    const fetch = fetchMock()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { error: "Rate limited" },
+          { status: 429, headers: { "retry-after": "12" } }
+        )
+      )
+      .mockResolvedValueOnce(jsonResponse({ data: person }));
+    const scope = limits();
+    const result = await Effect.runPromise(
+      Effect.gen(function* waitOutWindow() {
+        const fiber = yield* Effect.forkChild(
+          pacedClient(fetch).fetch("/services/v2/people/1")
+        );
+        yield* settle;
+        yield* TestClock.adjust("11999 millis");
+        yield* settle;
+        expect(fetch).toHaveBeenCalledOnce();
+        yield* TestClock.adjust("1 millis");
+        return yield* Fiber.join(fiber);
+      }).pipe(withLimits(scope), Effect.provide(TestClock.layer()))
+    );
+    expect(result.data.id).toBe("1");
+    expect(scope.accounting.totals).toMatchObject({
+      requests: 2,
+      rateLimited: 1,
+    });
+  });
+
+  it("holds a read that arrives while a 429 blocks the credential until the block passes", async () => {
+    const fetch = fetchMock()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { error: "Rate limited" },
+          { status: 429, headers: { "retry-after": "12" } }
+        )
+      )
+      .mockImplementation(
+        async () => await Promise.resolve(jsonResponse({ data: person }))
+      );
+    const scope = limits();
+    const client = pacedClient(fetch);
+    await Effect.runPromise(
+      Effect.gen(function* waitOutBlock() {
+        const first = yield* Effect.forkChild(
+          client.fetch("/services/v2/people/1")
+        );
+        yield* settle;
+        // The credential is blocked for 12 s; this read is refused by the pacer, not sent.
+        const second = yield* Effect.forkChild(
+          client.fetch("/services/v2/people/2")
+        );
+        yield* settle;
+        expect(fetch).toHaveBeenCalledOnce();
+        yield* TestClock.adjust("12 seconds");
+        yield* Fiber.join(first);
+        yield* Fiber.join(second);
+      }).pipe(withLimits(scope), Effect.provide(TestClock.layer()))
+    );
+    expect(fetch.mock.calls.map(([input]) => urlOf(input))).toStrictEqual([
+      "https://api.planningcenteronline.com/services/v2/people/1",
+      "https://api.planningcenteronline.com/services/v2/people/1",
+      "https://api.planningcenteronline.com/services/v2/people/2",
+    ]);
+    expect(scope.accounting.totals).toMatchObject({
+      requests: 3,
+      rateLimited: 1,
+      rateLimitRejections: 1,
+    });
+  });
+
+  it("fails a speculative read fast on a 429 an interactive read would wait out", async () => {
+    const fetch = fetchMock().mockResolvedValueOnce(
+      jsonResponse(
+        { error: "Rate limited" },
+        { status: 429, headers: { "retry-after": "12" } }
+      )
+    );
+    const scope = limits(
+      new PlanningCenterRequestAccounting({ priority: "speculative" })
+    );
+    await expect(
+      failureOf(
+        pacedClient(fetch)
+          .fetch("/services/v2/people/1")
+          .pipe(withLimits(scope))
+      )
+    ).resolves.toMatchObject({
+      _tag: "PlanningCenterApiError",
+      status: 429,
+      retryAfterSeconds: 12,
+    });
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("keeps one credential's Planning Center requests in flight to the isolate's cap", async () => {
+    const answers: (() => void)[] = [];
+    let sent = 0;
+    const fetch = fetchMock().mockImplementation(async () => {
+      sent += 1;
+      const { promise, resolve } = Promise.withResolvers<null>();
+      answers.push(() => {
+        resolve(null);
+      });
+      await promise;
+      return jsonResponse({ data: person });
+    });
+    const scope = limits();
+    const client = pacedClient(fetch);
+    const counts = await Effect.runPromise(
+      Effect.gen(function* capInFlight() {
+        // Two procedures' worth of reads at once, as a plan page's fan-out sends them.
+        const fiber = yield* Effect.forkChild(
+          Effect.forEach(
+            Array.from({ length: 13 }, (_, index) => index),
+            (index) => client.fetch(`/services/v2/people/${index}`),
+            { concurrency: "unbounded" }
+          )
+        );
+        yield* settle;
+        const atOnce = sent;
+        answers.shift()?.();
+        yield* settle;
+        const afterOneAnswer = sent;
+        for (const answer of answers.splice(0)) {
+          answer();
+        }
+        yield* Fiber.join(fiber);
+        return { atOnce, afterOneAnswer };
+      }).pipe(withLimits(scope), Effect.provide(TestClock.layer()))
+    );
+    expect(counts).toStrictEqual({ atOnce: 12, afterOneAnswer: 13 });
+  });
+
+  it("holds a queued read behind a 429 that answers while it waits for a send permit", async () => {
+    const answers: ((response: Response) => void)[] = [];
+    const sent: string[] = [];
+    const fetch = fetchMock().mockImplementation(async (input) => {
+      sent.push(urlOf(input));
+      const { promise, resolve } = Promise.withResolvers<Response>();
+      answers.push(resolve);
+      return await promise;
+    });
+    const scope = limits();
+    const client = pacedClient(fetch);
+    const counts = await Effect.runPromise(
+      Effect.gen(function* queuedBehindBlock() {
+        const fiber = yield* Effect.forkChild(
+          Effect.forEach(
+            Array.from({ length: 13 }, (_, index) => index),
+            (index) => client.fetch(`/services/v2/people/${index}`),
+            { concurrency: "unbounded" }
+          )
+        );
+        yield* settle;
+        const atOnce = sent.length;
+        answers.shift()?.(
+          jsonResponse(
+            { error: "Rate limited" },
+            { status: 429, headers: { "retry-after": "12" } }
+          )
+        );
+        yield* settle;
+        // The queued read takes the freed permit but must not send into the block.
+        const duringBlock = sent.length;
+        for (const answer of answers.splice(0)) {
+          answer(jsonResponse({ data: person }));
+        }
+        yield* TestClock.adjust("12 seconds");
+        yield* settle;
+        for (const answer of answers.splice(0)) {
+          answer(jsonResponse({ data: person }));
+        }
+        yield* Fiber.join(fiber);
+        return { atOnce, duringBlock, total: sent.length };
+      }).pipe(withLimits(scope), Effect.provide(TestClock.layer()))
+    );
+    expect(counts).toStrictEqual({ atOnce: 12, duringBlock: 12, total: 14 });
+  });
+
   it.each([1, 40])(
     "keeps concurrent paced sends within budget %i",
     async (budget) => {
       const fetch = fetchMock().mockImplementation(
         async () => await Promise.resolve(jsonResponse({ data: person }))
       );
+      // Every read wakes at once, so the in-flight cap must not stagger them.
       const scope = limits(
-        new PlanningCenterRequestAccounting({ requestBudget: budget })
+        new PlanningCenterRequestAccounting({ requestBudget: budget }),
+        new PlanningCenterRatePacer({ maxInFlight: budget + 1 })
       );
       const reserve = scope.pacer.reserve.bind(scope.pacer);
       vi.spyOn(scope.pacer, "reserve").mockImplementation((...args) => {

@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { FilePdfReader } from "@/components/schedule/file-pdf-reader";
+import { LoopingAudioPlayer } from "@/components/schedule/looping-audio-player";
 import { PlanFileIconTile } from "@/components/schedule/plan-file-icon";
 import { paneBarClassName } from "@/components/schedule/plan-file-pane-bar";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ import {
   useOpenPlanFileOriginal,
   usePlanFileLink,
 } from "@/hooks/use-plan-files";
-import { planFileKind, youtubeEmbedUrl } from "@/lib/plan-files";
+import { opensAsPdf, planFileKind, youtubeEmbedUrl } from "@/lib/plan-files";
 import { cn } from "@/lib/utils";
 
 /** The song a viewer dialog is on, which phones show in the file's own bar. */
@@ -162,6 +163,8 @@ const FileContent = ({
   data,
   preview,
   canOpen,
+  audioPlaybackVersion,
+  onRetry,
   onFailed,
 }: {
   file: PlanFile;
@@ -169,6 +172,8 @@ const FileContent = ({
   data: string | undefined;
   preview: boolean;
   canOpen: boolean;
+  audioPlaybackVersion: number;
+  onRetry: () => Promise<void>;
   onFailed: () => void;
 }) => {
   if (data !== undefined) {
@@ -194,19 +199,16 @@ const FileContent = ({
   }
   if (kind === "audio") {
     return (
-      <div className="flex flex-1 items-center justify-center p-6">
-        <audio
-          key={url}
-          aria-label={file.name}
-          controls
-          preload="metadata"
-          controlsList={file.downloadable ? undefined : "nodownload"}
-          onError={onFailed}
-          className="w-full max-w-md"
-          src={url}
-        >
-          <track kind="captions" />
-        </audio>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+        <LoopingAudioPlayer
+          key={`${file.id}:${String(audioPlaybackVersion)}`}
+          fileId={file.id}
+          autoPlay={audioPlaybackVersion > 0}
+          name={file.name}
+          onRetry={onRetry}
+          onFailed={onFailed}
+          url={url}
+        />
       </div>
     );
   }
@@ -283,8 +285,9 @@ export const PlanFileViewer = ({
   trailing?: ReactNode;
 }) => {
   const kind = planFileKind(file);
-  const [pdf, setPdf] = useState(kind === "pdf");
+  const [pdf, setPdf] = useState(() => opensAsPdf(file));
   const [mediaFailed, setMediaFailed] = useState(false);
+  const [audioPlaybackVersion, setAudioPlaybackVersion] = useState(0);
   let mode: PlanFileOpenMode = "link";
   if (pdf) {
     mode = "pdf";
@@ -294,9 +297,12 @@ export const PlanFileViewer = ({
   const link = usePlanFileLink(serviceTypeId, planId, file, mode);
   const canOpen = file.downloadable || kind === "link" || kind === "document";
   const url = link.data?.url ?? "";
-  const refresh = () => {
+  const refresh = async () => {
     setMediaFailed(false);
-    void link.refetch();
+    const result = await link.refetch();
+    if (result.isSuccess) {
+      setAudioPlaybackVersion((version) => version + 1);
+    }
   };
 
   let body: ReactNode = null;
@@ -314,7 +320,13 @@ export const PlanFileViewer = ({
         description="It may be unavailable, or you may not have access to it."
       >
         <div className="flex flex-wrap justify-center gap-2">
-          <Button variant="outline" size="sm" onClick={refresh}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void refresh();
+            }}
+          >
             <RefreshCw /> Try again
           </Button>
           {pdf ? (
@@ -339,6 +351,10 @@ export const PlanFileViewer = ({
         data={link.data.data}
         preview={link.data.preview}
         canOpen={canOpen}
+        audioPlaybackVersion={audioPlaybackVersion}
+        onRetry={async () => {
+          await link.refetch();
+        }}
         onFailed={() => {
           setMediaFailed(true);
         }}
@@ -385,7 +401,13 @@ export const PlanFileViewer = ({
           className="bg-muted flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm"
         >
           This file couldn’t load here. Its link may have expired.
-          <Button variant="outline" size="xs" onClick={refresh}>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() => {
+              void refresh();
+            }}
+          >
             <RefreshCw /> Refresh link
           </Button>
         </div>

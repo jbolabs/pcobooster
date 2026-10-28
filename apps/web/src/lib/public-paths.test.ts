@@ -17,6 +17,7 @@ describe("public marketing routes", () => {
     "/key-transitions/c-sharp-minor-to-e/",
     "/robots.txt",
     "/sitemap.xml",
+    "/c2d95222b2bd4d26cc55e31663139aa3.txt",
     "/version",
     "/marketing/assets/index.js",
     "/marketing/screenshots/assign.webp",
@@ -35,6 +36,7 @@ describe("public marketing routes", () => {
     "/marketing-private",
     "/marketing",
     "/versions",
+    "/other-key.txt",
   ])("does not exempt %s from product authentication", (pathname) => {
     expect(isPublicPath(pathname)).toBeFalsy();
   });

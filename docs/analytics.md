@@ -117,7 +117,7 @@ Failures alert through production's existing PostHog error tracking: each run th
 
 A cron that never fires sends nothing; the Worker's Cron Triggers and past events are listed under the Worker's Settings → Triggers in the Cloudflare dashboard, and `bun run analytics:erase` shows the queue's counts.
 
-Prerequisite: `POSTHOG_ERASURE_API_KEY`, a PostHog personal API key limited to **person:write** on project 614621, stored as `pcobooster__prod__analytics__POSTHOG_ERASURE_API_KEY` by `alchemy.secrets.ts` (production tier only). It must be stored before the API Worker that consumes it deploys; see [rollout](ci-cd.md#analytics-erasure-cron).
+Prerequisite: `POSTHOG_ERASURE_API_KEY`, a PostHog personal API key limited to **person:write** on project 614621, kept in Infisical `pcobooster-prod` (env `prod`) and stored as `pcobooster__prod__analytics__POSTHOG_ERASURE_API_KEY` by `alchemy.secrets.ts` (production tier only). The stored secret must exist before the API Worker that consumes it deploys, and an empty value surfaces as `ANALYTICS_ERASURE_NOT_CONFIGURED`; see [rollout](ci-cd.md#analytics-erasure-cron).
 
 ### Inspecting or running by hand
 
@@ -126,7 +126,7 @@ bun run analytics:erase -- --database-id <production D1 UUID>            # count
 bun run analytics:erase -- --database-id <production D1 UUID> --process  # erase what is due
 ```
 
-`scripts/analytics/erase-deleted-accounts.ts` runs the same code over the D1 HTTP API. It prints counts only (waiting, due, failing, completed, oldest open request), never ids, and exits 1 when a pass failed. It is optional: the cron does the work. It needs the `analytics-erasure` Keychain scope (`bun run secrets:set analytics-erasure <KEY> --stdin`): `CLOUDFLARE_D1_API_TOKEN` (limited to **D1 Edit**; required) and `POSTHOG_ERASURE_API_KEY` (for `--process`), plus the production D1 database id (the `databaseId` output of the production stack).
+`scripts/analytics/erase-deleted-accounts.ts` runs the same code over the D1 HTTP API. It prints counts only (waiting, due, failing, completed, oldest open request), never ids, and exits 1 when a pass failed. It is optional: the cron does the work. It needs the operator's `analytics-erasure` Keychain scope (`bun run secrets:set analytics-erasure <KEY> --stdin`): `CLOUDFLARE_D1_API_TOKEN` (limited to **D1 Edit**; required) and `POSTHOG_ERASURE_API_KEY` (for `--process`; a local copy of the Infisical value, which the cron never reads), plus the production D1 database id (the `databaseId` output of the production stack).
 
 ## Privacy and cost boundaries
 

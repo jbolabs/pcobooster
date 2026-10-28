@@ -92,7 +92,12 @@ export interface SocialPreview {
   alt: string;
 }
 
-type PageHeadInput = { title?: string; description: string } & (
+type PageHeadInput = {
+  title?: string;
+  description: string;
+  /** Kept out of search results, while its links are still followed. */
+  noindex?: boolean;
+} & (
   | { pathname: keyof typeof SOCIAL_PREVIEWS }
   | { pathname: string; preview: SocialPreview }
 );
@@ -102,7 +107,7 @@ type PageHeadInput = { title?: string; description: string } & (
  * one per key change, pass their own preview.
  */
 export const pageHead = (input: PageHeadInput): PageHead => {
-  const { title, description, pathname } = input;
+  const { title, description, pathname, noindex = false } = input;
   const preview: SocialPreview =
     "preview" in input ? input.preview : SOCIAL_PREVIEWS[input.pathname];
   const imageUrl = `${SITE_ORIGIN}${marketingAssetUrl(preview.image)}`;
@@ -124,6 +129,7 @@ export const pageHead = (input: PageHeadInput): PageHead => {
       { name: "twitter:description", content: preview.description },
       { name: "twitter:image", content: imageUrl },
       { name: "twitter:image:alt", content: preview.alt },
+      ...(noindex ? [{ name: "robots", content: "noindex, follow" }] : []),
     ],
     links: [{ rel: "canonical", href: canonicalUrl(pathname) }],
   };

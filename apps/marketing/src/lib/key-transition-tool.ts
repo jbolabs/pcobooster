@@ -62,6 +62,13 @@ export const keyTransitionAdvice = (
   };
 };
 
+/** How a change rates, without the advice: enough to mark a link to its page. */
+export const keyChangeLevel = (
+  from: KeyChoice,
+  to: KeyChoice
+): KeyTransitionLevel =>
+  rateKeyChange(musicalKeyOf(from), musicalKeyOf(to)).level;
+
 /** How each rating reads on the page, and the dot that marks it. */
 export const LEVELS: Record<
   KeyTransitionLevel,

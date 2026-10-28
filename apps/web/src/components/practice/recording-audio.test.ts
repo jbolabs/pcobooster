@@ -93,6 +93,142 @@ const buttonIn = (container: HTMLElement, label: string): HTMLButtonElement => {
   return button;
 };
 
+const sharedPlayer = (id: string) =>
+  createElement(RecordingPlayer, {
+    key: id,
+    songTitle: "Example song",
+    tracks: [{ id, name: "Original mix" }],
+    renderAudio: (props) =>
+      createElement(RecordingAudio, {
+        ...props,
+        url: "https://audio.example/recording.mp3",
+        onRetry: async () => {
+          await Promise.resolve();
+        },
+      }),
+  });
+
+describe("shared Practice and chord chart looping", () => {
+  it("selects and adjusts a passage, loops at track end, and clears for the next recording", async () => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    const play = vi
+      .spyOn(HTMLMediaElement.prototype, "play")
+      .mockResolvedValue();
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    try {
+      await act(async () => {
+        root.render(sharedPlayer("first"));
+        await Promise.resolve();
+      });
+      await act(async () => {
+        buttonIn(container, "Play").click();
+        await Promise.resolve();
+      });
+      const audio = audioIn(container);
+      Object.defineProperty(audio, "duration", { value: 120 });
+      audio.currentTime = 30;
+      await act(async () => {
+        audio.dispatchEvent(new Event("loadedmetadata"));
+        await Promise.resolve();
+      });
+      await act(async () => {
+        buttonIn(container, "Loop section").click();
+        await Promise.resolve();
+      });
+      const playhead = container.querySelector(
+        'input[aria-label="Playback position"]'
+      );
+      if (playhead === null) {
+        throw new Error("Expected the independent playback position handle");
+      }
+      await act(async () => {
+        playhead.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+        );
+        await Promise.resolve();
+      });
+      expect({
+        time: audio.currentTime,
+        selected: buttonIn(container, "Stop looping").getAttribute(
+          "aria-pressed"
+        ),
+        range: container.textContent?.includes("0:30 - 0:45"),
+      }).toStrictEqual({ time: 30.1, selected: "true", range: true });
+      const start = container.querySelector('input[aria-label="Loop start"]');
+      if (start === null) {
+        throw new Error("Expected the loop start handle");
+      }
+      await act(async () => {
+        start.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "End", bubbles: true })
+        );
+        await Promise.resolve();
+      });
+      const pausedPlayhead = container.querySelector<HTMLInputElement>(
+        'input[aria-label="Playback position"]'
+      )?.value;
+      const end = container.querySelector('input[aria-label="Loop end"]');
+      if (end === null) {
+        throw new Error("Expected the shared player's loop end handle");
+      }
+      await act(async () => {
+        end.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "End", bubbles: true })
+        );
+        await Promise.resolve();
+      });
+      expect(container.textContent).toContain("0:44 - 2:00");
+      await act(async () => {
+        audio.currentTime = 120;
+        Object.defineProperty(audio, "ended", {
+          value: true,
+          configurable: true,
+        });
+        audio.dispatchEvent(new Event("ended"));
+        await Promise.resolve();
+      });
+      expect({
+        time: audio.currentTime,
+        pausedPlayhead,
+        playAttempts: play.mock.calls.length,
+      }).toStrictEqual({
+        time: 44.9,
+        pausedPlayhead: "44.9",
+        playAttempts: 2,
+      });
+      await act(async () => {
+        buttonIn(container, "Stop looping").click();
+        await Promise.resolve();
+      });
+      audio.currentTime = 80;
+      audio.dispatchEvent(new Event("timeupdate"));
+      expect(audio.currentTime).toBe(80);
+      await act(async () => {
+        buttonIn(container, "Loop section").click();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        root.render(sharedPlayer("second"));
+        await Promise.resolve();
+      });
+      expect({
+        loopDisabled: buttonIn(container, "Loop section").disabled,
+        playDisabled: buttonIn(container, "Play").disabled,
+      }).toStrictEqual({ loopDisabled: true, playDisabled: false });
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+      play.mockRestore();
+      container.remove();
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe("shared playback failure state", () => {
   it("disables stale controls after failure and recovers through the shared retry action", async () => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);

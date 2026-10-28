@@ -6,20 +6,28 @@ import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 
 import { withPublicBase } from "./src/lib/base-path.ts";
-import { KEY_PAIRS, pairPath } from "./src/lib/key-transition-pages.ts";
+import {
+  KEY_PAIRS,
+  isSameKey,
+  pairPath,
+} from "./src/lib/key-transition-pages.ts";
 import { MARKETING_BASE, SITE_ORIGIN } from "./src/lib/site-head.ts";
 
 /**
  * Every public page, in sitemap order. Start discovers static routes on its own, but the key
- * change pages share one dynamic route, so each is listed.
+ * change pages share one dynamic route, so each is listed. Same-key pages are still built,
+ * since the finder can land on one, but stay out of the sitemap (they are `noindex`).
  */
 const SITE_PAGES = [
-  "/",
-  "/about",
-  "/key-transitions",
-  ...KEY_PAIRS.map((pair) => pairPath(pair)),
-  "/privacy",
-  "/terms",
+  { path: "/" },
+  { path: "/about" },
+  { path: "/key-transitions" },
+  ...KEY_PAIRS.map((pair) => ({
+    path: pairPath(pair),
+    sitemap: { exclude: isSameKey(pair) },
+  })),
+  { path: "/privacy" },
+  { path: "/terms" },
 ];
 
 /** Lets prerendering fetch every page (`/`, `/about`, `/key-transitions/...`) through the preview server's base guard. */
@@ -68,7 +76,7 @@ export default defineConfig({
     previewPagesOutsideBase(),
     tanstackStart({
       router: { basepath: "/" },
-      pages: SITE_PAGES.map((path) => ({ path })),
+      pages: SITE_PAGES,
       // Written to `sitemap.xml` beside the pages; the product serves it at `/sitemap.xml`.
       sitemap: { enabled: true, host: SITE_ORIGIN },
       prerender: {

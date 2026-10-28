@@ -1,7 +1,19 @@
+import {
+  PLAN_FILE_LINK_TYPES,
+  planFileDeclaresPdf,
+  planFileIsUntyped,
+} from "@pcobooster/contracts/http/plan-files";
 import type { PlanFile } from "@pcobooster/contracts/http/plan-files";
 import type { PlanItem } from "@pcobooster/planning-center-models/types";
 
-export type PlanFileKind = "pdf" | "audio" | "video" | "document" | "link";
+/** `unknown`: Planning Center gives no type, so the preview asks for a PDF and falls back to the link. */
+export type PlanFileKind =
+  | "pdf"
+  | "audio"
+  | "video"
+  | "document"
+  | "link"
+  | "unknown";
 const AUDIO_FILE = /\.(?:mp3|m4a|wav|aac|ogg|flac)$/u;
 const VIDEO_FILE = /\.(?:mp4|mov|webm)$/u;
 const DOCUMENT_FILE =
@@ -10,12 +22,11 @@ const DOCUMENT_FILE =
 export const planFileKind = (file: PlanFile): PlanFileKind => {
   const type = file.contentType.toLowerCase();
   const filename = file.filename.toLowerCase();
-  if (
-    type === "application/pdf" ||
-    filename.endsWith(".pdf") ||
-    file.providerType.startsWith("AttachmentChart")
-  ) {
+  if (planFileDeclaresPdf(file)) {
     return "pdf";
+  }
+  if (PLAN_FILE_LINK_TYPES.has(file.providerType)) {
+    return "link";
   }
   if (type.startsWith("audio/") || AUDIO_FILE.test(filename)) {
     return "audio";
@@ -26,7 +37,7 @@ export const planFileKind = (file: PlanFile): PlanFileKind => {
   if (type.startsWith("image/") || DOCUMENT_FILE.test(filename)) {
     return "document";
   }
-  return "link";
+  return planFileIsUntyped(file) ? "unknown" : "link";
 };
 
 export interface PlanFileGroup {

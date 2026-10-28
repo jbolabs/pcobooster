@@ -64,6 +64,20 @@ describe(pageHead, () => {
   );
 });
 
+describe(pageHead, () => {
+  it("keeps a noindex page out of search results while following its links", () => {
+    const head = pageHead({
+      description: "Page description",
+      pathname: "/key-transitions",
+      noindex: true,
+    });
+    expect(head.meta).toContainEqual({
+      name: "robots",
+      content: "noindex, follow",
+    });
+  });
+});
+
 describe(siteHead, () => {
   const { meta, links } = siteHead();
 

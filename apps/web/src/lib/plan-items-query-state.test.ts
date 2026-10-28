@@ -1,3 +1,4 @@
+import { RateLimited } from "@pcobooster/contracts/faults/rate-limited";
 import {
   applyPlanItemDraft,
   createOptimisticBasicPlanItem,
@@ -29,7 +30,10 @@ import {
 } from "@/lib/plan-items-cache";
 import {
   applyPlanItemsOptimisticUpdate,
+  attemptedPlanItemChange,
+  changedPlanItem,
   collectPlanSongOptionPrefetchIds,
+  failedPlanItemsChange,
   PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS,
   restorePlanItemsSnapshot,
   settlePlanItemsQuery,
@@ -451,32 +455,239 @@ describe("plan item query state", () => {
     ).toBeTruthy();
   });
 
-  it("settles optimistic plan item mutations without immediately refetching the active list", () => {
+  it("reconciles an order change without resurrecting unseen song queries", async () => {
     vi.useFakeTimers();
     const queryClient = new QueryClient();
     const queryKey = ["plan-items", "service-1", "plan-1"] as const;
-    const invalidateQueries = vi
-      .spyOn(queryClient, "invalidateQueries")
-      .mockResolvedValue();
-    const refetchQueries = vi
-      .spyOn(queryClient, "refetchQueries")
-      .mockResolvedValue();
-
-    settlePlanItemsQuery(queryClient, queryKey);
-    settlePlanItemsQuery(queryClient, queryKey);
-
-    expect(invalidateQueries).toHaveBeenCalledWith({
+    let songReads = 0;
+    const readSong = () => {
+      songReads += 1;
+      return "C";
+    };
+    await Promise.all(
+      [
+        ["song-history", "song-1"],
+        ["song-options", "song-1", "service-1"],
+      ].map(
+        async (key) =>
+          await queryClient.query({
+            queryKey: key,
+            queryFn: readSong,
+            staleTime: Infinity,
+          })
+      )
+    );
+    let serverTitle = "Opening";
+    const observer = new QueryObserver(queryClient, {
       queryKey,
-      refetchType: "inactive",
+      queryFn: () => serverTitle,
+      staleTime: Infinity,
     });
-    expect(refetchQueries).not.toHaveBeenCalled();
+    const stop = observer.subscribe(() => {});
+    await observer.refetch();
+    serverTitle = "Closing";
 
-    vi.advanceTimersByTime(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    settlePlanItemsQuery(queryClient, queryKey, { kind: "order" });
+    settlePlanItemsQuery(queryClient, queryKey, { kind: "order" });
 
-    expect(refetchQueries).toHaveBeenCalledWith({
+    expect(observer.getCurrentResult().data).toBe("Opening");
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(observer.getCurrentResult().data).toBe("Closing");
+    expect(songReads).toBe(2);
+    expect(
+      queryClient.getQueryData(["song-options", "song-1", "service-1"])
+    ).toBe("C");
+    expect(queryClient.getQueryState(["song-history", "song-1"])).toMatchObject(
+      { isInvalidated: false }
+    );
+    stop();
+    queryClient.clear();
+  });
+
+  it("invalidates only the changed song and defers its unseen reads until requested", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient();
+    let reads = 0;
+    const readSong = () => {
+      reads += 1;
+      return "C";
+    };
+    await Promise.all(
+      ["song-1", "song-2"].map(
+        async (id) =>
+          await queryClient.query({
+            queryKey: ["song-options", id, "service-1"],
+            queryFn: readSong,
+            staleTime: Infinity,
+          })
+      )
+    );
+    settlePlanItemsQuery(queryClient, ["plan-items", "service-1", "plan-1"], {
+      kind: "item",
+      songIds: ["song-1"],
+      filesChanged: true,
+    });
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(reads).toBe(2);
+    expect(
+      queryClient.getQueryState(["song-options", "song-1", "service-1"])
+    ).toMatchObject({ isInvalidated: true });
+    expect(
+      queryClient.getQueryState(["song-options", "song-2", "service-1"])
+    ).toMatchObject({ isInvalidated: false });
+    expect(
+      queryClient.getQueryData(["song-options", "song-1", "service-1"])
+    ).toBe("C");
+    queryClient.clear();
+  });
+
+  it("preserves pending song reconciliation when the last overlapping write is rate limited", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    let key = "C";
+    const observer = new QueryObserver(queryClient, {
+      queryKey: ["song-options", "song-1", "service-1"],
+      queryFn: () => key,
+      staleTime: Infinity,
+    });
+    const stop = observer.subscribe(() => {});
+    await observer.refetch();
+    key = "D";
+    settlePlanItemsQuery(queryClient, queryKey, {
+      kind: "item",
+      songIds: ["song-1"],
+      filesChanged: true,
+    });
+    const error = new RateLimited({
+      message: "Wait",
+      service: "Planning Center",
+      retryAfterSeconds: 20,
+    });
+    const finish = Promise.withResolvers<undefined>();
+    const mutation = new MutationObserver(queryClient, {
+      mutationKey: queryKey,
+      mutationFn: async () => {
+        await finish.promise;
+        throw error;
+      },
+      onSettled: (_data, failure) => {
+        if (failure) {
+          settlePlanItemsQuery(
+            queryClient,
+            queryKey,
+            failedPlanItemsChange(failure, { kind: "order" })
+          );
+        }
+      },
+    });
+    const result = mutation.mutate().catch(() => "rejected");
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(observer.getCurrentResult().data).toBe("C");
+    finish.resolve();
+    await expect(result).resolves.toBe("rejected");
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(observer.getCurrentResult().data).toBe("D");
+    stop();
+    queryClient.clear();
+  });
+
+  it("leaves a rate-limited reorder alone when there is no earlier successful edit", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    let reads = 0;
+    const observer = new QueryObserver(queryClient, {
       queryKey,
-      type: "active",
+      queryFn: () => {
+        reads += 1;
+        return reads;
+      },
+      staleTime: Infinity,
     });
+    const stop = observer.subscribe(() => {});
+    await observer.refetch();
+    settlePlanItemsQuery(
+      queryClient,
+      queryKey,
+      failedPlanItemsChange(
+        new RateLimited({ message: "Wait", service: "Planning Center" }),
+        { kind: "order" }
+      )
+    );
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(observer.getCurrentResult().data).toBe(1);
+    expect(queryClient.getQueryState(queryKey)).toMatchObject({
+      isInvalidated: false,
+    });
+    stop();
+    queryClient.clear();
+  });
+
+  it("reconciles targeted files when an arrangement save's response is lost", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    let savedFile = "old-arrangement.pdf";
+    const observer = new QueryObserver(queryClient, {
+      queryKey: ["plan-files", "service-1", "plan-1"],
+      queryFn: () => savedFile,
+      staleTime: Infinity,
+    });
+    const stop = observer.subscribe(() => {});
+    await observer.refetch();
+    queryClient.setQueryData(
+      ["song-options", "song-2", "service-1"],
+      "Unaffected song"
+    );
+    const attempted = attemptedPlanItemChange(
+      createSongItem("item-1", 1, "song-1"),
+      { arrangementId: "new-arrangement", keyId: "" }
+    );
+    savedFile = "new-arrangement.pdf";
+    settlePlanItemsQuery(
+      queryClient,
+      queryKey,
+      failedPlanItemsChange(new Error("Response lost after commit"), attempted)
+    );
+    expect(
+      queryClient.getQueryState(["plan-files", "service-1", "plan-1"])
+    ).toMatchObject({ isInvalidated: true });
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(observer.getCurrentResult().data).toBe("new-arrangement.pdf");
+    expect(
+      queryClient.getQueryState(["song-options", "song-2", "service-1"])
+    ).toMatchObject({ isInvalidated: false });
+    expect(attempted).toStrictEqual({
+      kind: "item",
+      songIds: ["song-1"],
+      filesChanged: true,
+    });
+    stop();
+    queryClient.clear();
+  });
+
+  it("distinguishes text edits from changes to a song's key and files", () => {
+    const item = createSongItem("item-1", 1, "song-1");
+    expect(
+      changedPlanItem(item, {
+        ...item,
+        title: "New title",
+        description: "New notes",
+        length: 120,
+      })
+    ).toStrictEqual({ kind: "item", songIds: [], filesChanged: false });
+    expect(
+      changedPlanItem(item, {
+        ...item,
+        key: { id: "key-d", name: "D", startingKey: "D", endingKey: "D" },
+      })
+    ).toStrictEqual({ kind: "item", songIds: ["song-1"], filesChanged: true });
+    expect(
+      failedPlanItemsChange(new Error("Unknown save outcome"), {
+        kind: "order",
+      })
+    ).toStrictEqual({ kind: "order" });
   });
 
   it("refreshes the plan's paginated files after an arrangement change without reloading", async () => {
@@ -502,7 +713,11 @@ describe("plan item query state", () => {
     queryClient.setQueryData(otherFilesKey, { files: ["other-plan-chart"] });
 
     savedArrangement = "new";
-    settlePlanItemsQuery(queryClient, queryKey);
+    settlePlanItemsQuery(queryClient, queryKey, {
+      kind: "item",
+      songIds: [],
+      filesChanged: true,
+    });
     await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
 
     expect(
@@ -539,7 +754,11 @@ describe("plan item query state", () => {
       observers.map(async (observer) => await observer.refetch())
     );
     savedKey = "D";
-    settlePlanItemsQuery(queryClient, ["plan-items", "service-1", "plan-1"]);
+    settlePlanItemsQuery(queryClient, ["plan-items", "service-1", "plan-1"], {
+      kind: "item",
+      songIds: ["song-1"],
+      filesChanged: true,
+    });
     await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
     expect(
       observers.map((observer) => observer.getCurrentResult().data)
@@ -562,7 +781,11 @@ describe("plan item query state", () => {
     });
     const unsubscribe = observer.subscribe(() => {});
     await observer.refetch();
-    settlePlanItemsQuery(queryClient, queryKey);
+    settlePlanItemsQuery(queryClient, queryKey, {
+      kind: "item",
+      songIds: [],
+      filesChanged: true,
+    });
     const finishEdit = Promise.withResolvers<undefined>();
     const mutation = new MutationObserver(queryClient, {
       mutationKey: queryKey,
@@ -571,7 +794,11 @@ describe("plan item query state", () => {
         serverFiles = ["new-arrangement-chart"];
       },
       onSettled: () => {
-        settlePlanItemsQuery(queryClient, queryKey);
+        settlePlanItemsQuery(queryClient, queryKey, {
+          kind: "item",
+          songIds: [],
+          filesChanged: true,
+        });
       },
     });
     const edit = mutation.mutate();
@@ -604,7 +831,7 @@ describe("plan item query state", () => {
       createSongItem("new-song", 2, "song-1"),
     ]);
     // The add has settled, and its refresh will fire during the following key edit.
-    settlePlanItemsQuery(queryClient, queryKey);
+    settlePlanItemsQuery(queryClient, queryKey, { kind: "order" });
     const finishEdit = Promise.withResolvers<undefined>();
     const mutation = new MutationObserver(queryClient, {
       mutationKey: queryKey,
@@ -612,7 +839,7 @@ describe("plan item query state", () => {
         await finishEdit.promise;
       },
       onSettled: () => {
-        settlePlanItemsQuery(queryClient, queryKey);
+        settlePlanItemsQuery(queryClient, queryKey, { kind: "order" });
       },
     });
     const edit = mutation.mutate();
@@ -641,7 +868,7 @@ describe("plan item query state", () => {
     queryClient.clear();
   });
 
-  it("clears persisted plan-item and song metadata snapshots when optimistic mutations settle", () => {
+  it("keeps persisted song metadata for reorders and clears it for changed songs", () => {
     installLocalStorageMock();
     const queryClient = new QueryClient();
     const queryKey = ["plan-items", "service-1", "plan-1"] as const;
@@ -663,11 +890,22 @@ describe("plan item query state", () => {
       readCachedSongOptions("song-1", "service-1")?.data.song.id,
     ]).toStrictEqual(["item-1", "song-1", "song-1"]);
 
-    settlePlanItemsQuery(queryClient, queryKey);
+    settlePlanItemsQuery(queryClient, queryKey, { kind: "order" });
 
     expect(readCachedPlanItems("service-1", "plan-1")).toBeUndefined();
-    expect(readCachedSongSearch("build")).toBeUndefined();
-    expect(readCachedSongOptions("song-1", "service-1")).toBeUndefined();
+    expect(readCachedSongSearch("build")?.data[0]?.id).toBe("song-1");
+    expect(readCachedSongOptions("song-1", "service-1")?.data.song.id).toBe(
+      "song-1"
+    );
+    settlePlanItemsQuery(queryClient, queryKey, {
+      kind: "item",
+      songIds: ["song-1"],
+      filesChanged: true,
+    });
+    expect([
+      readCachedSongSearch("build"),
+      readCachedSongOptions("song-1", "service-1"),
+    ]).toStrictEqual([undefined, undefined]);
   });
 });
 

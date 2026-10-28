@@ -26,6 +26,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useIntentPrefetch } from "@/hooks/use-intent-prefetch";
+import { usePrefetchPlanFiles } from "@/hooks/use-plan-files";
 import { usePlanItems } from "@/hooks/use-plan-items";
 import { createSongOptionsQueryOptions } from "@/hooks/use-song-options";
 import { isQueryFresh } from "@/lib/intent-prefetch";
@@ -33,12 +34,18 @@ import { confirmPlanItemCreation } from "@/lib/plan-item-creation";
 import type { ConfirmedPlanItemCreation } from "@/lib/plan-item-creation";
 import {
   applyPlanItemsOptimisticUpdate,
+  attemptedPlanItemChange,
+  changedPlanItem,
   collectPlanSongOptionPrefetchIds,
   discardPlanItemsSnapshot,
+  failedPlanItemsChange,
   restorePlanItemsSnapshot,
   settlePlanItemsQuery,
 } from "@/lib/plan-items-query-state";
-import type { PlanItemsOptimisticSnapshot } from "@/lib/plan-items-query-state";
+import type {
+  PlanItemsChange,
+  PlanItemsOptimisticSnapshot,
+} from "@/lib/plan-items-query-state";
 import { queryKeys } from "@/lib/query-keys";
 import { requestScheduler } from "@/lib/request-priority";
 import { productClient } from "@/product-client";
@@ -91,6 +98,8 @@ export const usePlanTabController = ({
   const queryClient = useQueryClient();
   const queryKey = queryKeys.planItems(serviceTypeId, planId);
   const planItemsQuery = usePlanItems(serviceTypeId, planId);
+  // Ahead of the songs' options: one or two requests serve every item's files.
+  usePrefetchPlanFiles(serviceTypeId, planId);
   const { data: itemsData, isLoading } = planItemsQuery;
   const planScope = JSON.stringify([serviceTypeId, planId]);
   // Writes to one plan run one after another, so quick keyboard edits land in order.
@@ -160,8 +169,12 @@ export const usePlanTabController = ({
     };
   }, [items, prefetchSongOptions, serviceTypeId]);
 
-  const settlePlanItems = () => {
-    settlePlanItemsQuery(queryClient, queryKey);
+  const settlePlanItems = (change: PlanItemsChange, error: Error | null) => {
+    settlePlanItemsQuery(
+      queryClient,
+      queryKey,
+      error === null ? change : failedPlanItemsChange(error, change)
+    );
   };
 
   const itemSongId = useCallback(
@@ -295,7 +308,7 @@ export const usePlanTabController = ({
     onSettled: (_result, _error, _input, context) => {
       discardPlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       setPendingItemId(null);
-      settlePlanItems();
+      settlePlanItems({ kind: "order" }, _error);
     },
   });
 
@@ -399,7 +412,10 @@ export const usePlanTabController = ({
       discardPlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       setPendingSongId(null);
       setPendingItemId(null);
-      settlePlanItems();
+      settlePlanItems(
+        { kind: "item", songIds: [_input.song.id], filesChanged: true },
+        _error
+      );
     },
   });
 
@@ -434,7 +450,14 @@ export const usePlanTabController = ({
         next.delete(item.id);
         return next;
       });
-      settlePlanItems();
+      settlePlanItems(
+        {
+          kind: "item",
+          songIds: item.song ? [item.song.id] : [],
+          filesChanged: true,
+        },
+        _error
+      );
     },
   });
 
@@ -557,7 +580,7 @@ export const usePlanTabController = ({
     onSettled: (_result, _error, _input, context) => {
       discardPlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       setPendingItemId(null);
-      settlePlanItems();
+      settlePlanItems({ kind: "order" }, _error);
     },
   });
 
@@ -656,7 +679,12 @@ export const usePlanTabController = ({
     onSettled: (_result, _error, _input, context) => {
       discardPlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       setPendingItemId(null);
-      settlePlanItems();
+      settlePlanItems(
+        _result
+          ? changedPlanItem(_input.item, _result)
+          : attemptedPlanItemChange(_input.item, _input.draft),
+        _error
+      );
     },
   });
 

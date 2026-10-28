@@ -15,7 +15,7 @@ import * as Output from "alchemy/Output";
 import * as RemovalPolicy from "alchemy/RemovalPolicy";
 import { Config, Effect, Layer, Redacted } from "effect";
 
-import { existingZoneId, formerDomain } from "./scripts/cloudflare/zones";
+import { existingZoneId } from "./scripts/cloudflare/zones";
 import { accountApiTokenProvider } from "./scripts/infra/cloudflare";
 import { gitHubProviders, GitHubRuleset } from "./scripts/infra/github";
 import { mainRuleset } from "./scripts/infra/main-ruleset";
@@ -103,11 +103,11 @@ const production: DeployTarget = {
 };
 
 /**
- * Zones `alchemy.run.ts` manages in the `prod` stage: its DNS records, the former domain's
- * redirect rule, and each zone's bot settings and custom WAF rules. The token cannot create zones (that needs Zone Write on every zone in the
+ * Zones `alchemy.run.ts` manages in the `prod` stage: their DNS records, bot settings, and
+ * custom WAF rules. The token cannot create zones (that needs Zone Write on every zone in the
  * account), so each is created by hand and must exist before this stack resolves its id by name.
  */
-const productionZones = ["pcobooster.com", formerDomain] as const;
+const productionZones = ["pcobooster.com"] as const;
 
 const productionZonePolicy = (
   zoneIds: readonly string[]
@@ -116,7 +116,6 @@ const productionZonePolicy = (
   permissionGroups: [
     "Zone Read",
     "DNS Write",
-    "Dynamic URL Redirects Write",
     "Zone WAF Write",
     "Bot Management Write",
   ],

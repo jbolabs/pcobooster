@@ -32,7 +32,7 @@ const panelScrollers = new Map([
   ],
   [
     "apps/web/src/components/schedule/plan-file-viewer.tsx",
-    "the file dialog image viewer",
+    "the file dialog image viewer and audio player",
   ],
   [
     "apps/web/src/components/schedule/file-pdf-reader.tsx",

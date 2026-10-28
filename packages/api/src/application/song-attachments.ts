@@ -35,5 +35,9 @@ export const readSongAttachmentLink = (
 ): Effect.Effect<SongAttachmentLink, ApplicationFault, PlanningCenterSongs> =>
   Effect.gen(function* openAttachment() {
     const songsService = yield* PlanningCenterSongs;
-    return yield* getSongAttachmentLink(input, songsService);
+    return yield* getSongAttachmentLink(
+      input,
+      songsService,
+      async (request, init) => await globalThis.fetch(request, init)
+    );
   }).pipe(viewDenied, withPlanningCenterFaults);

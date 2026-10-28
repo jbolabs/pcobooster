@@ -274,6 +274,43 @@ describe(getNeededTeamPositionsForPlan, () => {
     ]);
   });
 
+  it("leaves a position Planning Center sent without a team out of every team", async () => {
+    mocks.getServiceTypeTeamPositionsWithTeams.mockReturnValue(
+      Effect.succeed({
+        data: [
+          teamPosition("tp-band-vocals", "team-band", "Vocals"),
+          {
+            type: "TeamPosition",
+            id: "tp-unlinked",
+            attributes: { name: "Slides" },
+            relationships: { team: { data: null } },
+          },
+        ],
+        included: [team("team-band", "Band"), team("team-media", "Media")],
+      })
+    );
+    mocks.getPlanNeededPositionsWithTeams.mockReturnValue(
+      Effect.succeed({
+        data: [
+          neededPosition("np-1", "team-band", "Vocals", 1),
+          neededPosition("np-2", "team-band", "Slides", 1),
+        ],
+        included: [team("team-band", "Band")],
+      })
+    );
+
+    const result = await Effect.runPromise(
+      getNeededTeamPositionsForPlan("st-1", "plan-1", "series-1", dependencies)
+    );
+
+    expect(
+      result.map(({ teamName, positions }) => [
+        teamName,
+        positions.map(({ id }) => id),
+      ])
+    ).toStrictEqual([["Band", ["needed-position:np-2", "tp-band-vocals"]]]);
+  });
+
   it("uses provided seriesId and skips plan series resolution", async () => {
     mocks.getServiceTypeTeamPositionsWithTeams.mockReturnValue(
       Effect.succeed({

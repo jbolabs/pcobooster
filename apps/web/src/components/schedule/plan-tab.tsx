@@ -628,7 +628,7 @@ export const PlanTab = ({ serviceTypeId, planId, planDate }: PlanTabProps) => {
       )}
       <div className="relative flex h-full min-h-0 gap-6">
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <PageScrollArea>
+          <PageScrollArea contained={isWide && pane !== null}>
             <QueryDataBoundary
               query={planItemsQuery}
               title="Couldn't refresh the plan"

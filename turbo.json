@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "concurrency": "50%",
   "globalDependencies": [
     ".node-version",
     "bunfig.toml",
@@ -37,7 +38,7 @@
       "outputs": []
     },
     "test": {
-      "dependsOn": ["^test"],
+      "dependsOn": ["^test:inputs"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"],
       "outputs": []
     },
@@ -54,6 +55,11 @@
     },
     "db:generate": {
       "cache": false
+    },
+    "test:inputs": {
+      "dependsOn": ["^test:inputs"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest.config.ts"],
+      "outputs": []
     }
   }
 }

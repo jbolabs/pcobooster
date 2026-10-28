@@ -10,7 +10,7 @@ import { Config, Effect } from "effect";
 const supportedStagePattern = /^(?:prod|staging|local|test|pr-\d+)$/u;
 
 /** Where the API stack test serves the API Worker, clear of every local stage's ports. */
-const testApiPort = 3010;
+const defaultTestApiPort = 3010;
 
 export interface StageSettings {
   readonly stage: string;
@@ -56,7 +56,8 @@ const workerNames = (prefix: string): WorkerNames => ({
 export const resolveStageSettings = (
   stage: string,
   workersSubdomain: string,
-  devPortBase: number = DEFAULT_DEV_PORT_BASE
+  devPortBase: number = DEFAULT_DEV_PORT_BASE,
+  testApiPort: number = defaultTestApiPort
 ): StageSettings => {
   if (!supportedStagePattern.test(stage)) {
     throw new Error(`Unsupported deployment stage: ${stage}`);
@@ -65,11 +66,13 @@ export const resolveStageSettings = (
   const local = stage === "local" || stage === "test";
   const ports = devPorts(devPortBase);
   const apiDevPort = stage === "test" ? testApiPort : ports.api;
-  const names = workerNames(
-    stage === "local" && devPortBase !== DEFAULT_DEV_PORT_BASE
-      ? `pcobooster-${stage}-${devPortBase}`
-      : `pcobooster-${stage}`
-  );
+  let prefix = `pcobooster-${stage}`;
+  if (stage === "local" && devPortBase !== DEFAULT_DEV_PORT_BASE) {
+    prefix = `${prefix}-${devPortBase}`;
+  } else if (stage === "test") {
+    prefix = `${prefix}-${testApiPort}`;
+  }
+  const names = workerNames(prefix);
   let publicOrigin = `https://${names.web}.${workersSubdomain}.workers.dev`;
   if (production) {
     publicOrigin = "https://pcobooster.com";
@@ -105,12 +108,19 @@ export const currentStageSettings = Effect.gen(function* stageSettings() {
     stage === "local"
       ? yield* Config.String("DEV_PORT_BASE").pipe(Config.withDefault(""))
       : "";
+  const testApiPort =
+    stage === "test"
+      ? yield* Config.Int("TEST_API_PORT").pipe(
+          Config.withDefault(defaultTestApiPort)
+        )
+      : defaultTestApiPort;
   return yield* Effect.try({
     try: () =>
       resolveStageSettings(
         stage,
         workersSubdomain,
-        parseDevPortBase(devPortBase)
+        parseDevPortBase(devPortBase),
+        testApiPort
       ),
     catch: (error) =>
       error instanceof Error ? error : new Error(String(error)),

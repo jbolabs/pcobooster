@@ -123,13 +123,22 @@ export const songAttachmentLinkInputSchema = Schema.Struct({
   attachmentId: requiredId,
   /** The key the file belongs to; absent for the arrangement's own files. */
   keyId: Schema.optional(requiredId),
+  /**
+   * `pdf` also returns the file itself when it is a PDF, fetched by the server so the browser
+   * can render it in the app; Planning Center's signed links download PDFs instead of showing them.
+   */
+  as: Schema.optional(Schema.Literals(["link", "pdf"])),
 });
 
 /**
  * Planning Center's short-lived signed link to a stored file. Clients open it without their own
  * credentials and never keep it.
  */
-export const songAttachmentLinkSchema = Schema.Struct({ url: Schema.String });
+export const songAttachmentLinkSchema = Schema.Struct({
+  url: Schema.String,
+  /** The PDF, base64 encoded, when opened `as: "pdf"` and the file is one. */
+  data: Schema.optional(Schema.String),
+});
 
 export const songs = planningCenterGroup(
   "songs",
@@ -189,7 +198,7 @@ export const songs = planningCenterGroup(
         "arrangementId",
         "attachmentId",
       ]),
-      query: Struct.pick(songAttachmentLinkInputSchema.fields, ["keyId"]),
+      query: Struct.pick(songAttachmentLinkInputSchema.fields, ["keyId", "as"]),
       success: songAttachmentLinkSchema,
       feature: "chordCharts",
     }

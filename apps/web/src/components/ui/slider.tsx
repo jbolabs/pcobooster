@@ -5,13 +5,18 @@ import { cn } from "cn";
 import type { ReactNode } from "react";
 
 const sliderTrackVariants = cva(
-  "bg-input/90 relative grow overflow-hidden rounded-full select-none data-horizontal:w-full data-vertical:h-full",
+  "relative grow overflow-hidden rounded-full select-none data-horizontal:w-full data-vertical:h-full",
   {
     variants: {
       variant: {
-        default: "data-horizontal:h-2 data-vertical:w-2",
-        /** A thin media timeline, such as a player's progress. */
-        scrubber: "data-horizontal:h-1 data-vertical:w-1",
+        default: "bg-input/90 data-horizontal:h-2 data-vertical:w-2",
+        /**
+         * A thin media timeline, such as a player's progress: thicker under a finger, and
+         * thicker still while a `group/timeline` ancestor is `data-scrubbing`.
+         */
+        scrubber:
+          "bg-input/90 data-horizontal:h-1 group-data-scrubbing/timeline:data-horizontal:h-2 data-vertical:w-1 pointer-coarse:data-horizontal:h-1.5",
+        loop: "bg-transparent data-horizontal:h-1 data-vertical:w-1 pointer-coarse:data-horizontal:h-1.5",
       },
     },
     defaultVariants: { variant: "default" },
@@ -19,12 +24,20 @@ const sliderTrackVariants = cva(
 );
 
 const sliderThumbVariants = cva(
-  "hover:ring-ring/30 focus-visible:ring-ring/30 block shrink-0 rounded-full bg-white shadow-md ring-1 ring-black/10 transition-[box-shadow] select-none not-dark:bg-clip-padding hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50",
+  "hover:ring-ring/30 focus-visible:ring-ring/30 block shrink-0 shadow-md ring-1 ring-black/10 transition-[box-shadow,scale] select-none not-dark:bg-clip-padding hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "h-4 w-6 data-vertical:h-6 data-vertical:w-4",
-        scrubber: "size-3",
+        default:
+          "h-4 w-6 rounded-full bg-white data-vertical:h-6 data-vertical:w-4",
+        scrubber:
+          "size-3 rounded-full bg-white group-data-scrubbing/timeline:scale-125 pointer-coarse:size-4",
+        /**
+         * Slim trim handles at a loop's start and end, taller under a finger. They draw and
+         * take the keyboard only: the timeline's scrub layer drags them, with the playhead's
+         * fine control.
+         */
+        loop: "h-5 w-1.5 rounded-full bg-white pointer-coarse:h-7 pointer-coarse:w-2",
       },
     },
     defaultVariants: { variant: "default" },
@@ -40,6 +53,7 @@ const Slider = ({
   variant = "default",
   track,
   thumbLabel,
+  thumbLabels,
   thumbValueText,
   ...props
 }: SliderPrimitive.Root.Props &
@@ -48,6 +62,8 @@ const Slider = ({
     track?: ReactNode;
     /** What the thumb sets, for screen readers, such as "Playback position". */
     thumbLabel?: string;
+    /** Per-thumb names for a range, in order. */
+    thumbLabels?: readonly string[];
     /** The value read aloud, such as `1:05 of 4:10`. */
     thumbValueText?: (value: number) => string;
   }) => {
@@ -78,7 +94,10 @@ const Slider = ({
         >
           <SliderPrimitive.Indicator
             data-slot="slider-range"
-            className="bg-primary select-none data-horizontal:h-full data-vertical:w-full"
+            className={cn(
+              "select-none data-horizontal:h-full data-vertical:w-full",
+              variant === "loop" ? "bg-status-info/40" : "bg-primary"
+            )}
           />
           {track}
         </SliderPrimitive.Track>
@@ -87,7 +106,7 @@ const Slider = ({
             data-slot="slider-thumb"
             // Thumbs have no identity but their order.
             key={`thumb-${String(index)}-${String(values.length)}`}
-            aria-label={thumbLabel}
+            aria-label={thumbLabels?.[index] ?? thumbLabel}
             getAriaValueText={
               thumbValueText === undefined
                 ? undefined
