@@ -196,7 +196,7 @@ const PDF_SIGNATURE = "%PDF-";
  * The file's PDF, base64 encoded. A file Planning Center calls a PDF must be one; any other
  * file is null when it is too large to be a chart or isn't a PDF, and opens as its link.
  */
-const readProviderPdf = (
+export const readProviderPdf = (
   url: string,
   declaredPdf: boolean,
   fetch: typeof globalThis.fetch

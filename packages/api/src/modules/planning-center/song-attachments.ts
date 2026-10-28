@@ -1,4 +1,5 @@
 import { isPlanningCenterPathId } from "@pcobooster/api/modules/planning-center/path-ids";
+import { readProviderPdf } from "@pcobooster/api/modules/planning-center/plan-files";
 import type { PlanningCenterError } from "@pcobooster/api/planning-center/core-client";
 import type { PlanningCenterSongsService } from "@pcobooster/api/planning-center/services/songs-service";
 import { ExternalServiceFailure } from "@pcobooster/contracts/faults/external-service-failure";
@@ -274,13 +275,15 @@ export const getSongAttachments = (
   });
 
 /**
- * Planning Center's short-lived signed link to one stored file (its `open` action). The server
- * never downloads the file: audio and video stream on the device, and documents download there
- * without this app's credentials.
+ * Planning Center's short-lived signed link to one stored file (its `open` action). Audio and
+ * video stream on the device, and documents download there without this app's credentials.
+ * `as: "pdf"` also returns the file when it is a PDF, read from Planning Center's storage only,
+ * since its signed links download PDFs rather than show them.
  */
 export const getSongAttachmentLink = (
   input: SongAttachmentLinkInput,
-  songs: Pick<SongAttachmentsService, "openChartAttachment">
+  songs: Pick<SongAttachmentsService, "openChartAttachment">,
+  fetch: typeof globalThis.fetch
 ): Effect.Effect<
   SongAttachmentLink,
   PlanningCenterError | NotFound | ExternalServiceFailure
@@ -307,5 +310,9 @@ export const getSongAttachmentLink = (
         service: "planning-center",
       });
     }
-    return { url };
+    if (input.as !== "pdf") {
+      return { url };
+    }
+    const data = yield* readProviderPdf(url, false, fetch);
+    return data === null ? { url } : { url, data };
   });

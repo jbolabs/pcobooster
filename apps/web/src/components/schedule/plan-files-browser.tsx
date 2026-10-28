@@ -502,7 +502,8 @@ export const PlanFilesWorkspace = ({
 
 /**
  * An item's files in its details pane, by section, the way Planning Center lists them.
- * Choosing one opens it in the file dialog. Absent until loaded, and for items with none.
+ * Choosing one opens it in the file dialog. A song shows placeholder rows while the plan's files
+ * load, so "loading" never reads as "no files"; absent for items with none.
  */
 export const PlanItemFiles = ({
   serviceTypeId,
@@ -515,8 +516,20 @@ export const PlanItemFiles = ({
   item: PlanItem;
   onOpen: (file: PlanFile) => void;
 }) => {
-  const { query, files } = useAllPlanFiles(serviceTypeId, planId);
+  const { query, files, complete } = useAllPlanFiles(serviceTypeId, planId);
   const own = files.filter((file) => fileBelongsToItem(file, item));
+  if (own.length === 0 && !complete && !query.isError && item.song) {
+    return (
+      <Field>
+        <FieldTitle>Files</FieldTitle>
+        <div aria-busy className="flex flex-col gap-2">
+          <span className="sr-only">Loading files</span>
+          <Skeleton className="h-5 w-2/3" />
+          <Skeleton className="h-5 w-1/2" />
+        </div>
+      </Field>
+    );
+  }
   if (query.isError) {
     return (
       <Field>

@@ -1,11 +1,13 @@
 import { failureMessage } from "@pcobooster/client/product-client";
-import { callForQuery } from "@pcobooster/client/query";
+import { callForQuery, speculativeQuery } from "@pcobooster/client/query";
 import type {
   PlanFile,
   PlanFileOpenMode,
   PlanFiles,
 } from "@pcobooster/contracts/http/plan-files";
+import { isNonEmptyString } from "@pcobooster/planning-center-models/json";
 import {
+  infiniteQueryOptions,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
@@ -16,11 +18,15 @@ import { toast } from "sonner";
 
 import { createPlanFileQueryOptions } from "@/lib/plan-file-query";
 import { queryKeys } from "@/lib/query-keys";
+import { requestScheduler } from "@/lib/request-priority";
 import { productClient } from "@/product-client";
 
 /** The plan's files, a page of up to 100 at a time. */
-export const usePlanFiles = (serviceTypeId: string, planId: string) =>
-  useInfiniteQuery<
+export const createPlanFilesQueryOptions = (
+  serviceTypeId: string,
+  planId: string
+) =>
+  infiniteQueryOptions<
     PlanFiles,
     Error,
     InfiniteData<PlanFiles, number>,
@@ -40,6 +46,43 @@ export const usePlanFiles = (serviceTypeId: string, planId: string) =>
     getNextPageParam: (last) => last.nextOffset ?? undefined,
     staleTime: 60_000,
   });
+
+export const usePlanFiles = (serviceTypeId: string, planId: string) =>
+  useInfiniteQuery(createPlanFilesQueryOptions(serviceTypeId, planId));
+
+/** Plans past this many pages of files finish loading once their list is open. */
+const PREFETCHED_PLAN_FILE_PAGES = 5;
+
+/**
+ * Reads the plan's files in the speculative lane while the run sheet is open, so an item's
+ * files are there when it opens rather than arriving seconds later.
+ */
+export const usePrefetchPlanFiles = (
+  serviceTypeId: string | null,
+  planId: string | null
+) => {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const leave = new AbortController();
+    if (isNonEmptyString(serviceTypeId) && isNonEmptyString(planId)) {
+      void requestScheduler.runSpeculative(async () => {
+        try {
+          await queryClient.infiniteQuery({
+            ...speculativeQuery(
+              createPlanFilesQueryOptions(serviceTypeId, planId)
+            ),
+            pages: PREFETCHED_PLAN_FILE_PAGES,
+          });
+        } catch {
+          // The files list surfaces its own failures; prefetching is best effort.
+        }
+      }, leave.signal);
+    }
+    return () => {
+      leave.abort();
+    };
+  }, [queryClient, serviceTypeId, planId]);
+};
 
 /** Every page of the plan's files, loaded one after another: the list is only useful whole. */
 export const useAllPlanFiles = (serviceTypeId: string, planId: string) => {

@@ -47,6 +47,7 @@ import {
   KeyTabs,
   useSongSelection,
 } from "@/components/songs/song-arrangement-controls";
+import { SongFileViewer } from "@/components/songs/song-file-viewer";
 import { SongLoadError } from "@/components/songs/song-load-error";
 import {
   SongPageHeader,
@@ -325,18 +326,21 @@ const AttachmentRowContent = ({
 
 /**
  * A key's chord chart opens the chart page in that key; a link opens where it lives; a stored
- * file (Planning Center's lyrics sheet included) opens from a fresh signed link.
+ * PDF (Planning Center's lyrics sheet included) opens in the app's reader; any other stored file
+ * opens from a fresh signed link.
  */
 const AttachmentRow = ({
   songId,
   arrangementId,
   attachment,
   onOpen,
+  onView,
 }: {
   songId: string;
   arrangementId: string;
   attachment: SongAttachment;
   onOpen: (attachment: SongAttachment) => Promise<void>;
+  onView: (attachment: SongAttachment) => void;
 }) => {
   if (attachment.chart === "chord" && attachment.keyId !== null) {
     // Planning Center's chord chart for a key: the chart page shows it, in that key.
@@ -399,6 +403,10 @@ const AttachmentRow = ({
       size="row"
       render={<button type="button" aria-label={attachmentName(attachment)} />}
       onClick={() => {
+        if (attachment.kind === "pdf" && attachment.downloadable) {
+          onView(attachment);
+          return;
+        }
         void onOpen(attachment);
       }}
     >
@@ -501,6 +509,7 @@ const FilesSection = ({
 }) => {
   const files = useSongAttachments(songId, arrangement.id);
   const openAttachment = useOpenSongAttachment(songId, arrangement.id);
+  const [viewing, setViewing] = useState<SongAttachment | null>(null);
   let body: ReactNode = <FilesSkeleton />;
   if (files.data === undefined) {
     if (files.isError) {
@@ -561,6 +570,7 @@ const FilesSection = ({
                           arrangementId={arrangement.id}
                           attachment={attachment}
                           onOpen={openAttachment}
+                          onView={setViewing}
                         />
                       )}
                     />
@@ -594,6 +604,18 @@ const FilesSection = ({
       }
     >
       {body}
+      <SongFileViewer
+        songId={songId}
+        arrangementId={arrangement.id}
+        attachment={viewing}
+        name={viewing === null ? "" : attachmentName(viewing)}
+        onOpenOriginal={(attachment) => {
+          void openAttachment(attachment);
+        }}
+        onClose={() => {
+          setViewing(null);
+        }}
+      />
     </PageSection>
   );
 };
