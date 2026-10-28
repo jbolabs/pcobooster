@@ -43,13 +43,14 @@ describe("affected validation", () => {
       const scope = validationScope(cwd, base);
       expect(
         turboPlan(cwd, ["test", "//#test:root", ...scope.args])
+          .filter((task) => !task.taskId.endsWith("#test:inputs"))
           .map((task) => task.taskId)
           .toSorted()
       ).toStrictEqual(["//#test:root", "@pcobooster/admin#test"]);
     }
   );
 
-  it("includes dependents and their prerequisites", () => {
+  it("includes dependents without waiting for prerequisite tests", () => {
     const cwd = validationFixture();
     writeFixture(
       cwd,
@@ -59,13 +60,12 @@ describe("affected validation", () => {
     const scope = validationScope(cwd, "HEAD");
     expect(
       turboPlan(cwd, ["test", "//#test:root", ...scope.args])
+        .filter((task) => !task.taskId.endsWith("#test:inputs"))
         .map((task) => task.taskId)
         .toSorted()
     ).toStrictEqual([
       "//#test:root",
       "@pcobooster/client#test",
-      "@pcobooster/contracts#test",
-      "@pcobooster/design-tokens#test",
       "@pcobooster/mobile#test",
       "@pcobooster/web#test",
     ]);
@@ -81,12 +81,11 @@ describe("affected validation", () => {
     const scope = validationScope(cwd, "HEAD");
     expect(
       turboPlan(cwd, ["test", "//#test:root", ...scope.args])
+        .filter((task) => !task.taskId.endsWith("#test:inputs"))
         .map((task) => task.taskId)
         .toSorted()
     ).toStrictEqual([
       "//#test:root",
-      "@pcobooster/client#test",
-      "@pcobooster/contracts#test",
       "@pcobooster/design-tokens#test",
       "@pcobooster/mobile#test",
     ]);

@@ -10,7 +10,9 @@
  * cancellation, write completion, request rejection, defect isolation, outcome lines, bearer and
  * demo sessions, and every fault status the endpoints answer).
  */
+import { once } from "node:events";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { createServer } from "node:net";
 import path from "node:path";
 
 import { assert } from "@effect/vitest";
@@ -51,8 +53,25 @@ import TransportStackFixture, {
 import type { FixtureState } from "./transport-stack.fixture";
 import Api from "./worker";
 
+// Ask the OS for distinct available ports rather than sharing 3010/3011 across worktrees.
+const availablePort = async (): Promise<number> => {
+  await using server = createServer();
+  const listening = once(server, "listening");
+  server.listen(0, "127.0.0.1");
+  await listening;
+  return Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Int }))(
+    server.address()
+  ).port;
+};
+const [testApiPort, testFixturePort] = await Promise.all([
+  availablePort(),
+  availablePort(),
+]);
+
 /** Settings the API reads in a local stage; fictional, since nothing here reaches Planning Center. */
 const testSettings = {
+  TEST_API_PORT: String(testApiPort),
+  TEST_FIXTURE_PORT: String(testFixturePort),
   BETTER_AUTH_SECRET: "stack-test-secret-that-is-long-enough-000",
   PLANNING_CENTER_OAUTH_CLIENT_ID: "stack-test-client",
   PLANNING_CENTER_OAUTH_CLIENT_SECRET: "stack-test-client-secret",
@@ -200,7 +219,7 @@ test(
 // ---- The API Worker's router ------------------------------------------------------------------
 
 /** The API Worker's browser origin in the `test` stage (`stage.ts`). */
-const TEST_STAGE_ORIGIN = "http://127.0.0.1:3010";
+const TEST_STAGE_ORIGIN = `http://127.0.0.1:${testApiPort}`;
 /** The fixture serves `testServerConfig()`'s origin. */
 const FIXTURE_ORIGIN = "http://localhost:3000";
 

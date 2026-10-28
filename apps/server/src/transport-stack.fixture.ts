@@ -33,6 +33,7 @@ import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { makeSignature } from "better-auth/crypto";
 import {
+  Config,
   Duration,
   Effect,
   Logger,
@@ -580,13 +581,22 @@ export default class TransportStackFixture extends Cloudflare.Worker<TransportSt
   "TransportStackFixture",
   Effect.gen(function* fixtureProps() {
     const { stage } = yield* Alchemy.Stack;
+    const fixturePort =
+      stage === "test"
+        ? yield* Config.Int("TEST_FIXTURE_PORT").pipe(
+            Config.withDefault(FIXTURE_PORT)
+          )
+        : FIXTURE_PORT;
     return {
-      name: `pcobooster-${stage}-transport-fixture`,
+      name:
+        stage === "test"
+          ? `pcobooster-test-transport-fixture-${fixturePort}`
+          : `pcobooster-${stage}-transport-fixture`,
       main: import.meta.url,
       // `alchemy.load.ts` serves it on workers.dev so a load run can reach it from outside.
       workersDev: stage === LOAD_STAGE,
       compatibility: { date: "2026-09-01", flags: ["nodejs_compat"] },
-      dev: { host: "127.0.0.1", port: FIXTURE_PORT, strictPort: true },
+      dev: { host: "127.0.0.1", port: fixturePort, strictPort: true },
     };
   }),
   Effect.gen(function* fixture() {
