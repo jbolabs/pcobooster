@@ -1,4 +1,5 @@
 import { failureStatus } from "@pcobooster/client/product-client";
+import type { DraftState } from "@pcobooster/planning-center-models/plan-item-draft";
 import type { PlanItem } from "@pcobooster/planning-center-models/types";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
@@ -25,15 +26,15 @@ export type PlanItemsChange =
   | { kind: "order" }
   | { kind: "item"; songIds: readonly string[]; filesChanged: boolean };
 
-/** Known rejections changed nothing; an unreadable answer still needs plan reconciliation. */
-export const failedPlanItemsChange = (error: Error): PlanItemsChange => {
+/** Known rejections changed nothing; uncertain outcomes reconcile the attempted edit's targets. */
+export const failedPlanItemsChange = (
+  error: Error,
+  attempted: PlanItemsChange
+): PlanItemsChange => {
   const status = failureStatus(error);
-  return {
-    kind:
-      status !== undefined && status >= 400 && status < 500
-        ? "rejected"
-        : "order",
-  };
+  return status !== undefined && status >= 400 && status < 500
+    ? { kind: "rejected" }
+    : attempted;
 };
 
 export const changedPlanItem = (
@@ -56,6 +57,20 @@ export const changedPlanItem = (
           ),
         ]
       : [],
+    filesChanged,
+  };
+};
+
+export const attemptedPlanItemChange = (
+  item: PlanItem,
+  draft: Pick<DraftState, "arrangementId" | "keyId">
+): PlanItemsChange => {
+  const filesChanged =
+    (item.arrangement?.id ?? "") !== draft.arrangementId ||
+    (item.key?.id ?? "") !== draft.keyId;
+  return {
+    kind: "item",
+    songIds: filesChanged && item.song ? [item.song.id] : [],
     filesChanged,
   };
 };

@@ -34,6 +34,7 @@ import { confirmPlanItemCreation } from "@/lib/plan-item-creation";
 import type { ConfirmedPlanItemCreation } from "@/lib/plan-item-creation";
 import {
   applyPlanItemsOptimisticUpdate,
+  attemptedPlanItemChange,
   changedPlanItem,
   collectPlanSongOptionPrefetchIds,
   discardPlanItemsSnapshot,
@@ -172,7 +173,7 @@ export const usePlanTabController = ({
     settlePlanItemsQuery(
       queryClient,
       queryKey,
-      error === null ? change : failedPlanItemsChange(error)
+      error === null ? change : failedPlanItemsChange(error, change)
     );
   };
 
@@ -679,7 +680,9 @@ export const usePlanTabController = ({
       discardPlanItemsSnapshot(queryClient, queryKey, context?.snapshot);
       setPendingItemId(null);
       settlePlanItems(
-        _result ? changedPlanItem(_input.item, _result) : { kind: "order" },
+        _result
+          ? changedPlanItem(_input.item, _result)
+          : attemptedPlanItemChange(_input.item, _input.draft),
         _error
       );
     },

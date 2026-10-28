@@ -30,6 +30,7 @@ import {
 } from "@/lib/plan-items-cache";
 import {
   applyPlanItemsOptimisticUpdate,
+  attemptedPlanItemChange,
   changedPlanItem,
   collectPlanSongOptionPrefetchIds,
   failedPlanItemsChange,
@@ -575,7 +576,7 @@ describe("plan item query state", () => {
           settlePlanItemsQuery(
             queryClient,
             queryKey,
-            failedPlanItemsChange(failure)
+            failedPlanItemsChange(failure, { kind: "order" })
           );
         }
       },
@@ -610,13 +611,57 @@ describe("plan item query state", () => {
       queryClient,
       queryKey,
       failedPlanItemsChange(
-        new RateLimited({ message: "Wait", service: "Planning Center" })
+        new RateLimited({ message: "Wait", service: "Planning Center" }),
+        { kind: "order" }
       )
     );
     await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
     expect(observer.getCurrentResult().data).toBe(1);
     expect(queryClient.getQueryState(queryKey)).toMatchObject({
       isInvalidated: false,
+    });
+    stop();
+    queryClient.clear();
+  });
+
+  it("reconciles targeted files when an arrangement save's response is lost", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient();
+    const queryKey = ["plan-items", "service-1", "plan-1"] as const;
+    let savedFile = "old-arrangement.pdf";
+    const observer = new QueryObserver(queryClient, {
+      queryKey: ["plan-files", "service-1", "plan-1"],
+      queryFn: () => savedFile,
+      staleTime: Infinity,
+    });
+    const stop = observer.subscribe(() => {});
+    await observer.refetch();
+    queryClient.setQueryData(
+      ["song-options", "song-2", "service-1"],
+      "Unaffected song"
+    );
+    const attempted = attemptedPlanItemChange(
+      createSongItem("item-1", 1, "song-1"),
+      { arrangementId: "new-arrangement", keyId: "" }
+    );
+    savedFile = "new-arrangement.pdf";
+    settlePlanItemsQuery(
+      queryClient,
+      queryKey,
+      failedPlanItemsChange(new Error("Response lost after commit"), attempted)
+    );
+    expect(
+      queryClient.getQueryState(["plan-files", "service-1", "plan-1"])
+    ).toMatchObject({ isInvalidated: true });
+    await vi.advanceTimersByTimeAsync(PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
+    expect(observer.getCurrentResult().data).toBe("new-arrangement.pdf");
+    expect(
+      queryClient.getQueryState(["song-options", "song-2", "service-1"])
+    ).toMatchObject({ isInvalidated: false });
+    expect(attempted).toStrictEqual({
+      kind: "item",
+      songIds: ["song-1"],
+      filesChanged: true,
     });
     stop();
     queryClient.clear();
@@ -639,7 +684,9 @@ describe("plan item query state", () => {
       })
     ).toStrictEqual({ kind: "item", songIds: ["song-1"], filesChanged: true });
     expect(
-      failedPlanItemsChange(new Error("Unknown save outcome"))
+      failedPlanItemsChange(new Error("Unknown save outcome"), {
+        kind: "order",
+      })
     ).toStrictEqual({ kind: "order" });
   });
 
