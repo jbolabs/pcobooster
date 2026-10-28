@@ -48,11 +48,14 @@ const SECTION_PATTERN = new RegExp(
 const BRACKETED_CHORD_PATTERN = /\[(?<chord>[^\]]*)\]/gu;
 const PLAIN_TEXT_TAG_PATTERN = /<t>/iu;
 /**
- * Chord-line tokens that are not chords: bar lines, repeats (`x2`, `(2x)`, `-II-`, `-//-`), and
- * rests.
+ * Chord-line tokens that are not chords: bar lines, repeats (`x2`, `(2x)`, `-II-`, `-//-`),
+ * rests and pushes (`*`), and beat counts (`4,3`).
  */
 const CHORD_LINE_SYMBOL_PATTERN =
-  /^(?:\||\|\||\/|-|\u2013|%|\.|:|\(|\)|[x×]\d+|\(?[x×]\d+\)?|\(?\d+[x×]\)?|-+[Il|/]+-+|N\.?C\.?|\(\S*\))$/iu;
+  /^(?:\||\|\||\/|-|\u2013|%|\.|:|\*|\(|\)|[x×]\d+|\(?[x×]\d+\)?|\(?\d+[x×]\)?|\d+(?:,\d+)*|-+[Il|/]+-+|N\.?C\.?|\(\S*\))$/iu;
+/** A bass note alone after a chord (`/D`), or a chord in parentheses (`(Em)`). */
+const SLASH_BASS_PATTERN = /^\/[A-G][#b♯♭]?$/u;
+const ENCLOSING_PARENTHESES_PATTERN = /^\(|\)$/gu;
 const WHITESPACE_TOKEN_PATTERN = /\S+/gu;
 const TRAILING_WHITESPACE_PATTERN = /\s*$/u;
 
@@ -62,6 +65,11 @@ export const PAGE_BREAK = "PAGE_BREAK";
 export const isSectionHeading = (line: string): boolean =>
   !line.includes("[") && SECTION_PATTERN.test(line.trim());
 
+/** One space-separated token of a chord line that Services prints as a chord. */
+export const isChordToken = (token: string): boolean =>
+  SLASH_BASS_PATTERN.test(token) ||
+  isChord(token.replaceAll(ENCLOSING_PARENTHESES_PATTERN, ""));
+
 /** A line of chords written above lyrics, such as `G    D/F#   Em`. */
 export const isChordLine = (line: string): boolean => {
   if (line.includes("[") || PLAIN_TEXT_TAG_PATTERN.test(line)) {
@@ -70,7 +78,7 @@ export const isChordLine = (line: string): boolean => {
   const tokens = line.match(WHITESPACE_TOKEN_PATTERN) ?? [];
   let chords = 0;
   for (const token of tokens) {
-    if (isChord(token)) {
+    if (isChordToken(token)) {
       chords += 1;
     } else if (!CHORD_LINE_SYMBOL_PATTERN.test(token)) {
       return false;

@@ -118,10 +118,53 @@
     "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/*
+ * Services' chord chart fonts. Services prints chord lines as typed, so a chord lands over
+ * whichever lyric its spaces reach in the chart's font; the editor must use the same widths.
+ * Tinos and Arimo match Times and Helvetica glyph for glyph where those are not installed.
+ */
+@theme {
+  --font-chart-times: Times, "Times New Roman", Tinos, serif;
+  --font-chart-helvetica: Helvetica, Arial, Arimo, sans-serif;
+  --font-chart-courier: "Courier New", Courier, monospace;
+  --font-chart-monaco: Monaco, Menlo, ui-monospace, monospace;
+  --font-chart-noto-sans: "Noto Sans", "Noto Sans Variable", sans-serif;
+}
+
+/* Services' chord colors (`chord_chart_chord_color`), lifted in dark mode. */
+:root {
+  --chord-blue: oklch(0.5 0.21 262);
+  --chord-green: oklch(0.52 0.15 148);
+  --chord-orange: oklch(0.64 0.17 52);
+  --chord-purple: oklch(0.5 0.2 305);
+  --chord-red: oklch(0.54 0.21 27);
+}
+
+.dark {
+  --chord-blue: oklch(0.76 0.13 255);
+  --chord-green: oklch(0.78 0.15 150);
+  --chord-orange: oklch(0.8 0.14 65);
+  --chord-purple: oklch(0.76 0.13 305);
+  --chord-red: oklch(0.72 0.17 25);
+}
+
 @theme inline {
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
+  --color-chord-blue: var(--chord-blue);
+  --color-chord-green: var(--chord-green);
+  --color-chord-orange: var(--chord-orange);
+  --color-chord-purple: var(--chord-purple);
+  --color-chord-red: var(--chord-red);
+}
+
+/*
+ * Bold without wider glyphs, for text layered over a textarea: real bold would push the
+ * colored copy off the caret.
+ */
+@utility faux-bold {
+  -webkit-text-stroke: 0.035em currentColor;
 }
 
 @keyframes status-dot-pulse {

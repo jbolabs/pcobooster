@@ -46,6 +46,7 @@ import type { ChordChartCreateContent } from "@/components/songs/chord-chart-cre
 import { highlightChordChart } from "@/components/songs/chord-chart-highlight";
 import { ChordChartImportDialog } from "@/components/songs/chord-chart-import-dialog";
 import { ChordChartLayoutPopover } from "@/components/songs/chord-chart-layout-popover";
+import { chordChartPrintStyle } from "@/components/songs/chord-chart-print-style";
 import {
   PlanningCenterPdfPages,
   usePlanningCenterPdf,
@@ -855,18 +856,27 @@ const ChartReader = ({
 
 const EditorPane = ({
   workspace,
+  arrangement,
   textareaRef,
 }: {
   workspace: ChordChartWorkspace;
+  arrangement: ChordChartArrangement;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
 }) => {
   const { draft } = workspace;
+  const { fontClassName, chordClassName } = chordChartPrintStyle(
+    draft.layout,
+    arrangement.layout
+  );
   const highlighted = useMemo(
-    () => highlightChordChart(draft.chart),
-    [draft.chart]
+    () => highlightChordChart(draft.chart, chordClassName),
+    [draft.chart, chordClassName]
   );
   return (
-    <section aria-label="Chart text" className="flex min-h-0 flex-1 flex-col">
+    <section
+      aria-label="Chart text"
+      className={`flex min-h-0 flex-1 flex-col ${fontClassName}`}
+    >
       <HighlightedTextarea
         ref={textareaRef}
         aria-label="Lyrics and chords"
@@ -1408,7 +1418,11 @@ const ChartEditor = ({
         {(video, controls) => (
           <>
             <div className="flex min-h-0 flex-1 flex-col gap-3 md:grid md:grid-cols-2">
-              <EditorPane workspace={workspace} textareaRef={textareaRef} />
+              <EditorPane
+                workspace={workspace}
+                arrangement={arrangement}
+                textareaRef={textareaRef}
+              />
               {isMobile ? (
                 video
               ) : (
