@@ -334,7 +334,7 @@ const transientReadRetries = (
 
 /**
  * Planning Center answers 429 before acting on a request, so resending a rate-limited write
- * cannot apply it twice. It is resent once, when its Retry-After fits the write wait cap.
+ * cannot apply it twice. It is resent at most twice, when its Retry-After fits the write wait cap.
  */
 const isRetryableWriteRateLimit = (error: AttemptError): boolean =>
   error instanceof PlanningCenterApiError &&
@@ -342,7 +342,7 @@ const isRetryableWriteRateLimit = (error: AttemptError): boolean =>
   (error.retryAfterSeconds ?? 0) * MS_PER_SECOND <=
     PLANNING_CENTER_WINDOW_WAIT_MS;
 
-const MAX_WRITE_RATE_LIMIT_RETRIES = 1;
+const MAX_WRITE_RATE_LIMIT_RETRIES = 2;
 
 const rateLimitedWriteRetry = Schedule.recurs(
   MAX_WRITE_RATE_LIMIT_RETRIES
@@ -598,6 +598,17 @@ const readResponseText = (
 ): Effect.Effect<string, PlanningCenterNetworkError> =>
   Effect.mapError(response.text, networkFailure);
 
+const readAttemptBody = ({ response, startedAt }: SentResponse) =>
+  Effect.gen(function* readWithinAttempt() {
+    const elapsedMs = (yield* Clock.currentTimeMillis) - startedAt;
+    return yield* readResponseText(response).pipe(
+      Effect.timeoutOrElse({
+        duration: Duration.millis(Math.max(ATTEMPT_TIMEOUT_MS - elapsedMs, 0)),
+        orElse: () => Effect.fail(attemptTimedOut()),
+      })
+    );
+  });
+
 /**
  * Reads the JSON body within whatever remains of the attempt's time budget and decodes it with
  * `decode`. The schema is the only validation pass: `JSON.parse` output is JSON by
@@ -610,15 +621,7 @@ const readJsonBody =
     startedAt,
   }: SentResponse): Effect.Effect<DecodedBody<Output>, AttemptError> =>
     Effect.gen(function* readJson() {
-      const elapsedMs = (yield* Clock.currentTimeMillis) - startedAt;
-      const text = yield* readResponseText(response).pipe(
-        Effect.timeoutOrElse({
-          duration: Duration.millis(
-            Math.max(ATTEMPT_TIMEOUT_MS - elapsedMs, 0)
-          ),
-          orElse: () => Effect.fail(attemptTimedOut()),
-        })
-      );
+      const text = yield* readAttemptBody({ response, startedAt });
       if (response.status === 204 || text.trim() === "") {
         return yield* Effect.fail(
           new PlanningCenterApiError({
@@ -879,7 +882,13 @@ export class PlanningCenterCoreClient {
         )
       );
       return { response, startedAt };
-    });
+    }).pipe(
+      // Waiting for provider budget is not network time.
+      Effect.timeoutOrElse({
+        duration: Duration.millis(ATTEMPT_TIMEOUT_MS),
+        orElse: () => Effect.fail(attemptTimedOut()),
+      })
+    );
     const paced =
       pacer === undefined
         ? execute
@@ -918,7 +927,7 @@ export class PlanningCenterCoreClient {
       if (response.status >= 200 && response.status < 300) {
         return sent;
       }
-      const responseBody = yield* readResponseText(response);
+      const responseBody = yield* readAttemptBody(sent);
       const error = buildApiError(
         response.status,
         responseBody,
@@ -953,12 +962,7 @@ export class PlanningCenterCoreClient {
         });
       }
       return yield* Effect.fail(error);
-    }).pipe(
-      Effect.timeoutOrElse({
-        duration: Duration.millis(ATTEMPT_TIMEOUT_MS),
-        orElse: () => Effect.fail(attemptTimedOut()),
-      })
-    );
+    });
   }
 
   private send(

@@ -1,9 +1,10 @@
+import { failureStatus } from "@pcobooster/client/product-client";
 import type { PlanItem } from "@pcobooster/planning-center-models/types";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 import { clearCachedPlanItems } from "@/lib/plan-items-cache";
 import { queryKeys } from "@/lib/query-keys";
-import { clearCachedSongOptions } from "@/lib/song-options-cache";
+import { clearCachedSongOptionsForSong } from "@/lib/song-options-cache";
 import { clearCachedSongSearch } from "@/lib/song-search-cache";
 
 export type PlanItemsQueryKey = ReturnType<typeof queryKeys.planItems>;
@@ -13,8 +14,51 @@ export const PLAN_SONG_OPTIONS_PREFETCH_LIMIT = 6;
 
 const activeRefetchTimers = new WeakMap<
   QueryClient,
-  Map<string, ReturnType<typeof setTimeout>>
+  Map<
+    string,
+    { timer: ReturnType<typeof setTimeout>; keys: Map<string, QueryKey> }
+  >
 >();
+
+export type PlanItemsChange =
+  | { kind: "rejected" }
+  | { kind: "order" }
+  | { kind: "item"; songIds: readonly string[]; filesChanged: boolean };
+
+/** Known rejections changed nothing; an unreadable answer still needs plan reconciliation. */
+export const failedPlanItemsChange = (error: Error): PlanItemsChange => {
+  const status = failureStatus(error);
+  return {
+    kind:
+      status !== undefined && status >= 400 && status < 500
+        ? "rejected"
+        : "order",
+  };
+};
+
+export const changedPlanItem = (
+  before: PlanItem,
+  after: PlanItem
+): PlanItemsChange => {
+  const filesChanged =
+    before.song?.id !== after.song?.id ||
+    before.arrangement?.id !== after.arrangement?.id ||
+    before.key?.id !== after.key?.id ||
+    before.layout?.id !== after.layout?.id;
+  return {
+    kind: "item",
+    songIds: filesChanged
+      ? [
+          ...new Set(
+            [before.song?.id, after.song?.id].filter(
+              (id): id is string => id !== undefined
+            )
+          ),
+        ]
+      : [],
+    filesChanged,
+  };
+};
 
 export interface PlanItemsOptimisticSnapshot {
   previousItems: PlanItem[];
@@ -190,25 +234,34 @@ export const restorePlanItemsSnapshot = (
 
 export const settlePlanItemsQuery = (
   queryClient: QueryClient,
-  queryKey: PlanItemsQueryKey
+  queryKey: PlanItemsQueryKey,
+  change: PlanItemsChange
 ) => {
-  clearCachedPlanItems();
-  clearCachedSongOptions();
-  clearCachedSongSearch();
   const [, serviceTypeId, planId] = queryKey;
-  // Arrangement, key, and song edits change which attachments the plan reaches.
-  const relatedKeys: QueryKey[] = [
-    queryKey,
-    [queryKeys.songHistory(null)[0]],
-    [queryKeys.songOptions(null, null)[0]],
-  ];
-  if (serviceTypeId !== null && planId !== null) {
-    relatedKeys.push(queryKeys.planFiles(serviceTypeId, planId));
+  const relatedKeys: QueryKey[] = [];
+  if (change.kind !== "rejected") {
+    clearCachedPlanItems();
+    relatedKeys.push(queryKey);
+  }
+  if (change.kind === "item") {
+    if (change.songIds.length > 0) {
+      clearCachedSongSearch();
+    }
+    for (const songId of change.songIds) {
+      clearCachedSongOptionsForSong(songId);
+      relatedKeys.push(queryKeys.songHistory(songId), [
+        queryKeys.songOptions(songId, null)[0],
+        songId,
+      ]);
+    }
+    if (change.filesChanged && serviceTypeId !== null && planId !== null) {
+      relatedKeys.push(queryKeys.planFiles(serviceTypeId, planId));
+    }
   }
   for (const relatedKey of relatedKeys) {
     void queryClient.invalidateQueries({
       queryKey: relatedKey,
-      refetchType: "inactive",
+      refetchType: "none",
     });
   }
 
@@ -221,14 +274,21 @@ export const settlePlanItemsQuery = (
   const timerKey = JSON.stringify(queryKey);
   const currentTimer = clientTimers.get(timerKey);
   if (currentTimer) {
-    clearTimeout(currentTimer);
+    clearTimeout(currentTimer.timer);
+  }
+  const keys = currentTimer?.keys ?? new Map<string, QueryKey>();
+  for (const key of relatedKeys) {
+    keys.set(JSON.stringify(key), key);
+  }
+  if (keys.size === 0) {
+    return;
   }
 
   const nextTimer = setTimeout(() => {
-    clientTimers.delete(timerKey);
     // The last pending edit schedules its own reconciliation when it settles.
     if (queryClient.isMutating({ mutationKey: queryKey }) === 0) {
-      for (const relatedKey of relatedKeys) {
+      clientTimers.delete(timerKey);
+      for (const relatedKey of keys.values()) {
         void queryClient.refetchQueries({
           queryKey: relatedKey,
           type: "active",
@@ -236,5 +296,5 @@ export const settlePlanItemsQuery = (
       }
     }
   }, PLAN_ITEMS_MUTATION_RECONCILE_DELAY_MS);
-  clientTimers.set(timerKey, nextTimer);
+  clientTimers.set(timerKey, { timer: nextTimer, keys });
 };
