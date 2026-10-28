@@ -39,12 +39,12 @@ if (busy.length > 0) {
 process.stdout.write(
   [
     `Product ${devOrigin(ports.web)} (${launch.oauth ? "Planning Center sign-in" : "signed in with the personal access token"})`,
-    `API ${devOrigin(ports.api)}, marketing ${devOrigin(ports.marketing)}, admin ${devOrigin(ports.admin)}`,
+    `API ${devOrigin(ports.api)}, marketing ${devOrigin(ports.marketing)}`,
     "",
   ].join("\n")
 );
 
-// Alchemy runs the product and admin Vite dev servers with their Workers bindings and applies
+// Alchemy runs the product Vite dev server with its Workers bindings and applies
 // local D1 migrations. The product proxies `/`, `/about`, and `/marketing/*` to marketing.
 const processes = [
   // Only Alchemy reads Infisical credentials; the marketing dev server never sees them.

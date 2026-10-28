@@ -15,13 +15,13 @@ describe("affected validation", () => {
       const cwd = validationFixture();
       const base = fixtureGit(cwd, "rev-parse", "HEAD");
       if (state === "deleted") {
-        fixtureGit(cwd, "rm", "apps/admin/src/input.ts");
+        fixtureGit(cwd, "rm", "apps/video/src/input.ts");
       } else {
         writeFixture(
           cwd,
           state === "untracked"
-            ? "apps/admin/src/new.ts"
-            : "apps/admin/src/input.ts",
+            ? "apps/video/src/new.ts"
+            : "apps/video/src/input.ts",
           "export const input = 2;\n"
         );
       }
@@ -45,7 +45,7 @@ describe("affected validation", () => {
         turboPlan(cwd, ["test", "//#test:root", ...scope.args])
           .map((task) => task.taskId)
           .toSorted()
-      ).toStrictEqual(["//#test:root", "@pcobooster/admin#test"]);
+      ).toStrictEqual(["//#test:root", "@pcobooster/video#test"]);
     }
   );
 

@@ -24,10 +24,9 @@ export interface StageSettings {
   readonly staging: boolean;
   /** The port `alchemy dev` serves the API Worker on. */
   readonly apiDevPort: number;
-  /** The ports `alchemy dev` serves the product and admin Vite dev servers on (local stage). */
+  /** The port `alchemy dev` serves the product Vite dev server on (local stage). */
   readonly webDevPort: number;
-  readonly adminDevPort: number;
-  /** The product's browser origin, which also serves the API and (outside production) admin. */
+  /** The product's browser origin, which also serves the API. */
   readonly publicOrigin: string;
   /** Matches every preview and staging product Worker; they share production's OAuth callback. */
   readonly previewOriginPattern: string;
@@ -43,13 +42,11 @@ export interface StageSettings {
 export interface WorkerNames {
   readonly api: string;
   readonly web: string;
-  readonly admin: string;
 }
 
 const workerNames = (prefix: string): WorkerNames => ({
   api: `${prefix}-api`,
   web: `${prefix}-web`,
-  admin: `${prefix}-admin`,
 });
 
 /**
@@ -88,7 +85,6 @@ export const resolveStageSettings = (
     staging: stage === "staging",
     apiDevPort,
     webDevPort: ports.web,
-    adminDevPort: ports.admin,
     publicOrigin,
     previewOriginPattern: `https://pcobooster-*-web.${workersSubdomain}.workers.dev`,
     workerNames: names,

@@ -57,8 +57,8 @@ const deployPermissions: Cloudflare.ApiToken.PermissionGroupRef[] = [
   "Secrets Store Write",
   // Each deployed stage declares a Flagship app and its flags (`apps/server/src/feature-flags.ts`).
   FLAGSHIP_WRITE,
-  // Staging's and previews' product Workers and production's admin Worker each declare a
-  // Cloudflare Access application (`alchemy.run.ts`).
+  // Staging's and previews' product Workers each declare a Cloudflare Access application
+  // (`alchemy.run.ts`); production deletes the former admin Worker's on its next deploy.
   ACCESS_APPS_WRITE,
 ];
 

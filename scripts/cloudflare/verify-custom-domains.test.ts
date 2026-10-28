@@ -83,7 +83,7 @@ describe(verifyCustomDomains, () => {
     const { fetchImpl } = cloudflareDomains([
       { hostname: "pcobooster.com", service: "pcobooster-staging-web" },
       {
-        hostname: "admin.pcobooster.com",
+        hostname: "app.pcobooster.com",
         service: "pcobooster-prod-web",
         enabled: false,
       },
@@ -92,14 +92,14 @@ describe(verifyCustomDomains, () => {
       verifyCustomDomains(
         credentials,
         "pcobooster-prod-web",
-        ["pcobooster.com", "www.pcobooster.com", "admin.pcobooster.com"],
+        ["pcobooster.com", "www.pcobooster.com", "app.pcobooster.com"],
         fetchImpl
       )
     ).rejects.toThrow(
-      "Expected pcobooster-prod-web to serve pcobooster.com, www.pcobooster.com, admin.pcobooster.com: " +
+      "Expected pcobooster-prod-web to serve pcobooster.com, www.pcobooster.com, app.pcobooster.com: " +
         "pcobooster.com routes to pcobooster-staging-web; " +
         "www.pcobooster.com is not attached to any Worker; " +
-        "admin.pcobooster.com is attached to pcobooster-prod-web but disabled"
+        "app.pcobooster.com is attached to pcobooster-prod-web but disabled"
     );
   });
 

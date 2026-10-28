@@ -1,8 +1,4 @@
 import {
-  adminAccountsResponseSchema,
-  adminUserResponseSchema,
-} from "@pcobooster/contracts/admin";
-import {
   accountsSelectInputSchema,
   accountSwitchSchema,
   planningCenterAccountsSchema,
@@ -18,26 +14,6 @@ const identity = {
   email: null,
   organizationId: "organization-1",
   organizationName: "Organization",
-};
-
-const accountActivity = {
-  userId: "user-1",
-  name: "A Person",
-  email: "person@example.com",
-  image: null,
-  createdAt: "2026-09-01T00:00:00Z",
-  updatedAt: "2026-09-19T00:00:00Z",
-  linkedAccounts: 1,
-  providers: ["planning-center"],
-  activeSessions: 2,
-  loginEvents: 3,
-  loginEvents7d: 1,
-  loginEvents30d: 2,
-  signOutEvents: 0,
-  activityEvents: 4,
-  firstLoginAt: "2026-09-01T00:00:00Z",
-  lastLoginAt: "2026-09-19T00:00:00Z",
-  lastActivityAt: null,
 };
 
 describe("identity contracts", () => {
@@ -89,45 +65,6 @@ describe("identity contracts", () => {
         })),
       }).accounts[0]?.identity
     ).toBeNull();
-  });
-
-  it("preserves admin activity totals and linked-account metadata without tokens", () => {
-    const accounts = {
-      email: "admin@example.com",
-      accounts: [accountActivity],
-    };
-    const user = {
-      ...accountActivity,
-      linkedAccountDetails: [
-        {
-          id: "local-account-1",
-          providerAccountId: "provider-account-1",
-          providerId: "planning-center",
-          createdAt: accountActivity.createdAt,
-          updatedAt: accountActivity.updatedAt,
-          scope: "people services",
-          accessTokenExpiresAt: "2026-09-20T00:00:00Z",
-          refreshTokenExpiresAt: null,
-          activityEvents: 4,
-          linkedEvents: 1,
-          firstActivityAt: null,
-          lastActivityAt: "2026-09-19T00:00:00Z",
-          identity,
-        },
-      ],
-    };
-
-    expect(
-      Schema.decodeUnknownSync(adminAccountsResponseSchema)(accounts)
-    ).toStrictEqual(accounts);
-    expect(
-      Schema.decodeUnknownSync(adminUserResponseSchema)({ user })
-    ).toStrictEqual({ user });
-    expect(
-      Schema.decodeUnknownSync(adminUserResponseSchema)({ user: null })
-    ).toStrictEqual({
-      user: null,
-    });
   });
 
   it("accepts anonymous and disabled results without requiring authentication", () => {

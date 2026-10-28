@@ -66,7 +66,7 @@ export default defineConfig({
   overrides: [
     {
       // The surfaces people open on phones: the product, marketing, and their shared UI
-      // (docs/mobile-native-audit.md). Admin is desktop-only behind Cloudflare Access.
+      // (docs/mobile-native-audit.md).
       files: ["apps/web/**", "apps/marketing/**", "packages/ui/**"],
       rules: {
         // Text fields stay 16px on touch screens; iOS zooms into anything smaller.

@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./admin": "./src/admin.ts",
     "./chord-charts": "./src/chord-charts.ts",
     "./demo": "./src/demo.ts",
     "./faults": "./src/faults.ts",

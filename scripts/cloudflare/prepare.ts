@@ -9,8 +9,8 @@ const inlinedVariables = [
 const buildStampName = "cloudflare-build-inputs.json";
 
 /**
- * Alchemy's memo hashes files, not the environment: record the stage (which sets the admin
- * base path) and the variables the web build inlines in a gitignored file each app's memo
+ * Alchemy's memo hashes files, not the environment: record the stage (which picks the product
+ * favicon) and the variables the web build inlines in a gitignored file the product's memo
  * hashes. Source files, including the workspace packages and the marketing site the web build
  * stages, are memo workspaces in `alchemy.run.ts`.
  */
@@ -22,9 +22,5 @@ export const prepareCloudflareBuild = async (stage: string): Promise<void> => {
     .update(JSON.stringify({ stage, publicEnvironment }))
     .digest("hex");
   const stamp = `${JSON.stringify({ sha256 })}\n`;
-  await Promise.all(
-    ["web", "admin"].map(async (app) => {
-      await writeFile(`apps/${app}/${buildStampName}`, stamp);
-    })
-  );
+  await writeFile(`apps/web/${buildStampName}`, stamp);
 };

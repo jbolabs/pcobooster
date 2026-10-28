@@ -10,7 +10,6 @@
 - `apps/web/`: TanStack Start product UI on Cloudflare Workers. File routes live in `apps/web/src/routes` (`src/routeTree.gen.ts` is generated and committed); the sign-in gate and other request middleware in `src/start.ts`; components, hooks, and public assets under `apps/web/src` and `apps/web/public`.
 - `apps/server/`: the API Worker, an Alchemy Effect-native `Cloudflare.Worker` (`src/worker.ts`) that reads its settings with `Config` at startup, binds D1, the Planning Center cache KV namespace, and the read-only iOS update bucket (`src/mobile-update-bucket.ts`), builds one Effect `HttpRouter` (`src/http-app.ts`: the product API under `/api/v1`, Better Auth, the iOS app's over-the-air update routes, liveness, CORS, the cache policy, and disconnect handling) once per isolate in its constructor, and hands each request the isolate's server dependencies. `src/database.ts` declares the D1 database and its `Drizzle.Schema`; `src/stage.ts` derives per-stage origins for both the Worker and `alchemy.run.ts`.
 - `apps/marketing/`: independent marketing site, a TanStack Start app prerendered to static files. Its interactive product replica lives in `apps/marketing/src/components/product-demo/` with fictional fixtures; it shares design tokens and shared UI from `packages/ui` (currently the phone menu) with the product; its own primitives stay in `apps/marketing/src/components/ui`.
-- `apps/admin/`: private full-stack TanStack Start admin app for `admin.pcobooster.com`, deployed as its own Cloudflare Worker behind Cloudflare Access. Its server functions read D1 through the Worker's own binding using `packages/api` modules; the public API has no admin procedures. See `docs/admin.md`.
 - `apps/video/`: the Remotion launch video (15s, 30s, and ~64s cuts, each in 16:9 and 9:16). It drives the marketing replica frame by frame through scripted beats; `bun run --cwd apps/video render` writes MP4s to its ignored `out/`. See `apps/video/README.md`.
 - `packages/design-tokens/`: product color and radius tokens (`tokens.css`, light on `:root`, dark under `.dark`) shared by `apps/web` and the marketing replica.
 - `packages/ui/`: UI shared by `apps/web` and `apps/marketing`, one export per component (`@pcobooster/ui/mobile-menu`). Components are primitive-free (each app supplies its own buttons and headers) and styled with Tailwind utilities that exist in both apps; each app `@source`s `packages/ui/src` and imports a component's CSS (`@pcobooster/ui/mobile-menu.css`) when it has one.
@@ -29,7 +28,7 @@
 ## Build, Test, and Development Commands
 
 - Use Bun for dependency management and scripts. `bun.lock` is the only committed lockfile; do not add `package-lock.json` or run npm-based install workflows for this repo.
-- `bun run dev`: start API, product, and admin through Alchemy, plus the marketing dev server, signed in with the pinned free Planning Center sandbox PAT from Keychain (`sandbox` scope; see `docs/planning-center-sandbox.md`). The main checkout uses ports 3000 to 3003 (API, product, marketing, admin); each linked worktree gets its own block from its path, so worktrees can run dev at once. `DEV_PORT_BASE=<port>` overrides the block. The command prints the product URL.
+- `bun run dev`: start API and product through Alchemy, plus the marketing dev server, signed in with the pinned free Planning Center sandbox PAT from Keychain (`sandbox` scope; see `docs/planning-center-sandbox.md`). The main checkout uses ports 3000 to 3002 (API, product, marketing); each linked worktree gets its own block from its path, so worktrees can run dev at once. `DEV_PORT_BASE=<port>` overrides the block. The command prints the product URL.
 - `bun run dev:church`: inspect the pinned Agape account with provider writes blocked, using the `pcobooster-dev` PAT; the stack refuses a token from another organization. This is the PAT profile available without a Mac Keychain. `dev:church:write` enables real church writes and requires explicit user authorization for the specific mutation.
 - `bun run dev:auth`: the same with real Planning Center OAuth, on the main ports (the OAuth callback is registered for `127.0.0.1:3001`). Use it only to test sign-in.
 - `bun run build`: build the Vite apps through Turborepo. Alchemy bundles the API Worker itself on `dev`/deploy.
@@ -104,12 +103,12 @@ Read-only account verification on 2026-10-06 confirmed Workers Paid with Standar
 ## Architecture Notes
 
 - Preferred flow: `apps/web` -> `productClient.run((api) => api.people.search({ query }))` -> `apps/server` `/api/v1/...` -> `packages/api/src/http/handlers/*` -> Effect application program -> `packages/api/src/modules/*` -> service adapter.
-- Better Auth is mounted on the API Worker's Effect router at `/api/auth/*`. The product Worker's `/api/*` and `/admin/*` server routes forward through service bindings (locally too), so browser requests stay on the web origin.
+- Better Auth is mounted on the API Worker's Effect router at `/api/auth/*`. The product Worker's `/api/*` server route forwards through a service binding (locally too), so browser requests stay on the web origin.
 - Product operations use Effect HttpApi under `/api/v1`: reads are `GET` (or `POST` when the input can outgrow a URL), writes use `POST`, `PUT`, `PATCH`, or `DELETE`, and callers use the native typed `api.<group>.<endpoint>({ params, query, payload })` methods. The query helper supplies the abort signal and read priority. Better Auth, liveness health, and the iOS over-the-air update routes (`/api/updates/*`, whose requests and multipart answers the Expo Updates protocol fixes) are the intentional surfaces outside it. Callers catch failures with `instanceof` on the fault class or `failureStatus(error)`. The client header is `x-pcobooster-client: <name>;api=<N>` (`formatClientHeader`).
 - Native clients sign in through `/api/auth/native/start` and `/api/auth/native/exchange`, then send `Authorization: Bearer <token>` plus `x-pcobooster-account` (and `x-pcobooster-demo`) headers instead of cookies; keep the web cookie flow and these header reads in step. See [docs/native-auth.md](docs/native-auth.md).
 - Database access uses Drizzle through `packages/api/src/db`; migrations include Better Auth tables.
 - The API Worker builds `ServerDependencies` (`packages/api/src/server.ts`: typed `ServerConfig`, Drizzle database, Better Auth, feature flags, Planning Center read caches) once per isolate and passes them explicitly: to each request as `IsolateServer`, and to Effect programs as the `Server` service. `packages/api` never reads `process.env` or `cloudflare:workers`; add new settings to `ServerConfig` and read them in `apps/server/src/worker.ts`.
-- Browser query keys, persistence schemas, and cache hydration live in `apps/web/src/lib`. The web app may import contracts and Planning Center models, never `packages/api`. The admin app's server functions may import `packages/api` modules (they run in the admin Worker); its components may not.
+- Browser query keys, persistence schemas, and cache hydration live in `apps/web/src/lib`. The web app may import contracts and Planning Center models, never `packages/api`.
 - Backward compatibility is not a priority during the current dev phase; prefer cleaner APIs/URLs/UX over temporary compatibility shims unless explicitly requested.
 
 ## Learned User Preferences
@@ -218,7 +217,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 ### Framework-Specific Guidance
 
-**TanStack Start (web, admin, marketing):**
+**TanStack Start (web, marketing):**
 
 - Add pages as file routes under `src/routes`, and commit the regenerated `src/routeTree.gen.ts` (`vite dev` or `vite build` rewrites it).
 - Keep server functions (`*.functions.ts`) as SSR glue; product operations go through the product API client to the API Worker.

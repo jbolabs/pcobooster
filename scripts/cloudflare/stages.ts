@@ -1,6 +1,6 @@
 const previewStagePattern = /^pr-(?<number>[1-9]\d*)$/u;
 const previewResourcePattern =
-  /^pcobooster-pr-(?<number>[1-9]\d*)(?:-(?:api|web|admin))?$/u;
+  /^pcobooster-pr-(?<number>[1-9]\d*)(?:-(?:api|web))?$/u;
 const dayMs = 24 * 60 * 60 * 1000;
 
 /** An open pull request's preview is destroyed after this long without a deploy. */

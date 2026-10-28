@@ -127,8 +127,6 @@ describe(decideRequestGate, () => {
       "/services/1/plans/2/assign?teamId=3&positionId=4",
       "/auth?next=%2Fservices%2F1%2Fplans%2F2%2Fassign%3FteamId%3D3%26positionId%3D4",
     ],
-    ["/admin", "/auth?next=%2Fadmin"],
-    ["/admin/users/7", "/auth?next=%2Fadmin%2Fusers%2F7"],
     // Other API paths are gated, and API paths are never a return destination.
     ["/api/health", "/auth"],
     ["/api/updates", "/auth"],

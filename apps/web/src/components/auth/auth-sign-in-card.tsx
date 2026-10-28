@@ -337,7 +337,7 @@ export const AuthSignInCard = ({
     try {
       const resumed = await resumeDeviceAccount(userId);
       if (resumed) {
-        // The return path may be outside this router, such as `/admin`.
+        // The return path may be outside this router, such as a marketing page.
         window.location.assign(returnPath);
         return;
       }
