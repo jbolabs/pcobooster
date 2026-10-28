@@ -1,5 +1,6 @@
 import type { PlanningCenterRateLimitInfo } from "@pcobooster/api/planning-center/api-error";
 import type { RequestPriority } from "@pcobooster/contracts/request-priority";
+import { Effect, Semaphore } from "effect";
 
 /** Budget used freely before pacing starts, as a share of the reported limit. */
 const DEFAULT_PACE_FROM_SHARE = 0.5;
@@ -17,10 +18,19 @@ const DEFAULT_WRITE_RESERVE_SHARE = 0.1;
 /** Longest an interactive request waits for budget before failing fast. */
 export const DEFAULT_MAX_RATE_LIMIT_WAIT_MS = 5000;
 /**
- * Longest a write waits for budget. A write is a change the person already made (the screen
- * shows it optimistically), so it waits out up to one whole window rather than failing.
+ * One Planning Center rate window: the longest a write waits for budget, and the longest
+ * Retry-After an interactive read waits out before resending. A write is a change the person
+ * already made (the screen shows it optimistically), so it waits rather than failing.
  */
-export const DEFAULT_MAX_WRITE_RATE_LIMIT_WAIT_MS = 20_000;
+export const PLANNING_CENTER_WINDOW_WAIT_MS = 20_000;
+/**
+ * Requests one credential may have in flight from an isolate at once, across every procedure.
+ * Workers hold six connections per invocation, so this lets two procedures read at full speed
+ * while a plan page's wider fan-out (window history, candidate details, songs) queues. Fewer
+ * requests committed at once means each response's rate headers, which count every isolate and
+ * device on the account, reach the pacer before the next requests are sent.
+ */
+const DEFAULT_MAX_IN_FLIGHT = 12;
 /** Retry wait after a 429 that names no Retry-After and no known window. */
 const UNKNOWN_BLOCK_MS = 1000;
 /** Credentials tracked before idle ones are pruned; OAuth tokens rotate every 2 hours. */
@@ -96,6 +106,14 @@ export interface PlanningCenterRatePacerOptions {
   readonly writeReserveShare?: number;
   /** Share of the reported limit speculative reads may use (default 0.4). */
   readonly speculativeShare?: number;
+  /** Requests one credential may have in flight at once (default 12). */
+  readonly maxInFlight?: number;
+}
+
+/** One credential's send permits and the requests holding or waiting for one. */
+interface SendLane {
+  readonly semaphore: Semaphore.Semaphore;
+  users: number;
 }
 
 export interface PlanningCenterRateObservation {
@@ -176,19 +194,52 @@ export class PlanningCenterRatePacer {
   private readonly writeReserveShare: number;
   private readonly paceFromShare: number;
   private readonly speculativeShare: number;
+  private readonly maxInFlight: number;
   private readonly windows = new Map<string, CredentialWindow>();
+  private readonly lanes = new Map<string, SendLane>();
 
   constructor(options: PlanningCenterRatePacerOptions = {}) {
     this.paceFromShare = options.paceFromShare ?? DEFAULT_PACE_FROM_SHARE;
     this.maxWaitMs = options.maxWaitMs ?? DEFAULT_MAX_RATE_LIMIT_WAIT_MS;
     this.maxWriteWaitMs =
-      options.maxWriteWaitMs ?? DEFAULT_MAX_WRITE_RATE_LIMIT_WAIT_MS;
+      options.maxWriteWaitMs ?? PLANNING_CENTER_WINDOW_WAIT_MS;
     this.writeReserveShare =
       options.writeReserveShare ?? DEFAULT_WRITE_RESERVE_SHARE;
     this.speculativeShare = Math.min(
       options.speculativeShare ?? DEFAULT_SPECULATIVE_SHARE,
       this.paceFromShare
     );
+    this.maxInFlight = options.maxInFlight ?? DEFAULT_MAX_IN_FLIGHT;
+  }
+
+  /**
+   * Sends `effect` once fewer than `maxInFlight` of the credential's requests are in flight.
+   * A lane lives only while a request holds or waits for one of its permits.
+   */
+  withSendPermit<Value, Failure, Requirements>(
+    scope: string,
+    effect: Effect.Effect<Value, Failure, Requirements>
+  ): Effect.Effect<Value, Failure, Requirements> {
+    return Effect.suspend(() => {
+      const lane = this.lanes.get(scope) ?? {
+        semaphore: Semaphore.makeUnsafe(this.maxInFlight),
+        users: 0,
+      };
+      this.lanes.set(scope, lane);
+      lane.users += 1;
+      return lane.semaphore
+        .withPermits(1)(effect)
+        .pipe(
+          Effect.ensuring(
+            Effect.sync(() => {
+              lane.users -= 1;
+              if (lane.users === 0) {
+                this.lanes.delete(scope);
+              }
+            })
+          )
+        );
+    });
   }
 
   private windowFor(scope: string, now: number): CredentialWindow {
@@ -272,12 +323,13 @@ export class PlanningCenterRatePacer {
     const { limit } = window;
     const blocked = window.blockedUntil > now;
     const used = window.reportedCount + window.inFlight;
-    if (
-      limit === undefined ||
-      window.periodMs === undefined ||
-      (!blocked && used < limit * this.paceFromShare)
-    ) {
+    const windowKnown = limit !== undefined && window.periodMs !== undefined;
+    if (!(blocked || (windowKnown && used >= limit * this.paceFromShare))) {
       return { kind: "send", waitMs: 0, window: snapshotOf(window) };
+    }
+    if (limit === undefined || window.periodMs === undefined) {
+      // A 429 arrived before any response reported the window: wait out its block only.
+      return this.sendAfter(window, now, window.blockedUntil);
     }
     const readLimit = Math.floor(limit * (1 - this.writeReserveShare));
     const remaining = readLimit - used;
@@ -292,6 +344,19 @@ export class PlanningCenterRatePacer {
       remaining > 0 && windowLeftMs > 0
         ? windowLeftMs / remaining
         : window.periodMs / readLimit;
+    const decision = this.sendAfter(window, now, earliest);
+    if (decision.kind === "send") {
+      window.nextSlotAt = earliest + spacingMs;
+    }
+    return decision;
+  }
+
+  /** Sends at `earliest`, or rejects when that is further away than a read may wait. */
+  private sendAfter(
+    window: CredentialWindow,
+    now: number,
+    earliest: number
+  ): PlanningCenterPacingDecision {
     const waitMs = Math.ceil(earliest - now);
     if (waitMs > this.maxWaitMs) {
       return {
@@ -301,7 +366,6 @@ export class PlanningCenterRatePacer {
         window: snapshotOf(window),
       };
     }
-    window.nextSlotAt = earliest + spacingMs;
     return { kind: "send", waitMs, window: snapshotOf(window) };
   }
 
@@ -310,15 +374,17 @@ export class PlanningCenterRatePacer {
     now: number
   ): PlanningCenterPacingDecision {
     const { limit } = window;
-    if (limit === undefined || window.periodMs === undefined) {
+    const blocked = window.blockedUntil > now;
+    if (!blocked && (limit === undefined || window.periodMs === undefined)) {
       // Nothing is known about this credential yet; the first response teaches the window.
       return { kind: "send", waitMs: 0, window: snapshotOf(window) };
     }
     const used = window.reportedCount + window.inFlight;
     const interactiveQueued = window.nextSlotAt > now;
     if (
-      window.blockedUntil <= now &&
+      !blocked &&
       !interactiveQueued &&
+      limit !== undefined &&
       used < limit * this.speculativeShare
     ) {
       return { kind: "send", waitMs: 0, window: snapshotOf(window) };

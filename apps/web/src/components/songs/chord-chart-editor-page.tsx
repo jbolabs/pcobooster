@@ -7,6 +7,8 @@ import {
   parseKey,
   transposeKey,
 } from "@pcobooster/planning-center-models/chord-chart-chords";
+import { toggleChartTextStyle } from "@pcobooster/planning-center-models/chord-chart-style";
+import type { ChartTextStyle } from "@pcobooster/planning-center-models/chord-chart-style";
 import {
   chartActionLabel,
   keyContextLabel,
@@ -17,7 +19,8 @@ import {
 } from "@pcobooster/planning-center-models/song-detail";
 import type { SongPageSearch } from "@pcobooster/planning-center-models/song-detail";
 import type { KeyOption } from "@pcobooster/planning-center-models/types";
-import { useHotkey } from "@tanstack/react-hotkeys";
+import { useHotkey, useHotkeys } from "@tanstack/react-hotkeys";
+import type { RegisterableHotkey } from "@tanstack/react-hotkeys";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUpDown,
@@ -121,6 +124,15 @@ import { rememberRecentSong } from "@/lib/recent-songs";
 
 const SAVE_HOTKEY = "Mod+S";
 const EDIT_HOTKEY = "E";
+/** Planning Center's own bold and italic tags, toggled around the selection. */
+const STYLE_HOTKEYS = [
+  { style: "b", label: "Bold", binding: "Mod+B" },
+  { style: "i", label: "Italic", binding: "Mod+I" },
+] as const satisfies readonly {
+  style: ChartTextStyle;
+  label: string;
+  binding: RegisterableHotkey;
+}[];
 const COPIED_LABEL_MS = 2000;
 const KEYS_PER_MODE = 12;
 
@@ -192,6 +204,26 @@ const insertAtCaret = (
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
+/** Toggles a style's tags around the textarea's selection and tells React. */
+const toggleStyleAtSelection = (
+  textarea: HTMLTextAreaElement | null,
+  style: ChartTextStyle
+) => {
+  if (textarea === null || textarea.readOnly) {
+    return;
+  }
+  const edit = toggleChartTextStyle(
+    textarea.value,
+    textarea.selectionStart,
+    textarea.selectionEnd,
+    style
+  );
+  textarea.focus();
+  textarea.setRangeText(edit.insert, edit.from, edit.to);
+  textarea.setSelectionRange(edit.selectionStart, edit.selectionEnd);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+};
+
 const scheduleReset = (reset: () => void): (() => void) => {
   const timeout = window.setTimeout(reset, COPIED_LABEL_MS);
   return () => {
@@ -240,6 +272,25 @@ const InsertItems = ({
   textareaRef: RefObject<HTMLTextAreaElement | null>;
 }) => (
   <>
+    <DropdownMenuGroup>
+      <DropdownMenuLabel>Style</DropdownMenuLabel>
+      {STYLE_HOTKEYS.map((item) => (
+        <DropdownMenuItem
+          key={item.style}
+          onClick={() => {
+            toggleStyleAtSelection(textareaRef.current, item.style);
+          }}
+        >
+          {item.label}
+          <HotkeyChord
+            id={`chord-chart-style-${item.style}`}
+            binding={item.binding}
+            className="ml-auto"
+          />
+        </DropdownMenuItem>
+      ))}
+    </DropdownMenuGroup>
+    <DropdownMenuSeparator />
     <DropdownMenuGroup>
       <DropdownMenuLabel>Section</DropdownMenuLabel>
       {SECTION_SNIPPETS.map((section) => (
@@ -1266,6 +1317,15 @@ const ChartEditor = ({
     ignoreInputs: false,
     preventDefault: true,
   });
+  useHotkeys(
+    STYLE_HOTKEYS.map((item) => ({
+      hotkey: item.binding,
+      callback: () => {
+        toggleStyleAtSelection(textareaRef.current, item.style);
+      },
+    })),
+    { target: textareaRef, ignoreInputs: false, preventDefault: true }
+  );
 
   const focusOnOpen = useRef(takeFocus);
   useEffect(() => {
