@@ -1,4 +1,4 @@
-import * as GitHub from "alchemy/GitHub";
+import * as GitHub from "@alchemy.run/github";
 import { Effect, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 

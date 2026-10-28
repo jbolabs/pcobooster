@@ -1,6 +1,6 @@
+import * as Cloudflare from "@alchemy.run/cloudflare";
 /** Retained, centrally owned runtime secrets. Product deployments only reference these resources. */
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
 import * as RemovalPolicy from "alchemy/RemovalPolicy";
 import { Config, Effect, Redacted } from "effect";
 

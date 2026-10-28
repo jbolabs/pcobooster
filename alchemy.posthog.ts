@@ -1,3 +1,4 @@
+import * as Cloudflare from "@alchemy.run/cloudflare";
 /**
  * PostHog analytics configuration as code: project settings, dashboards, and saved
  * insights declared in `@pcobooster/analytics/reports`. Separate from the application
@@ -11,7 +12,6 @@ import {
   project as projectDefinition,
 } from "@pcobooster/analytics/reports";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
 import type { Input } from "alchemy/Input";
 import * as RemovalPolicy from "alchemy/RemovalPolicy";
 import { Effect } from "effect";

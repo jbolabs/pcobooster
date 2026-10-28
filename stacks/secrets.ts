@@ -1,4 +1,4 @@
-import * as Infisical from "alchemy/Infisical";
+import * as Infisical from "@alchemy.run/infisical";
 
 /**
  * The only place that names the Infisical projects or maps stages to them. On the free plan a

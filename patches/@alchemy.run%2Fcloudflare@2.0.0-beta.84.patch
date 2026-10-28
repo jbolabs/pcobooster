@@ -1,0 +1,25 @@
+diff --git a/src/Workers/ViteChild.ts b/src/Workers/ViteChild.ts
+index 67b9646cf7cf9a5d302b3a67107810e4b0eb500e..a7adfae404682dc546c8bf1490750911f0c8463d 100644
+--- a/src/Workers/ViteChild.ts
++++ b/src/Workers/ViteChild.ts
+@@ -40,8 +40,18 @@ export interface ViteChildHandle {
+ // does not exist (workerd) — a module-level call would crash the bundle
+ // at startup even though no child is ever spawned there. At spawn time
+ // we are guaranteed to be in Node/bun.
+-const resolveRunner = (basename: string) =>
+-  fileURLToPath(import.meta.resolve(`./${basename}${moduleExtension(import.meta.url)}`));
++const resolveRunner = (basename: string) => {
++  // Bun selects published src/ exports, but Node children must run the shipped
++  // lib/ entry. Source entries require a checkout-only loader omitted from npm.
++  const publishedSource =
++    moduleExtension(import.meta.url) === ".ts" &&
++    /[\\/]node_modules[\\/]/.test(fileURLToPath(import.meta.url));
++  return fileURLToPath(
++    publishedSource
++      ? new URL(`../../lib/Workers/${basename}.js`, import.meta.url)
++      : import.meta.resolve(`./${basename}${moduleExtension(import.meta.url)}`),
++  );
++};
+ 
+ export const startViteChild = (
+   config: ViteChildConfig,

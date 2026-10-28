@@ -1,13 +1,13 @@
 import { readdirSync } from "node:fs";
 import path from "node:path";
 
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle";
 import {
   planningCenterFallbackTimeZone,
   productionPostHogKey,
 } from "@pcobooster/config/public-environment";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle";
 import * as RemovalPolicy from "alchemy/RemovalPolicy";
 import * as State from "alchemy/State";
 import { Config, Effect, Layer } from "effect";

@@ -11,10 +11,10 @@
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import path from "node:path";
 
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle";
 import { assert } from "@effect/vitest";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle";
 import * as State from "alchemy/State";
 import * as Test from "alchemy/Test/Vitest";
 import { Effect, Layer } from "effect";

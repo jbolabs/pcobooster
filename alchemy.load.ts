@@ -1,3 +1,5 @@
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Drizzle from "@alchemy.run/drizzle";
 /**
  * A throwaway Cloudflare stack for a load run: `TransportStackFixture` (the API Worker's router
  * over a fake Planning Center) and its own D1 database, in the production database's region, on
@@ -10,8 +12,6 @@
  * State stays in this checkout's `.alchemy`, apart from the shared state store.
  */
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle";
 import * as State from "alchemy/State";
 import { Effect, Layer } from "effect";
 

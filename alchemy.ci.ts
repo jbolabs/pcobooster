@@ -1,3 +1,5 @@
+import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as GitHub from "@alchemy.run/github";
 /**
  * The CI/deploy control plane: repository merge settings, the `main` ruleset, the deployment
  * environments and their variables, Cloudflare deploy tokens, staging's Access service token, and
@@ -9,8 +11,6 @@
  */
 import * as Alchemy from "alchemy";
 import { adopt } from "alchemy/AdoptPolicy";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as GitHub from "alchemy/GitHub";
 import * as Output from "alchemy/Output";
 import * as RemovalPolicy from "alchemy/RemovalPolicy";
 import { Config, Effect, Layer, Redacted } from "effect";

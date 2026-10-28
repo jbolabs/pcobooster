@@ -1,3 +1,4 @@
+import * as Cloudflare from "@alchemy.run/cloudflare";
 /**
  * A Worker that serves the API Worker's router exactly as the API Worker builds it (Better Auth,
  * liveness, CORS, the cache policy, disconnects, `/api/v1`) against a fake Planning Center, so
@@ -30,7 +31,6 @@ import { emptyUpdateStore } from "@pcobooster/api/testing/mobile-updates";
 import { testServer, testServerConfig } from "@pcobooster/api/testing/server";
 import type { JsonValue } from "@pcobooster/planning-center-models/json";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
 import { makeSignature } from "better-auth/crypto";
 import {
   Duration,
