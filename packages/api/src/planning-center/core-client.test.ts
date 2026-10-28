@@ -893,7 +893,7 @@ describe(PlanningCenterCoreClient, () => {
     ]);
   });
 
-  it("resends a rate-limited write only once", async () => {
+  it("resends a rate-limited write at most twice", async () => {
     const fetch = fetchMock().mockImplementation(
       async () =>
         await Promise.resolve(
@@ -915,11 +915,47 @@ describe(PlanningCenterCoreClient, () => {
         );
         yield* settle;
         yield* TestClock.adjust("1 second");
+        yield* settle;
+        yield* TestClock.adjust("1 second");
         return yield* Fiber.join(fiber);
       }).pipe(Effect.provide(TestClock.layer()))
     );
     expect(failure).toMatchObject({ status: 429 });
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps a write pending through the incident's 12-second then 1-second rate limits", async () => {
+    const fetch = fetchMock()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { error: "Rate limited" },
+          { status: 429, headers: { "retry-after": "12" } }
+        )
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { error: "Rate limited" },
+          { status: 429, headers: { "retry-after": "1" } }
+        )
+      )
+      .mockResolvedValueOnce(jsonResponse({ data: person }));
+    const result = await Effect.runPromise(
+      Effect.gen(function* saveAfterRepeatedRateLimits() {
+        const write = yield* Effect.forkChild(
+          basicClient(fetch).fetch("/services/v2/people/1", {
+            method: "PATCH",
+            body: {},
+          })
+        );
+        yield* settle;
+        yield* TestClock.adjust("12 seconds");
+        yield* settle;
+        yield* TestClock.adjust("1 second");
+        return yield* Fiber.join(write);
+      }).pipe(Effect.provide(TestClock.layer()))
+    );
+    expect(result.data.id).toBe("1");
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   it("gives up on a read after two retries", async () => {
@@ -1067,6 +1103,60 @@ const pacedClient = (fetch: FetchMock): PlanningCenterCoreClient =>
   );
 
 describe("Planning Center pacing and accounting", () => {
+  it("still times out a stalled write after 15 seconds of network time", async () => {
+    const fetch = fetchMock().mockImplementation(
+      async () => await Promise.withResolvers<Response>().promise
+    );
+    const failure = await Effect.runPromise(
+      Effect.gen(function* stalledWrite() {
+        const write = yield* Effect.forkChild(
+          Effect.flip(
+            basicClient(fetch).fetch("/services/v2/people/1", {
+              method: "PATCH",
+              body: {},
+            })
+          )
+        );
+        yield* settle;
+        yield* TestClock.adjust("15 seconds");
+        return yield* Fiber.join(write);
+      }).pipe(Effect.provide(TestClock.layer()))
+    );
+    expect(failure).toMatchObject({
+      _tag: "PlanningCenterNetworkError",
+      cause: {
+        name: "TimeoutError",
+        message: "Planning Center request timed out",
+      },
+    });
+  });
+
+  it("lets a write wait a full rate window before starting its network timeout", async () => {
+    const fetch = fetchMock().mockResolvedValue(jsonResponse({ data: person }));
+    const pacer = new PlanningCenterRatePacer();
+    const scope = limits(undefined, pacer);
+    const client = pacedClient(fetch);
+    const result = await Effect.runPromise(
+      Effect.gen(function* saveAfterWindow() {
+        const now = yield* Clock.currentTimeMillis;
+        pacer.reserve(client.getCacheScope(), now, "read");
+        pacer.complete(client.getCacheScope(), now, {
+          status: 200,
+          rateLimit: { limit: 100, count: 100, period: "20" },
+        });
+        const write = yield* Effect.forkChild(
+          client.fetch("/services/v2/people/1", { method: "PATCH", body: {} })
+        );
+        yield* settle;
+        yield* TestClock.adjust("20 seconds");
+        return yield* Fiber.join(write);
+      }).pipe(withLimits(scope), Effect.provide(TestClock.layer()))
+    );
+    expect(result.data.id).toBe("1");
+    expect(scope.accounting.totals.pacedWaitMs).toBe(20_000);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
   it("spreads concurrent reads over the rest of the reported window", async () => {
     const fetch = fetchMock().mockImplementation(
       async () => await Promise.resolve(rateLimitedResponse(70))
