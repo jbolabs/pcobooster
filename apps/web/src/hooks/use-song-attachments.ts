@@ -71,6 +71,37 @@ export const useOpenSongAttachment = (
   };
 };
 
+const SONG_PDF_CACHE_TIME_MS = 5 * 60 * 1000;
+
+/**
+ * A stored PDF, fetched through the API so the app can show it: Planning Center's signed links
+ * download PDFs instead. `data` is absent when the file turns out not to be a PDF.
+ */
+export const useSongAttachmentPdf = (
+  songId: string,
+  arrangementId: string,
+  attachment: SongAttachment
+) =>
+  useQuery({
+    queryKey: queryKeys.songAttachmentPdf(
+      songId,
+      arrangementId,
+      attachment.id,
+      attachment.keyId
+    ),
+    queryFn: async (context) =>
+      await callForQuery(context, productClient, (api) =>
+        api.songs.attachmentLink({
+          params: { songId, arrangementId, attachmentId: attachment.id },
+          query: { keyId: attachment.keyId ?? undefined, as: "pdf" },
+        })
+      ),
+    staleTime: SONG_PDF_CACHE_TIME_MS,
+    gcTime: SONG_PDF_CACHE_TIME_MS,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
 /** Mounted only after Play; short-lived streaming links never survive the player. */
 export const useSongAttachmentLink = (
   songId: string,

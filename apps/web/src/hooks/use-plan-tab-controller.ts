@@ -26,6 +26,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useIntentPrefetch } from "@/hooks/use-intent-prefetch";
+import { usePrefetchPlanFiles } from "@/hooks/use-plan-files";
 import { usePlanItems } from "@/hooks/use-plan-items";
 import { createSongOptionsQueryOptions } from "@/hooks/use-song-options";
 import { isQueryFresh } from "@/lib/intent-prefetch";
@@ -91,6 +92,8 @@ export const usePlanTabController = ({
   const queryClient = useQueryClient();
   const queryKey = queryKeys.planItems(serviceTypeId, planId);
   const planItemsQuery = usePlanItems(serviceTypeId, planId);
+  // Ahead of the songs' options: one or two requests serve every item's files.
+  usePrefetchPlanFiles(serviceTypeId, planId);
   const { data: itemsData, isLoading } = planItemsQuery;
   const planScope = JSON.stringify([serviceTypeId, planId]);
   // Writes to one plan run one after another, so quick keyboard edits land in order.

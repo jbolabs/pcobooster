@@ -82,6 +82,20 @@ export const queryKeys = {
       keyId,
       attachmentId,
     ] as const,
+  /** A stored PDF's bytes, kept for the session so reopening it is instant. */
+  songAttachmentPdf: (
+    songId: string,
+    arrangementId: string,
+    attachmentId: string,
+    keyId: string | null
+  ) =>
+    [
+      "song-attachment-pdf",
+      songId,
+      arrangementId,
+      keyId,
+      attachmentId,
+    ] as const,
   chordChartSong: (songId: string) => ["chord-chart-song", songId] as const,
   lyricsSearch: (query: string) => ["lyrics-search", query] as const,
   /** Keyed by the saved version, so each save renders again. */
