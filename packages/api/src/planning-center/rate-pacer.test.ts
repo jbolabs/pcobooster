@@ -56,6 +56,26 @@ describe(PlanningCenterRatePacer, () => {
     }
   });
 
+  it("honors a 429 that arrives before any response reported the window", () => {
+    const pacer = new PlanningCenterRatePacer();
+    pacer.reserve(SCOPE, 0, "read");
+    pacer.complete(SCOPE, 0, {
+      status: 429,
+      rateLimit: { retryAfterSeconds: 3 },
+    });
+    expect({
+      read: pacer.reserve(SCOPE, 0, "read"),
+      speculative: pacer.reserve(SCOPE, 0, "read", "speculative"),
+    }).toMatchObject({
+      read: { kind: "send", waitMs: 3000 },
+      speculative: {
+        kind: "reject",
+        reason: "speculative",
+        retryAfterMs: 3000,
+      },
+    });
+  });
+
   it("sends immediately below the pacing share of the limit", () => {
     const pacer = new PlanningCenterRatePacer();
     observe(pacer, 0, 40);
