@@ -1,6 +1,10 @@
 import type { PlanningCenterRateLimitInfo } from "@pcobooster/api/planning-center/api-error";
+import {
+  SEND_PERMIT_POLL_MS,
+  SendLane,
+} from "@pcobooster/api/planning-center/send-lane";
 import type { RequestPriority } from "@pcobooster/contracts/request-priority";
-import { Effect, Semaphore } from "effect";
+import { Clock, Duration, Effect } from "effect";
 
 /** Budget used freely before pacing starts, as a share of the reported limit. */
 const DEFAULT_PACE_FROM_SHARE = 0.5;
@@ -110,12 +114,6 @@ export interface PlanningCenterRatePacerOptions {
   readonly maxInFlight?: number;
 }
 
-/** One credential's send permits and the requests holding or waiting for one. */
-interface SendLane {
-  readonly semaphore: Semaphore.Semaphore;
-  users: number;
-}
-
 export interface PlanningCenterRateObservation {
   readonly status: number;
   readonly rateLimit: PlanningCenterRateLimitInfo;
@@ -214,31 +212,43 @@ export class PlanningCenterRatePacer {
 
   /**
    * Sends `effect` once fewer than `maxInFlight` of the credential's requests are in flight.
+   * Waiting requests take permits in arrival order, each checking every `SEND_PERMIT_POLL_MS`.
    * A lane lives only while a request holds or waits for one of its permits.
    */
   withSendPermit<Value, Failure, Requirements>(
     scope: string,
     effect: Effect.Effect<Value, Failure, Requirements>
   ): Effect.Effect<Value, Failure, Requirements> {
+    const { lanes, maxInFlight } = this;
+    const laneFor = () => {
+      const existing = lanes.get(scope);
+      if (existing !== undefined) {
+        return existing;
+      }
+      const lane = new SendLane(maxInFlight);
+      lanes.set(scope, lane);
+      return lane;
+    };
     return Effect.suspend(() => {
-      const lane = this.lanes.get(scope) ?? {
-        semaphore: Semaphore.makeUnsafe(this.maxInFlight),
-        users: 0,
-      };
-      this.lanes.set(scope, lane);
-      lane.users += 1;
-      return lane.semaphore
-        .withPermits(1)(effect)
-        .pipe(
-          Effect.ensuring(
-            Effect.sync(() => {
-              lane.users -= 1;
-              if (lane.users === 0) {
-                this.lanes.delete(scope);
-              }
-            })
-          )
-        );
+      const token = Symbol("send permit");
+      const takePermit = Effect.gen(function* waitForPermit() {
+        while (!laneFor().tryTake(token, yield* Clock.currentTimeMillis)) {
+          yield* Effect.sleep(Duration.millis(SEND_PERMIT_POLL_MS));
+        }
+      });
+      const leave = Effect.sync(() => {
+        const lane = lanes.get(scope);
+        lane?.leave(token);
+        if (lane?.idle === true) {
+          lanes.delete(scope);
+        }
+      });
+      return Effect.uninterruptibleMask((restore) =>
+        restore(takePermit).pipe(
+          Effect.onInterrupt(() => leave),
+          Effect.flatMap(() => restore(effect).pipe(Effect.ensuring(leave)))
+        )
+      );
     });
   }
 

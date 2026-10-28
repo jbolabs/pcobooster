@@ -3,6 +3,8 @@ import {
   parseRatePeriodMs,
 } from "@pcobooster/api/planning-center/rate-pacer";
 import type { PlanningCenterPacingDecision } from "@pcobooster/api/planning-center/rate-pacer";
+import { Deferred, Effect, Fiber } from "effect";
+import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 
 const SCOPE = "bearer:scope";
@@ -252,6 +254,112 @@ describe(PlanningCenterRatePacer, () => {
     pacer.complete(SCOPE, 1000);
     expect(pacer.reserve(SCOPE, 1000, "read")).toMatchObject({
       window: { inFlight: 0 },
+    });
+  });
+});
+
+/** Runs `name` under the credential's permit until `answer` completes; records the order. */
+const sendUntil = (
+  pacer: PlanningCenterRatePacer,
+  order: string[],
+  name: string,
+  answer: Deferred.Deferred<null>
+) =>
+  pacer.withSendPermit(
+    SCOPE,
+    Effect.sync(() => {
+      order.push(name);
+    }).pipe(Effect.andThen(Deferred.await(answer)))
+  );
+
+describe("send permits", () => {
+  it("gives a freed permit to the requests waiting, in the order they arrived", async () => {
+    const order = await Effect.runPromise(
+      Effect.gen(function* inArrivalOrder() {
+        const pacer = new PlanningCenterRatePacer({ maxInFlight: 1 });
+        const sent: string[] = [];
+        const answers = {
+          first: yield* Deferred.make<null>(),
+          second: yield* Deferred.make<null>(),
+          third: yield* Deferred.make<null>(),
+        };
+        const fibers = [];
+        for (const name of ["first", "second", "third"] as const) {
+          fibers.push(
+            yield* Effect.forkChild(sendUntil(pacer, sent, name, answers[name]))
+          );
+          yield* TestClock.adjust("1 millis");
+        }
+        yield* Deferred.succeed(answers.first, null);
+        yield* TestClock.adjust("100 millis");
+        const afterFirst = [...sent];
+        yield* Deferred.succeed(answers.second, null);
+        yield* Deferred.succeed(answers.third, null);
+        yield* TestClock.adjust("100 millis");
+        yield* Fiber.joinAll(fibers);
+        return { afterFirst, all: sent };
+      }).pipe(Effect.provide(TestClock.layer()))
+    );
+    expect(order).toStrictEqual({
+      afterFirst: ["first", "second"],
+      all: ["first", "second", "third"],
+    });
+  });
+
+  it("lets the line move past a request interrupted while it waited", async () => {
+    const sent = await Effect.runPromise(
+      Effect.gen(function* pastInterrupted() {
+        const pacer = new PlanningCenterRatePacer({ maxInFlight: 1 });
+        const order: string[] = [];
+        const holderAnswer = yield* Deferred.make<null>();
+        const done = yield* Deferred.make<null>();
+        yield* Deferred.succeed(done, null);
+        const holder = yield* Effect.forkChild(
+          sendUntil(pacer, order, "holder", holderAnswer)
+        );
+        yield* TestClock.adjust("1 millis");
+        const leaving = yield* Effect.forkChild(
+          sendUntil(pacer, order, "leaving", done)
+        );
+        yield* TestClock.adjust("1 millis");
+        const staying = yield* Effect.forkChild(
+          sendUntil(pacer, order, "staying", done)
+        );
+        yield* TestClock.adjust("1 millis");
+        yield* Fiber.interrupt(leaving);
+        yield* Deferred.succeed(holderAnswer, null);
+        yield* TestClock.adjust("100 millis");
+        yield* Fiber.joinAll([holder, staying]);
+        return order;
+      }).pipe(Effect.provide(TestClock.layer()))
+    );
+    expect(sent).toStrictEqual(["holder", "staying"]);
+  });
+
+  it("takes back a permit its holder never returned, after a minute", async () => {
+    const sent = await Effect.runPromise(
+      Effect.gen(function* reclaimExpired() {
+        // A request workerd cancels runs no finalizers, so its permit is never returned.
+        const pacer = new PlanningCenterRatePacer({ maxInFlight: 1 });
+        const order: string[] = [];
+        const never = yield* Deferred.make<null>();
+        const done = yield* Deferred.make<null>();
+        yield* Deferred.succeed(done, null);
+        yield* Effect.forkChild(sendUntil(pacer, order, "cancelled", never));
+        yield* TestClock.adjust("1 millis");
+        const waiting = yield* Effect.forkChild(
+          sendUntil(pacer, order, "waiting", done)
+        );
+        yield* TestClock.adjust("59 seconds");
+        const beforeLease = [...order];
+        yield* TestClock.adjust("1 seconds");
+        yield* Fiber.join(waiting);
+        return { beforeLease, after: order };
+      }).pipe(Effect.provide(TestClock.layer()))
+    );
+    expect(sent).toStrictEqual({
+      beforeLease: ["cancelled"],
+      after: ["cancelled", "waiting"],
     });
   });
 });
