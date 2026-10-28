@@ -655,7 +655,8 @@ const lock = (env: Record<string, string>) =>
     env
   );
 
-describe("release-cli", () => {
+// Real CLI launches and throwaway checkouts need headroom on shared CI runners.
+describe("release-cli", { timeout: 30_000 }, () => {
   it("refuses the local Apple account in automation, whatever the truthy CI form", () => {
     for (const ci of ["true", "1", "yes"]) {
       const result = cli(["signing"], { CI: ci });

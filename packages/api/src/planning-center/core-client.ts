@@ -904,7 +904,7 @@ export class PlanningCenterCoreClient {
           willRetry: willRetryRateLimit(method, context.attempt, error),
         });
       } else if (isWrite) {
-        // The toast shows only Planning Center's words; this keeps what was sent beside them.
+        // Retain provider details and redacted inputs independently of the user-facing message.
         yield* log.warn("Planning Center rejected a write", {
           endpoint,
           method,

@@ -196,7 +196,7 @@ describe("faults", () => {
       body: {
         _tag: "InvalidInput",
         message:
-          "Planning Center didn't accept that change: Length can not be longer than 24 hours; Service position is not included in the list; Title Private church title is already taken; Private church title is invalid",
+          "We couldn't save this change. Please try again. If it keeps failing, contact support.",
         planningCenterValidation: {
           code: null,
           detail: "can not be longer than 24 hours",

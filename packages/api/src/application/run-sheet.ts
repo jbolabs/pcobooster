@@ -168,12 +168,16 @@ export const commitRunSheetItemUpdate = (
 ): Effect.Effect<
   PlanItem,
   ApplicationFault,
-  PlanningCenterPlanItems | RequestContext
+  PlanningCenterPlanItems | PlanningCenterSongs | RequestContext
 > =>
   Effect.gen(function* commitItemUpdate() {
     const planItemsService = yield* PlanningCenterPlanItems;
     yield* ensureRequestIsOpen;
-    return yield* commitUpdatePlanItem(prepared, planItemsService);
+    return yield* commitUpdatePlanItem(
+      prepared,
+      planItemsService,
+      yield* PlanningCenterSongs
+    );
   }).pipe(withPlanningCenterFaults);
 
 export const deleteRunSheetItem = (

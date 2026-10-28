@@ -329,7 +329,7 @@ describe("PlanningCenterAccess", () => {
     });
   });
 
-  it("names the attribute Planning Center rejected when its detail leaves it out", () => {
+  it("explains a duration rejection even alongside another validation error", () => {
     expect(
       toApplicationFault(
         new PlanningCenterApiError({
@@ -354,7 +354,7 @@ describe("PlanningCenterAccess", () => {
     ).toMatchObject({
       _tag: "InvalidInput",
       message:
-        "Planning Center didn't accept that change: Length can not be longer than 24 hours; Service position is not included in the list",
+        "We couldn't save this change. Please try again. If it keeps failing, contact support.",
     });
   });
 
@@ -527,7 +527,7 @@ describe("length validation regression", () => {
       ).toMatchObject({
         _tag: "InvalidInput",
         message:
-          "This item's length is over 24 hours in Planning Center. Shorten it in Planning Center and try again.",
+          "We couldn't save this change. Please try again. If it keeps failing, contact support.",
         planningCenterValidation: {
           code: "too_long",
           detail: "can not be longer than 24 hours",

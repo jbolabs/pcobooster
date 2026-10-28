@@ -211,11 +211,8 @@ const safeValidation = (
 /** Planning Center's own reason for rejecting a change, written for people. */
 const rejectedChangeMessage = (error: PlanningCenterApiError): string => {
   const details = listedErrorDetails(error.details);
-  if (
-    details.length === 1 &&
-    safeValidation(error)?.detail === "can not be longer than 24 hours"
-  ) {
-    return "This item's length is over 24 hours in Planning Center. Shorten it in Planning Center and try again.";
+  if (safeValidation(error)?.detail === "can not be longer than 24 hours") {
+    return "We couldn't save this change. Please try again. If it keeps failing, contact support.";
   }
   return details.length > 0
     ? `Planning Center didn't accept that change: ${details.join("; ")}`

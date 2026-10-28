@@ -84,7 +84,10 @@ describe("PlanningCenterPlanItemsService reads after writes", () => {
       id: "key-c",
     });
     await Effect.runPromise(
-      writer.updatePlanItem("st-1", "plan-1", "new-song", { key_id: "key-d" })
+      writer.updatePlanItem("st-1", "plan-1", "new-song", {
+        key_id: "key-d",
+        length: 0,
+      })
     );
 
     const refreshed = await Effect.runPromise(

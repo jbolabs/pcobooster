@@ -4,6 +4,7 @@ import { PlanningCenterReadOnlyError } from "@pcobooster/api/planning-center/rea
 import {
   isRecoverablePlanningCenterCause,
   recoverPlanningCenterFailure,
+  withPlanningCenterFailureDiagnostics,
 } from "@pcobooster/api/planning-center/recover-failure";
 import type { RecoverablePlanningCenterFailure } from "@pcobooster/api/planning-center/recover-failure";
 import { PlanningCenterSubrequestLimitError } from "@pcobooster/api/planning-center/subrequest-limit-error";
@@ -175,5 +176,36 @@ describe(isRecoverablePlanningCenterCause, () => {
         ["provider-failure"]
       )
     ).toBeTruthy();
+  });
+});
+
+describe(withPlanningCenterFailureDiagnostics, () => {
+  it.each(budgetFailures)(
+    "keeps an original rejection when diagnostics encounter %s",
+    async (diagnosticFailure) => {
+      const rejection = new PlanningCenterApiError({
+        status: 422,
+        message: "Rejected write",
+      });
+      const exit = await Effect.runPromiseExit(
+        Effect.fail(rejection).pipe(
+          withPlanningCenterFailureDiagnostics(
+            (_failure: PlanningCenterApiError) => Effect.fail(diagnosticFailure)
+          )
+        )
+      );
+      expect(exit).toStrictEqual(Exit.fail(rejection));
+    }
+  );
+
+  it("returns successful product data without running diagnostics", async () => {
+    const result = await Effect.runPromise(
+      Effect.succeed("saved item").pipe(
+        withPlanningCenterFailureDiagnostics(() =>
+          Effect.die(new Error("Must not diagnose a successful write"))
+        )
+      )
+    );
+    expect(result).toBe("saved item");
   });
 });
