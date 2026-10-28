@@ -1932,6 +1932,490 @@ const fieldKeyboardHintsRule = {
   },
 };
 
+/**
+ * Corner radii in px for `--radius: 0.625rem` (packages/design-tokens/src/tokens.css).
+ * `rounded-full` is left out: pills and avatars do not hug a container corner.
+ */
+const RADIUS_PX = new Map([
+  ["rounded-none", 0],
+  ["rounded-xs", 2],
+  ["rounded", 4],
+  ["rounded-sm", 6],
+  ["rounded-md", 8],
+  ["rounded-lg", 10],
+  ["rounded-xl", 14],
+  ["rounded-2xl", 18],
+  ["rounded-3xl", 22],
+  ["rounded-4xl", 26],
+]);
+const ARBITRARY_LENGTH = /^\[(\d+(?:\.\d+)?)(px|rem)\]$/;
+const SPACING_STEP = /^\d+(?:\.\d+)?$/;
+const SPACING_PX_PER_STEP = 4;
+const UNIFORM_PADDING = /^p-(.+)$/;
+const AXIS_PADDING = /^p([xy])-(.+)$/;
+/** Base UI and cmdk popups whose items hug the popup's corners. */
+const CONCENTRIC_SURFACE_NAMES = new Set(["Popup", "CommandPrimitive"]);
+const CONCENTRIC_ITEM_NAMES = new Set([
+  "Item",
+  "CheckboxItem",
+  "RadioItem",
+  "SubmenuTrigger",
+]);
+
+/**
+ * @param {string} value
+ * @returns {number | null}
+ */
+const arbitraryPx = (value) => {
+  const match = ARBITRARY_LENGTH.exec(value);
+  if (!match) {
+    return null;
+  }
+  const amount = Number(match[1]);
+  return match[2] === "rem" ? amount * REM_PX : amount;
+};
+
+/**
+ * @param {string} value spacing suffix such as `1.5`, `px`, or `[6px]`
+ * @returns {number | null}
+ */
+const spacingPx = (value) => {
+  if (value === "px") {
+    return 1;
+  }
+  if (SPACING_STEP.test(value)) {
+    return Number(value) * SPACING_PX_PER_STEP;
+  }
+  return arbitraryPx(value);
+};
+
+/**
+ * Resting (unprefixed) corner radius and corner inset of a class list.
+ * @param {string} text
+ * @returns {{ radius: number | null, inset: number | null }}
+ */
+const cornerGeometry = (text) => {
+  let radius = null;
+  /** @type {{ x: number | null, y: number | null }} */
+  const inset = { x: null, y: null };
+  for (const { variant, base } of classTokens(text)) {
+    if (variant !== "") {
+      continue;
+    }
+    if (RADIUS_PX.has(base)) {
+      radius = RADIUS_PX.get(base) ?? null;
+      continue;
+    }
+    if (base.startsWith("rounded-[")) {
+      radius = arbitraryPx(base.slice("rounded-".length));
+      continue;
+    }
+    const uniform = UNIFORM_PADDING.exec(base);
+    if (uniform) {
+      const px = spacingPx(uniform[1]);
+      inset.x = px;
+      inset.y = px;
+      continue;
+    }
+    const axis = AXIS_PADDING.exec(base);
+    if (axis) {
+      inset[axis[1] === "x" ? "x" : "y"] = spacingPx(axis[2]);
+    }
+  }
+  const corner =
+    inset.x === null || inset.y === null ? null : Math.min(inset.x, inset.y);
+  return { radius, inset: corner };
+};
+
+/**
+ * JSX children of an element, through fragments, conditionals, and `.map` callbacks.
+ * @param {unknown} node
+ * @param {import("oxlint/plugins-dev").JSXElement[]} out
+ */
+const collectChildElements = (node, out) => {
+  if (!node || typeof node !== "object") {
+    return;
+  }
+  if (node.type === "CallExpression") {
+    for (const argument of node.arguments) {
+      if (argument.type !== "ArrowFunctionExpression") {
+        continue;
+      }
+      if (argument.body.type !== "BlockStatement") {
+        collectChildElements(argument.body, out);
+        continue;
+      }
+      for (const statement of argument.body.body) {
+        if (statement.type === "ReturnStatement") {
+          collectChildElements(statement.argument, out);
+        }
+      }
+    }
+    return;
+  }
+  if (node.type === "JSXExpressionContainer") {
+    collectChildElements(node.expression, out);
+    return;
+  }
+  if (node.type === "JSXFragment") {
+    for (const child of node.children) {
+      collectChildElements(child, out);
+    }
+    return;
+  }
+  collectJsxElements(node, out);
+};
+
+/**
+ * Resting corners of shared primitives, for call sites that do not restate them.
+ * Keep in step with the primitives in components/ui.
+ */
+const PRIMITIVE_CORNERS = new Map([
+  ["PopoverContent", { radius: 22, inset: 0 }],
+  ["ResponsivePopoverContent", { radius: 22, inset: 0 }],
+  ["DropdownMenuContent", { radius: 22, inset: 6 }],
+  ["DropdownMenuSubContent", { radius: 22, inset: 6 }],
+  ["Command", { radius: 22, inset: 4 }],
+  ["DialogContent", { radius: 26, inset: 24 }],
+  ["SelectionPickerShell", { radius: 18, inset: 6 }],
+  ["DropdownMenuItem", { radius: 14, inset: null }],
+  ["CommandItem", { radius: 18, inset: null }],
+  ["SelectionPickerOption", { radius: 10, inset: null }],
+  ["SelectionPickerCommandItem", { radius: 10, inset: null }],
+]);
+
+const concentricRadiusRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Require corner-hugging children of a padded rounded surface to use a radius no larger than the surface radius minus the padding between them, so nested corners stay concentric.",
+    },
+    messages: {
+      tooRound:
+        "This corner ({{inner}}px) is rounder than its container allows: {{outer}}px radius minus {{inset}}px padding leaves {{max}}px. Use a radius of at most {{max}}px (for example `rounded-xl` inside `rounded-3xl p-1.5`).",
+    },
+    schema: [],
+  },
+  create(context) {
+    /** @type {(name: string) => string} */
+    let resolve = () => "";
+    /** @type {{ outer: number, inset: number }[]} */
+    const surfaces = [];
+    /** @type {{ node: import("oxlint/plugins-dev").JSXOpeningElement, radius: number }[]} */
+    const items = [];
+
+    /**
+     * Own classes first, then the primitive's resting corner.
+     * @param {import("oxlint/plugins-dev").JSXOpeningElement} opening
+     */
+    const geometryOf = (opening) => {
+      const own = cornerGeometry(openingClassText(opening, resolve));
+      const name = getJsxName(opening.name);
+      const primitive =
+        opening.name.type === "JSXIdentifier" && name !== null
+          ? PRIMITIVE_CORNERS.get(name)
+          : undefined;
+      return {
+        radius: own.radius ?? primitive?.radius ?? null,
+        inset: own.inset ?? primitive?.inset ?? null,
+      };
+    };
+
+    /**
+     * @param {import("oxlint/plugins-dev").JSXOpeningElement} node
+     * @param {number} inner
+     * @param {number} outer
+     * @param {number} inset
+     */
+    const check = (node, inner, outer, inset) => {
+      const max = Math.max(0, outer - inset);
+      if (inner <= max) {
+        return;
+      }
+      context.report({
+        node,
+        messageId: "tooRound",
+        data: {
+          inner: String(inner),
+          outer: String(outer),
+          inset: String(inset),
+          max: String(max),
+        },
+      });
+    };
+
+    /**
+     * Check the rounded children, and through a lone square wrapper (which reaches the
+     * corners) the rounded children it holds, adding its padding.
+     * @param {import("oxlint/plugins-dev").JSXElement} element
+     * @param {number} outer
+     * @param {number} inset
+     */
+    const checkDescendants = (element, outer, inset) => {
+      /** @type {import("oxlint/plugins-dev").JSXElement[]} */
+      const children = [];
+      for (const child of element.children) {
+        collectChildElements(child, children);
+      }
+      for (const child of children) {
+        const geometry = geometryOf(child.openingElement);
+        if (geometry.radius === null) {
+          if (children.length === 1) {
+            checkDescendants(child, outer, inset + (geometry.inset ?? 0));
+          }
+          continue;
+        }
+        check(child.openingElement, geometry.radius, outer, inset);
+      }
+    };
+
+    return {
+      Program(node) {
+        resolve = classConstantResolver(node);
+      },
+      JSXElement(node) {
+        const opening = node.openingElement;
+        const geometry = geometryOf(opening);
+        if (geometry.radius === null) {
+          return;
+        }
+        const name = getJsxName(opening.name);
+        if (name !== null && CONCENTRIC_ITEM_NAMES.has(name)) {
+          items.push({ node: opening, radius: geometry.radius });
+        }
+        if (name !== null && CONCENTRIC_SURFACE_NAMES.has(name)) {
+          surfaces.push({ outer: geometry.radius, inset: geometry.inset ?? 0 });
+        }
+        checkDescendants(node, geometry.radius, geometry.inset ?? 0);
+      },
+      "Program:exit"() {
+        for (const item of items) {
+          for (const surface of surfaces) {
+            check(item.node, item.radius, surface.outer, surface.inset);
+          }
+        }
+      },
+    };
+  },
+};
+
+const NEGATIVE_MARGIN = /^-m([xy]?)-(.+)$/;
+/** `<Item>` corners from its `size` variant (components/ui/item.tsx). */
+const ITEM_RADIUS = 18;
+const ITEM_SIZE_RADIUS = new Map([
+  ["row", 10],
+  ["pill", 26],
+]);
+
+const MAX_INSET_DEPTH = 8;
+
+/**
+ * Resting padding per axis of a class list; unset axes are 0.
+ * @param {string} text
+ */
+const axisPadding = (text) => {
+  const inset = { x: 0, y: 0 };
+  for (const { variant, base } of classTokens(text)) {
+    if (variant !== "") {
+      continue;
+    }
+    const uniform = UNIFORM_PADDING.exec(base);
+    if (uniform) {
+      const px = spacingPx(uniform[1]) ?? 0;
+      inset.x = px;
+      inset.y = px;
+      continue;
+    }
+    const axis = AXIS_PADDING.exec(base);
+    if (axis) {
+      inset[axis[1] === "x" ? "x" : "y"] = spacingPx(axis[2]) ?? 0;
+    }
+  }
+  return inset;
+};
+
+/**
+ * Resting negative margin per axis, which pulls an element toward the edge.
+ * @param {string} text
+ */
+const axisBleed = (text) => {
+  const bleed = { x: 0, y: 0 };
+  for (const { variant, base } of classTokens(text)) {
+    const match = variant === "" ? NEGATIVE_MARGIN.exec(base) : null;
+    if (!match) {
+      continue;
+    }
+    const px = spacingPx(match[2]) ?? 0;
+    if (match[1] !== "y") {
+      bleed.x = px;
+    }
+    if (match[1] !== "x") {
+      bleed.y = px;
+    }
+  }
+  return bleed;
+};
+
+/**
+ * True when the element is the first or last element child of its JSX parent, or one of
+ * many rows mapped from a list, so it can touch the parent's top or bottom edge.
+ * @param {import("oxlint/plugins-dev").JSXElement} element
+ * @param {import("oxlint/plugins-dev").JSXElement} parent
+ */
+const touchesVerticalEdge = (element, parent) => {
+  /** @type {{ element: import("oxlint/plugins-dev").JSXElement, optional: boolean }[]} */
+  const siblings = [];
+  for (const child of parent.children) {
+    /** @type {import("oxlint/plugins-dev").JSXElement[]} */
+    const found = [];
+    collectChildElements(child, found);
+    const optional =
+      child.type === "JSXExpressionContainer" &&
+      (child.expression.type === "ConditionalExpression" ||
+        child.expression.type === "LogicalExpression");
+    for (const each of found) {
+      siblings.push({ element: each, optional });
+    }
+  }
+  const index = siblings.findIndex((sibling) => sibling.element === element);
+  if (index === -1) {
+    return false;
+  }
+  const onlyOptional = (list) => list.every((sibling) => sibling.optional);
+  return (
+    onlyOptional(siblings.slice(0, index)) ||
+    onlyOptional(siblings.slice(index + 1))
+  );
+};
+
+/**
+ * The JSX element that contains this one, through child slots and props such as
+ * `trigger={<Item />}`.
+ * @param {import("oxlint/plugins-dev").JSXElement} element
+ * @returns {{ parent: import("oxlint/plugins-dev").JSXElement, viaProp: boolean } | null}
+ */
+const jsxContainer = (element) => {
+  let viaProp = false;
+  let node = element.parent;
+  while (node) {
+    if (node.type === "JSXAttribute") {
+      viaProp = true;
+    }
+    if (node.type === "JSXElement") {
+      return { parent: node, viaProp };
+    }
+    if (
+      node.type === "ArrowFunctionExpression" &&
+      node.parent?.type !== "CallExpression"
+    ) {
+      return null;
+    }
+    if (
+      node.type === "FunctionDeclaration" ||
+      node.type === "FunctionExpression"
+    ) {
+      return null;
+    }
+    node = node.parent;
+  }
+  return null;
+};
+
+const evenCornerInsetRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Require a rounded element in a rounded surface's corner to sit as far from the side as from the top or bottom edge.",
+    },
+    messages: {
+      uneven:
+        "This rounded element sits {{x}}px from the sides of its rounded container but {{y}}px from the top or bottom. Use the same inset on both axes so the corner gap is even.",
+    },
+    schema: [],
+  },
+  create(context) {
+    /** @type {(name: string) => string} */
+    let resolve = () => "";
+
+    /** @param {import("oxlint/plugins-dev").JSXOpeningElement} opening */
+    const classesOf = (opening) => openingClassText(opening, resolve);
+
+    /** @param {import("oxlint/plugins-dev").JSXOpeningElement} opening */
+    const radiusOf = (opening) =>
+      cornerGeometry(classesOf(opening)).radius ??
+      (getJsxName(opening.name) === ITEM_NAME &&
+      opening.name.type === "JSXIdentifier"
+        ? (ITEM_SIZE_RADIUS.get(stringAttribute(opening, "size") ?? "") ??
+          ITEM_RADIUS)
+        : null);
+
+    /** @param {import("oxlint/plugins-dev").JSXOpeningElement} opening */
+    const surfaceOf = (opening) => {
+      const own = cornerGeometry(classesOf(opening));
+      const name = getJsxName(opening.name);
+      const primitive =
+        opening.name.type === "JSXIdentifier" && name !== null
+          ? PRIMITIVE_CORNERS.get(name)
+          : undefined;
+      if (own.radius === null && primitive === undefined) {
+        return null;
+      }
+      const padding = axisPadding(classesOf(opening));
+      if (own.inset === null && primitive?.inset !== null && primitive) {
+        return { x: primitive.inset, y: primitive.inset };
+      }
+      return padding;
+    };
+
+    return {
+      Program(node) {
+        resolve = classConstantResolver(node);
+      },
+      JSXElement(node) {
+        const radius = radiusOf(node.openingElement);
+        if (radius === null || radius === 0) {
+          return;
+        }
+        const bleed = axisBleed(classesOf(node.openingElement));
+        let x = -bleed.x;
+        let y = -bleed.y;
+        let element = node;
+        for (let depth = 0; depth < MAX_INSET_DEPTH; depth += 1) {
+          const container = jsxContainer(element);
+          if (container === null) {
+            return;
+          }
+          const { parent, viaProp } = container;
+          if (!(viaProp || touchesVerticalEdge(element, parent))) {
+            return;
+          }
+          const surface = surfaceOf(parent.openingElement);
+          if (surface !== null) {
+            x += surface.x;
+            y += surface.y;
+            if (x !== y && x >= 0 && y >= 0) {
+              context.report({
+                node: node.openingElement,
+                messageId: "uneven",
+                data: { x: String(x), y: String(y) },
+              });
+            }
+            return;
+          }
+          if (!viaProp) {
+            const padding = axisPadding(classesOf(parent.openingElement));
+            x += padding.x;
+            y += padding.y;
+          }
+          element = parent;
+        }
+      },
+    };
+  },
+};
+
 export default {
   meta: {
     name: "local",
@@ -1953,6 +2437,8 @@ export default {
     "no-small-field-text": noSmallFieldTextRule,
     "scroll-container-overscroll": scrollContainerOverscrollRule,
     "field-keyboard-hints": fieldKeyboardHintsRule,
+    "concentric-radius": concentricRadiusRule,
+    "even-corner-inset": evenCornerInsetRule,
   },
 };
 
@@ -1973,4 +2459,6 @@ export {
   noSmallFieldTextRule,
   scrollContainerOverscrollRule,
   fieldKeyboardHintsRule,
+  concentricRadiusRule,
+  evenCornerInsetRule,
 };
