@@ -8,22 +8,27 @@ import {
 } from "./fixtures";
 
 describe("validation task cache", () => {
-  it("reuses a guard result only while the inspected app source is unchanged", () => {
-    const cwd = validationFixture();
-    expect(runTurbo(cwd, ["//#test:root"])).toContain(
-      "export const input = 1;"
-    );
-    expect(runTurbo(cwd, ["//#test:root"])).toContain("cache hit");
-    const forced = runTurbo(cwd, ["//#test:root"], true);
-    expect({
-      bypassed: forced.includes("cache bypass"),
-      checkedSource: forced.includes("export const input = 1;"),
-    }).toStrictEqual({ bypassed: true, checkedSource: true });
-    writeFixture(cwd, "apps/web/src/input.ts", "export const input = 2;\n");
-    const output = runTurbo(cwd, ["//#test:root"]);
-    expect(output).toContain("cache miss");
-    expect(output).toContain("export const input = 2;");
-  });
+  // A real Git/Bun workspace plus four Turbo launches needs an integration-test startup budget.
+  it(
+    "reuses a guard result only while the inspected app source is unchanged",
+    { timeout: 30_000 },
+    () => {
+      const cwd = validationFixture();
+      expect(runTurbo(cwd, ["//#test:root"])).toContain(
+        "export const input = 1;"
+      );
+      expect(runTurbo(cwd, ["//#test:root"])).toContain("cache hit");
+      const forced = runTurbo(cwd, ["//#test:root"], true);
+      expect({
+        bypassed: forced.includes("cache bypass"),
+        checkedSource: forced.includes("export const input = 1;"),
+      }).toStrictEqual({ bypassed: true, checkedSource: true });
+      writeFixture(cwd, "apps/web/src/input.ts", "export const input = 2;\n");
+      const output = runTurbo(cwd, ["//#test:root"]);
+      expect(output).toContain("cache miss");
+      expect(output).toContain("export const input = 2;");
+    }
+  );
 
   it.each([
     "packages/design-tokens/src/tokens.css",
