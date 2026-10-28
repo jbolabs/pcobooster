@@ -142,6 +142,8 @@ const TurboRun = Schema.fromJsonString(
     tasks: Schema.Array(
       Schema.Struct({
         taskId: Schema.String,
+        command: Schema.String,
+        dependencies: Schema.Array(Schema.String),
         hash: Schema.String,
         inputs: Schema.Record(Schema.String, Schema.String),
       })

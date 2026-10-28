@@ -20,7 +20,7 @@ permissions:
 # deployment jobs never interrupt an Alchemy state update.
 
 jobs:
-  ci:
+  quality:
     # A `labeled` event carries no new code; preview reuses the head's existing checks.
     if: github.event.action != 'labeled'
     runs-on: ubuntu-latest
@@ -29,7 +29,7 @@ jobs:
       # PRs reuse content-addressed results; main executes every gate afresh before deploy.
       TURBO_FORCE: ${{ github.event_name != 'pull_request' }}
     concurrency:
-      group: ci-${{ github.event.pull_request.number || github.sha }}
+      group: quality-${{ github.event.pull_request.number || github.sha }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout
@@ -69,12 +69,49 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: bun scripts/ci/affected.ts --github
 
-      # Kept apart, not one Turborepo run: in parallel they starve the release tests' 5 s timeouts.
       - name: Typecheck
         run: bun run typecheck ${{ steps.scope.outputs.args }}
 
-      - name: Test
-        run: bun run test ${{ steps.scope.outputs.args }}
+  tests:
+    if: github.event.action != 'labeled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [application, worker, guards]
+    env:
+      TURBO_FORCE: ${{ github.event_name != 'pull_request' }}
+      BASE: ${{ github.event.pull_request.base.sha }}
+    concurrency:
+      group: tests-${{ matrix.lane }}-${{ github.event.pull_request.number || github.sha }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Setup toolchain
+        uses: ./.github/actions/setup
+      - name: Cache validation tasks
+        uses: ./.github/actions/turbo-cache
+        with:
+          partition: ${{ matrix.lane }}
+      - name: Run affected test lane
+        run: bun scripts/ci/test-lane.ts "${{ matrix.lane }}"
+
+  ci:
+    needs: [quality, tests]
+    if: always() && github.event.action != 'labeled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require every validation lane
+        env:
+          QUALITY: ${{ needs.quality.result }}
+          TESTS: ${{ needs.tests.result }}
+        run: test "$QUALITY" = success && test "$TESTS" = success
 
   cloudflare-build:
     if: github.event.action != 'labeled'

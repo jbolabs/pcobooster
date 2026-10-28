@@ -15,15 +15,15 @@ runs:
       with:
         bun-version-file: package.json
 
-    # The cache holds downloaded tarballs only; the frozen lockfile still decides what installs.
+    # Keep only this lockfile's packages, rather than restoring an ever-growing shared cache.
     - name: Restore Bun package cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        path: ~/.bun/install/cache
-        key: ${{ runner.os }}-bun-${{ steps.bun.outputs.bun-version }}-${{ hashFiles('bun.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-bun-${{ steps.bun.outputs.bun-version }}-
+        path: ${{ runner.temp }}/bun-package-cache
+        key: ${{ runner.os }}-${{ runner.arch }}-bun-packages-v2-${{ steps.bun.outputs.bun-version }}-${{ hashFiles('bun.lock') }}
 
     - name: Install dependencies
       shell: bash
+      env:
+        BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-package-cache
       run: LEFTHOOK=0 bun install --frozen-lockfile

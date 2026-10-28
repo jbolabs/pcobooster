@@ -20,7 +20,7 @@
     "lint:no-long-dashes": "bun run lint/no-long-dashes.ts",
     "typecheck": "turbo run typecheck //#typecheck:root",
     "typecheck:root": "tsc --noEmit",
-    "test": "bun run test:install && turbo run test //#test:root",
+    "test": "bun run test:install && turbo run test //#test:root --concurrency=2",
     "test:install": "vitest run scripts/check-patches.test.ts",
     "test:root": "vitest run lint scripts stacks --exclude scripts/check-patches.test.ts",
     "test:watch": "vitest",

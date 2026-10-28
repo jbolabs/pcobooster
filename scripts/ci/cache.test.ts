@@ -110,8 +110,8 @@ describe("validation task cache", () => {
         reused: task.hash === before[index]?.hash,
       }))
     ).toStrictEqual([
-      { task: "@pcobooster/client#test", reused: false },
-      { task: "@pcobooster/contracts#test", reused: false },
+      { task: "@pcobooster/client#test:inputs", reused: false },
+      { task: "@pcobooster/contracts#test:inputs", reused: false },
       { task: "@pcobooster/web#test", reused: false },
     ]);
   });

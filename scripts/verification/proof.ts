@@ -35,9 +35,9 @@ const fail = (message: string): never => {
   throw new Error(message);
 };
 
-const git = (args: readonly string[]): string =>
+const git = (args: readonly string[], cwd = repositoryRoot): string =>
   execFileSync("git", [...args], {
-    cwd: repositoryRoot,
+    cwd,
     encoding: "utf-8",
   }).trim();
 
@@ -155,12 +155,16 @@ const parseFocusedCheck = (value: string): FocusedCheck => {
   return { command, name };
 };
 
-const calculatePatchId = (baseSha: string, headSha: string): string => {
+const calculatePatchId = (
+  baseSha: string,
+  headSha: string,
+  cwd = repositoryRoot
+): string => {
   const diff = execFileSync(
     "git",
     ["diff", "--binary", `${baseSha}...${headSha}`],
     {
-      cwd: repositoryRoot,
+      cwd,
       maxBuffer: MAX_GIT_DIFF_BYTES,
     }
   );
@@ -168,7 +172,7 @@ const calculatePatchId = (baseSha: string, headSha: string): string => {
     return fail("The proof range has no changes");
   }
   const result = execFileSync("git", ["patch-id", "--stable"], {
-    cwd: repositoryRoot,
+    cwd,
     encoding: "utf-8",
     input: diff,
   }).trim();
@@ -211,10 +215,13 @@ interface LoadedReceipt {
   receipt: ProofReceipt;
 }
 
-const readReceipt = (receiptPath: string): LoadedReceipt => {
+const readReceipt = (
+  receiptPath: string,
+  cwd = repositoryRoot
+): LoadedReceipt => {
   const absolutePath = path.isAbsolute(receiptPath)
     ? receiptPath
-    : path.resolve(repositoryRoot, receiptPath);
+    : path.resolve(cwd, receiptPath);
   return {
     directory: path.dirname(absolutePath),
     receipt: Schema.decodeUnknownSync(proofReceiptSchema)(
@@ -223,23 +230,25 @@ const readReceipt = (receiptPath: string): LoadedReceipt => {
   };
 };
 
-const verifyReceipt = (receiptPath: string): ProofReceipt => {
-  const { directory, receipt } = readReceipt(receiptPath);
-  const currentHead = git(["rev-parse", "HEAD"]);
+const verifyReceipt = (
+  receiptPath: string,
+  cwd = repositoryRoot
+): ProofReceipt => {
+  const { directory, receipt } = readReceipt(receiptPath, cwd);
+  const currentHead = git(["rev-parse", "HEAD"], cwd);
   if (receipt.headSha !== currentHead) {
     return fail(
       `Receipt head ${receipt.headSha} does not match current HEAD ${currentHead}`
     );
   }
-  const currentPatchId = calculatePatchId(receipt.base.sha, currentHead);
+  const currentPatchId = calculatePatchId(receipt.base.sha, currentHead, cwd);
   if (receipt.patchId !== currentPatchId) {
     return fail("Receipt patch ID no longer matches the checked-out change");
   }
-  const changedFiles = git([
-    "diff",
-    "--name-only",
-    `${receipt.base.sha}...${currentHead}`,
-  ])
+  const changedFiles = git(
+    ["diff", "--name-only", `${receipt.base.sha}...${currentHead}`],
+    cwd
+  )
     .split("\n")
     .filter(Boolean);
   const semanticViolations = validateReceiptSemantics(receipt, {
@@ -278,6 +287,22 @@ const verifyReceipt = (receiptPath: string): ProofReceipt => {
     return fail("Proof report does not match the verified receipt");
   }
   return receipt;
+};
+
+const assertProofRevision = (
+  headSha: string,
+  baseRef: string,
+  baseSha: string
+): void => {
+  if (
+    git(["status", "--porcelain"]) !== "" ||
+    git(["rev-parse", "HEAD"]) !== headSha ||
+    git(["rev-parse", baseRef]) !== baseSha
+  ) {
+    fail(
+      "Checkout or base changed while proof ran; run proof again on the final revision"
+    );
+  }
 };
 
 const runProof = async (args: readonly string[]): Promise<void> => {
@@ -365,6 +390,8 @@ const runProof = async (args: readonly string[]): Promise<void> => {
     notes.push("Critical change has no captured focused boundary check.");
   }
 
+  assertProofRevision(headSha, baseRef, baseSha);
+
   let receipt: ProofReceipt = {
     artifacts,
     base: { ref: baseRef, sha: baseSha },
@@ -394,6 +421,70 @@ const runProof = async (args: readonly string[]): Promise<void> => {
   if (receipt.verdict === "FAIL" || receipt.verdict === "BLOCKED") {
     process.exitCode = 1;
   }
+};
+
+/** Attach later review/media to verified gates; a failed or stale run is never reusable. */
+export const finalizeProof = (
+  args: readonly string[],
+  cwd = repositoryRoot
+): string => {
+  if (git(["status", "--porcelain"], cwd) !== "") {
+    return fail("Commit or stash changes before finalizing proof");
+  }
+  if (args.includes("--focused-check") || args.includes("--risk")) {
+    return fail(
+      "Finalization cannot change risk or execute checks; use proof run"
+    );
+  }
+  const sourcePath = flagValue(args, "--receipt");
+  const receipt = verifyReceipt(sourcePath, cwd);
+  if (git(["rev-parse", receipt.base.ref], cwd) !== receipt.base.sha) {
+    return fail("Proof base has changed; run proof again");
+  }
+  if (
+    [...receipt.commands, ...receipt.focusedChecks].some(
+      (command) => command.status !== "pass"
+    )
+  ) {
+    return fail("Failed checks cannot be finalized; run proof again");
+  }
+  const { directory } = readReceipt(sourcePath, cwd);
+  const output = path.join(
+    directory,
+    `finalized-${new Date().toISOString().replaceAll(/[:.]/gu, "-")}`
+  );
+  mkdirSync(output, { recursive: true });
+  const capturedPaths = [
+    ...[...receipt.commands, ...receipt.focusedChecks].map(
+      (command) => command.logPath
+    ),
+    ...receipt.artifacts.map((artifact) => artifact.path),
+  ];
+  for (const entry of capturedPaths) {
+    mkdirSync(path.dirname(path.join(output, entry)), { recursive: true });
+    copyFileSync(path.join(directory, entry), path.join(output, entry));
+  }
+  const updated: ProofReceipt = {
+    ...receipt,
+    artifacts: [
+      ...receipt.artifacts,
+      ...flagValues(args, "--artifact").map((value) =>
+        parseArtifact(value, output)
+      ),
+    ],
+    flows: [...receipt.flows, ...flagValues(args, "--flow")],
+    notes: [...receipt.notes, ...flagValues(args, "--note")],
+    independentVerification:
+      readIndependentVerification(args) ?? receipt.independentVerification,
+    rollback: optionalFlagValue(args, "--rollback") ?? receipt.rollback,
+  };
+  const finalized = { ...updated, verdict: deriveVerdict(updated) };
+  const receiptPath = path.join(output, "receipt.json");
+  writeFileSync(receiptPath, `${JSON.stringify(finalized, null, 2)}\n`);
+  writeFileSync(path.join(output, "report.md"), renderProofReport(finalized));
+  verifyReceipt(receiptPath, cwd);
+  process.stdout.write(`${finalized.verdict} ${receiptPath}\n`);
+  return receiptPath;
 };
 
 const doctor = (): void => {
@@ -482,6 +573,7 @@ const publish = (args: readonly string[]): void => {
 const usage = `Usage:
   bun run proof -- doctor
   bun run proof -- run [--base origin/main] [--risk auto] [--flow text] [--artifact path#alt] [--focused-check name::command] [--note text] [--verifier-verdict PASS] [--verifier-summary text] [--verifier-source id-or-url] [--rollback text]
+  bun run proof -- finalize --receipt path/to/receipt.json [--artifact path#alt] [--flow text] [--note text] [--verifier-verdict PASS --verifier-summary text --verifier-source id-or-url] [--rollback text]
   bun run proof -- verify --receipt path/to/receipt.json
   bun run proof -- publish --pr NUMBER_OR_URL --receipt path/to/receipt.json
 `;
@@ -494,6 +586,12 @@ const main = async (): Promise<void> => {
   }
   if (command === "run") {
     await runProof(args);
+    return;
+  }
+  if (command === "finalize") {
+    const { receipt } = readReceipt(finalizeProof(args));
+    process.exitCode =
+      receipt.verdict === "FAIL" || receipt.verdict === "BLOCKED" ? 1 : 0;
     return;
   }
   if (command === "verify") {

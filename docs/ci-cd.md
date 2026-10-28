@@ -1,6 +1,6 @@
 # CI/CD
 
-The Cloudflare workflow separates secretless validation from deployment: labeled pull requests deploy previews, and merges to `main` deploy staging and then production. `ci` runs dependency review, strict linting, typechecks, and tests. `cloudflare-build` runs the product's and the admin app's Vite Worker builds (with the prerendered marketing site staged into the product) without credentials. Both run for pull requests and again on the merged commit on `main`, where they gate the staging and production deploys.
+The Cloudflare workflow separates secretless validation from deployment: labeled pull requests deploy previews, and merges to `main` deploy staging and then production. `quality` runs dependency review, strict linting, and typechecks alongside three test lanes: application, Worker integration, and repository guards. The required `ci` gate succeeds only when quality and every test lane succeed. `cloudflare-build` runs the product's and the admin app's Vite Worker builds (with the prerendered marketing site staged into the product) without credentials. Both run for pull requests and again on the merged commit on `main`, where they gate the staging and production deploys.
 
 Run the local gates before opening a pull request:
 
@@ -14,7 +14,11 @@ Use Node 24 and the pinned Bun version. Actions are pinned to immutable commits 
 
 During development, use `bun run ci:affected --base origin/main` for lint, affected typechecks and tests, and repository guards. `--dry-run` shows the selected tasks without executing checks. The base is resolved to its merge base with `HEAD`; committed, staged, unstaged, and untracked changes are included. For a stacked PR, use its preceding branch. An unavailable base fails instead of narrowing validation. Shared toolchain, TypeScript, test-fixture, workflow, or scope-selection changes run all packages. Final PR proof still requires the full local gates above.
 
-PR validation restores `.turbo/cache` through GitHub Actions' cache service, partitioned by job, OS, architecture, toolchain/configuration, and revision. The cache action runs only in the secretless `ci` and `cloudflare-build` jobs; deployments build from source. GitHub's branch/ref cache boundaries keep PR-written entries out of `main`. On `main` and manual runs, `TURBO_FORCE` bypasses restored results so every gate executes afresh before deployment and seeds the next PR's cache.
+PR validation restores `.turbo/cache` through GitHub Actions' cache service, partitioned by job and test lane, OS, architecture, toolchain/configuration, and revision. The cache action runs only in the secretless quality, test, and `cloudflare-build` jobs; deployments build from source. GitHub's branch/ref cache boundaries keep PR-written entries out of `main`. On `main` and manual runs, `TURBO_FORCE` bypasses restored results so every gate executes afresh before deployment and seeds the next PR's cache.
+
+Test execution does not depend on upstream test execution: source-only `test:inputs` tasks carry transitive hashes without running another suite. The lane selector partitions the conservative affected Turbo plan, with root guards always selected; empty lanes explicitly exit instead of passing an empty filter to Turbo. Local tests use two concurrent packages and two Vitest workers per package; other Turbo commands default to half the available cores. Worker integration runs select available TCP ports and distinct Worker registry names rather than sharing ports 3010/3011 across checkouts. Independent review can run alongside validation; avoid starting a second full CI/build/proof run for the same revision.
+
+The Bun package cache lives in a fresh runner directory keyed by the exact lockfile, platform, and Bun version, without a fallback to older locks. This prevents unrelated historical packages from accumulating in a shared cache. Frozen installs and the uncached patch check remain required.
 
 Root tests and typechecks hash all repository inputs: these gates inspect and import files across workspace boundaries. Root scripts, shared TypeScript configuration, and toolchain configuration participate in every task hash, since packages import script types and fixtures; package tests also hash Vitest configuration. Mobile declares its build-time design-token dependency so token edits select and invalidate its checks. `test:install` checks the installed dependency patches outside Turbo on every `bun run test`, since a source cache key cannot establish the state of `node_modules`.
 
@@ -24,9 +28,9 @@ Shared steps live in composite actions:
 - `.github/actions/turbo-cache` restores and saves content-addressed validation results. Bump its cache namespace when changing the cache trust policy; rollback is to remove its two workflow uses, leaving all validation commands and merge gates in place.
 - Deployment jobs receive encrypted secrets from their declared GitHub environment; app secret values stay in Cloudflare.
 
-The `ci` job also runs checksum-verified `actionlint`. Run it locally when you edit workflows.
+The `quality` job also runs checksum-verified `actionlint`. Run it locally when you edit workflows.
 
-Concurrency is set per job. A new push to a pull request cancels that PR's older `ci` and `cloudflare-build` jobs. Deploy and cleanup jobs share a per-stage group that never cancels, so an Alchemy state update is never interrupted.
+Concurrency is set per job. A new push to a pull request cancels that PR's older quality, test, and `cloudflare-build` jobs. Deploy and cleanup jobs share a per-stage group that never cancels, so an Alchemy state update is never interrupted.
 
 `scripts/check-patches.test.ts` runs in `bun run test`. It fails if any installed copy of a patched dependency is missing a line the patch adds, for example after a stale Bun cache.
 
