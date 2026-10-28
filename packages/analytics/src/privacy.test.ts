@@ -23,14 +23,7 @@ describe("analytics privacy boundary", () => {
         email: "private@example.com",
       },
     };
-    for (const pathname of [
-      "/",
-      "/about",
-      "/auth",
-      "/demo/key",
-      "/admin",
-      "/other",
-    ]) {
+    for (const pathname of ["/", "/about", "/auth", "/demo/key", "/other"]) {
       expect(canRecordSession(pathname, true)).toBeFalsy();
       expect(prepareAnalyticsEvent(event, pathname, true)).toBeNull();
     }
@@ -322,7 +315,7 @@ describe("analytics privacy boundary", () => {
     );
     expect(analyticsPath("/people/987")).toBe("/people/:personId");
     expect(analyticsPath("/demo/private-key")).toBe("/other");
-    expect(analyticsPath("/admin/users/private-id")).toBe("/other");
+    expect(analyticsPath("/unknown/private-id")).toBe("/other");
   });
 
   it("preserves Overview and Songs error locations without IDs or expanding replay", () => {

@@ -29,7 +29,7 @@ export const Route = createFileRoute("/auth")({
     const returnPath = sanitizeReturnPath(search.next ?? null);
     const { authenticated } = await getSessionStatus();
     if (authenticated) {
-      // The return path may be outside this router, such as `/admin`.
+      // The return path may be outside this router, such as a marketing page.
       redirect({ href: returnPath, reloadDocument: true, throw: true });
     }
     return { returnPath };

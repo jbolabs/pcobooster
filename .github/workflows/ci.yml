@@ -122,8 +122,6 @@ jobs:
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       TURBO_FORCE: ${{ github.event_name != 'pull_request' }}
-      # Validates admin's Vite build with the preview stages' base path.
-      ADMIN_BASE_PATH: /admin
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

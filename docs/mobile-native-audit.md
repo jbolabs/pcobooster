@@ -1,6 +1,6 @@
 # Mobile-native audit
 
-What makes the product (`apps/web`), the marketing site (`apps/marketing`, with its product replica), and the shared UI (`packages/ui`) feel like a website on a phone, and what changed. Admin is desktop-only behind Cloudflare Access and out of scope. Audited 2026-10-18 against the mobile-native checklist (sticky hover, tap highlight, viewport units, input zoom, keyboard hints, tap delay and press feedback, overscroll, safe areas, user-select, touch-action, theme-color, text-size-adjust, interactive-widget, zoom, device sniffing).
+What makes the product (`apps/web`), the marketing site (`apps/marketing`, with its product replica), and the shared UI (`packages/ui`) feel like a website on a phone, and what changed. Audited 2026-10-18 against the mobile-native checklist (sticky hover, tap highlight, viewport units, input zoom, keyboard hints, tap delay and press feedback, overscroll, safe areas, user-select, touch-action, theme-color, text-size-adjust, interactive-widget, zoom, device sniffing).
 
 ## Where it lives
 

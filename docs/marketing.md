@@ -4,7 +4,7 @@ The public site is a separate TanStack Start app at `apps/marketing`, prerendere
 
 ## Development
 
-- `bun run dev`: API on port 3000, product on port 3001, marketing on port 3002, and admin on port 3003 in the main checkout. Worktrees get their own four ports; see [local ports](environment.md#local-ports).
+- `bun run dev`: API on port 3000, product on port 3001, and marketing on port 3002 in the main checkout. Worktrees get their own ports; see [local ports](environment.md#local-ports).
 - `bun run dev:present`: the same, with anonymized Planning Center people in the product.
 - `bun run dev:marketing`: marketing only, with no database, Keychain, OAuth, or session requirement.
 
@@ -30,7 +30,7 @@ Run `bun run build` from the repository root. It:
 
 The product is a TanStack Start app deployed with Alchemy's `Cloudflare.Website.Vite`. Vite copies the staged files into the product's client assets, which Alchemy uploads. Alchemy's build has no pre-build hook, so a plugin in `apps/web/vite.config.ts` runs `bun run build:marketing` first when Alchemy drives the build; standalone builds stage the marketing build Turborepo already ran. The product's `/` and `/about` server routes fetch `/marketing/index.html` and `/marketing/about.html` from the `ASSETS` binding.
 
-Marketing assets use `/marketing` (the Vite `base`), avoiding collisions with the product's `/assets` chunks. Those exact public routes bypass the product's sign-in gate (`apps/web/src/lib/request-gate.ts`); `/services`, `/people`, `/admin`, and product APIs retain their existing authentication behavior. In development the product's Vite server proxies `/`, `/about`, and `/marketing/*` to the marketing dev server on its checkout's marketing port.
+Marketing assets use `/marketing` (the Vite `base`), avoiding collisions with the product's `/assets` chunks. Those exact public routes bypass the product's sign-in gate (`apps/web/src/lib/request-gate.ts`); `/services`, `/people`, and product APIs retain their existing authentication behavior. In development the product's Vite server proxies `/`, `/about`, and `/marketing/*` to the marketing dev server on its checkout's marketing port.
 
 Prerendering runs only at build time. Start serves the pages through `vite preview` while it writes them; `src/server.ts` and a preview middleware in `vite.config.ts` reconcile the `/marketing/` asset base with the `/` page paths there. Nothing marketing-specific runs on a server in production. Titles, descriptions, canonical URLs, and the Open Graph/Twitter card come from `src/lib/site-head.ts`.
 

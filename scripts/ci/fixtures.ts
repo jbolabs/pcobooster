@@ -75,7 +75,7 @@ export const validationFixture = (): string => {
     })
   );
   for (const [directory, name, dependencies] of [
-    ["apps/admin", "@pcobooster/admin", {}],
+    ["apps/video", "@pcobooster/video", {}],
     ["apps/web", "@pcobooster/web", { "@pcobooster/client": "workspace:*" }],
     ["apps/mobile", "@pcobooster/mobile", mobileDependencies],
     [

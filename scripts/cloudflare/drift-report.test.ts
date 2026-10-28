@@ -23,11 +23,11 @@ describe(driftReport, () => {
     const report = driftReport("alchemy.run.ts", "prod", [
       resource("Web", "drifted"),
       resource("Api", "in-sync"),
-      resource("Admin", "missing"),
+      resource("Database", "missing"),
     ]);
     expect(report.drifted).toBeTruthy();
     expect(report.markdown).toContain("2 of 3 resources differ");
-    expect(report.markdown.indexOf("`Admin`")).toBeLessThan(
+    expect(report.markdown.indexOf("`Database`")).toBeLessThan(
       report.markdown.indexOf("`Web`")
     );
     expect(report.markdown).not.toContain("`Api`");

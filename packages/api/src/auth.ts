@@ -16,9 +16,9 @@ import {
 import type { Db } from "@pcobooster/api/db/client";
 import * as schema from "@pcobooster/api/db/schema";
 import { boundaryLog } from "@pcobooster/api/logging";
-import { upsertPlanningCenterAccountIdentity } from "@pcobooster/api/modules/admin/planning-center-account-identities";
 import type { PostHogPersonProperties } from "@pcobooster/api/modules/analytics/posthog-capture";
 import { getPostHogPersonProperties } from "@pcobooster/api/modules/analytics/posthog-person";
+import { upsertPlanningCenterAccountIdentity } from "@pcobooster/api/modules/planning-center/account-identities";
 import { PLANNING_CENTER_USER_AGENT } from "@pcobooster/api/planning-center/user-agent";
 import type { JsonObject } from "@pcobooster/planning-center-models/json";
 import { betterAuth } from "better-auth";

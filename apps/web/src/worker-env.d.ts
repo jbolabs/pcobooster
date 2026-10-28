@@ -11,8 +11,6 @@ declare module "cloudflare:workers" {
   interface WebWorkerEnv {
     /** The API Worker. */
     API: Fetcher;
-    /** The admin Worker, served under `/admin` outside production. */
-    ADMIN: Fetcher;
     /** Static assets, including the staged marketing site. */
     ASSETS: Fetcher;
     PRODUCT_ORIGIN: string;

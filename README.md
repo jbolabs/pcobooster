@@ -44,9 +44,9 @@ Scripts that run outside Alchemy use `bun run secrets:dev <command>`. Operator-o
 bun run dev
 ```
 
-Alchemy applies migrations to persistent local D1 and starts the API, product, and admin; marketing runs beside them. The command prints the product URL. The admin preview is at `/admin`. You are signed in with the personal access token; there is no sign-in page.
+Alchemy applies migrations to persistent local D1 and starts the API and product; marketing runs beside them. The command prints the product URL. You are signed in with the personal access token; there is no sign-in page.
 
-The main checkout uses ports 3000 (API), 3001 (product), 3002 (marketing), and 3003 (admin). Each linked `git worktree` gets its own block of four ports, derived from its path (4000 to 4993), so several worktrees can run `bun run dev` at once. Set `DEV_PORT_BASE=<port>` to choose the block yourself; the stack uses that port and the next three. Every checkout keeps its own local D1 database under `.alchemy/`.
+The main checkout uses ports 3000 (API), 3001 (product), and 3002 (marketing). Each linked `git worktree` gets its own block of ports, derived from its path (4000 to 4993), so several worktrees can run `bun run dev` at once. Set `DEV_PORT_BASE=<port>` to choose the block yourself; the stack uses that port and the next two. Every checkout keeps its own local D1 database under `.alchemy/`.
 
 All running checkouts share one personal access token, so they share Planning Center's limit of 100 requests per 20 seconds per user. Each API Worker paces only its own requests, so two busy checkouts can see 429s that one would not.
 
@@ -87,7 +87,6 @@ Product operations are Effect HttpApi endpoints under `/api/v1` (one method and 
 ```text
 apps/
   web/                       # TanStack Start product UI
-  admin/                     # TanStack Start admin app
   server/                    # API Worker (Alchemy Effect-native) serving Effect HttpApi
   marketing/                 # Prerendered TanStack Start marketing site
 packages/

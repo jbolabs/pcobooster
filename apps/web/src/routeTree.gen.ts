@@ -18,7 +18,6 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VersionRouteImport } from './routes/version'
-import { Route as AdminSplatRouteImport } from './routes/admin/$'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as DemoKeyRouteImport } from './routes/demo/$key'
 import { Route as IngestSplatRouteImport } from './routes/ingest/$'
@@ -76,11 +75,6 @@ const TermsRoute = TermsRouteImport.update({
 const VersionRoute = VersionRouteImport.update({
   id: '/version',
   path: '/version',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminSplatRoute = AdminSplatRouteImport.update({
-  id: '/admin/$',
-  path: '/admin/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
@@ -166,7 +160,6 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/version': typeof VersionRoute
-  '/admin/$': typeof AdminSplatRoute
   '/api/$': typeof ApiSplatRoute
   '/demo/$key': typeof DemoKeyRoute
   '/ingest/$': typeof IngestSplatRoute
@@ -191,7 +184,6 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/version': typeof VersionRoute
-  '/admin/$': typeof AdminSplatRoute
   '/api/$': typeof ApiSplatRoute
   '/demo/$key': typeof DemoKeyRoute
   '/ingest/$': typeof IngestSplatRoute
@@ -216,7 +208,6 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/version': typeof VersionRoute
-  '/admin/$': typeof AdminSplatRoute
   '/api/$': typeof ApiSplatRoute
   '/demo/$key': typeof DemoKeyRoute
   '/ingest/$': typeof IngestSplatRoute
@@ -243,7 +234,6 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/version'
-    | '/admin/$'
     | '/api/$'
     | '/demo/$key'
     | '/ingest/$'
@@ -268,7 +258,6 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/version'
-    | '/admin/$'
     | '/api/$'
     | '/demo/$key'
     | '/ingest/$'
@@ -292,7 +281,6 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/version'
-    | '/admin/$'
     | '/api/$'
     | '/demo/$key'
     | '/ingest/$'
@@ -319,7 +307,6 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   VersionRoute: typeof VersionRoute
-  AdminSplatRoute: typeof AdminSplatRoute
   ApiSplatRoute: typeof ApiSplatRoute
   DemoKeyRoute: typeof DemoKeyRoute
   IngestSplatRoute: typeof IngestSplatRoute
@@ -389,13 +376,6 @@ declare module '@tanstack/react-router' {
       path: '/version'
       fullPath: '/version'
       preLoaderRoute: typeof VersionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/$': {
-      id: '/admin/$'
-      path: '/admin/$'
-      fullPath: '/admin/$'
-      preLoaderRoute: typeof AdminSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/$': {
@@ -561,7 +541,6 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   VersionRoute: VersionRoute,
-  AdminSplatRoute: AdminSplatRoute,
   ApiSplatRoute: ApiSplatRoute,
   DemoKeyRoute: DemoKeyRoute,
   IngestSplatRoute: IngestSplatRoute,

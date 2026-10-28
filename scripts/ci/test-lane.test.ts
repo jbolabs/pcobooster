@@ -52,14 +52,14 @@ describe("parallel test lanes", () => {
 
   it("keeps the affected selection when partitioning real Turbo plans", () => {
     const cwd = validationFixture();
-    writeFixture(cwd, "apps/admin/src/input.ts", "export const input = 2;\n");
+    writeFixture(cwd, "apps/video/src/input.ts", "export const input = 2;\n");
     const tasks = turboPlan(cwd, [
       "test",
       "//#test:root",
       ...validationScope(cwd, "HEAD").args,
     ]);
     expect(testLanes.map((lane) => laneFilters(lane, tasks))).toStrictEqual([
-      ["--filter=@pcobooster/admin"],
+      ["--filter=@pcobooster/video"],
       [],
       ["--filter=//"],
     ]);

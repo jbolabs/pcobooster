@@ -1,7 +1,7 @@
 /*
- * Product color and radius tokens shared by the product app, the admin app, and the
- * marketing site's interactive product replica. Light values live on :root; `.dark` can
- * be applied to the document (product, admin) or to a single subtree (marketing). The iOS
+ * Product color and radius tokens shared by the product app and the marketing site's
+ * interactive product replica. Light values live on :root; `.dark` can be applied to the
+ * document (product) or to a single subtree (marketing). The iOS
  * app's color sets follow these values (`bun run --cwd apps/mobile tokens`).
  *
  * Both themes declare the same tokens in the same order. Dark mode is a soft gray-green:

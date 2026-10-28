@@ -17,7 +17,6 @@ const checkedRoots = [
   "packages/contracts/src",
   "apps/server/src",
   "apps/web/src",
-  "apps/admin/src",
 ];
 
 const intlDateTimeFormatPattern = /\bIntl\.DateTimeFormat\(/gu;

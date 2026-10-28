@@ -25,7 +25,6 @@ describe("resolveStageSettings worker names", () => {
     ).toStrictEqual({
       api: "pcobooster-pr-42-api",
       web: "pcobooster-pr-42-web",
-      admin: "pcobooster-pr-42-admin",
     });
     expect(resolveStageSettings("pr-42", "jakebodea").publicOrigin).toBe(
       "https://pcobooster-pr-42-web.jakebodea.workers.dev"
@@ -38,7 +37,6 @@ describe("resolveStageSettings worker names", () => {
     ).toStrictEqual({
       api: "pcobooster-local-api",
       web: "pcobooster-local-web",
-      admin: "pcobooster-local-admin",
     });
   });
 
@@ -48,7 +46,6 @@ describe("resolveStageSettings worker names", () => {
     ).toStrictEqual({
       api: "pcobooster-local-4040-api",
       web: "pcobooster-local-4040-web",
-      admin: "pcobooster-local-4040-admin",
     });
   });
 });
