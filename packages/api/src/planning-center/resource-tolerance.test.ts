@@ -414,6 +414,7 @@ describe("Planning Center collections with null or missing fields", () => {
           { ...resources.TeamPosition("2"), id: null },
           { ...resources.TeamPosition("3"), id: { name: PRIVATE } },
           { ...resources.TeamPosition("4"), type: null },
+          { ...resources.TeamPosition("5"), type: PRIVATE, id: null },
         ])
       )
         .fetchCollection("/services/v2/service_types/12345/team_positions")
@@ -489,6 +490,12 @@ describe("Planning Center collections with null or missing fields", () => {
           "api:/api/v1/service-types/:serviceTypeId/plans/:planId/team-positions:PROVIDER_ROWS_DROPPED:/services/v2/service_types/:id/team_positions:unknown:data[].type: Expected string",
         provider_resource_type: "unknown",
         provider_fields: ["data[].type: Expected string"],
+        provider_rows: 1,
+      },
+      {
+        // A type Planning Center never sends is body text, so it is not repeated.
+        provider_resource_type: "unknown",
+        provider_fields: ["data[].id: Expected string"],
         provider_rows: 1,
       },
     ]);

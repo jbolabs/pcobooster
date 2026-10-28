@@ -272,8 +272,39 @@ export const describeDecodeIssues = (
     .map(({ path, message }) => ({ path: formatPath(prefix, path), message }));
 
 const decodeRow = Schema.decodeUnknownResult(tolerantResourceSchema);
+/**
+ * The Planning Center resource types this app reads. A dropped row's `type` is reported only
+ * when it is one of these: the field is body text, so anything else reads as unknown.
+ */
+const KNOWN_RESOURCE_TYPES = [
+  "Arrangement",
+  "Attachment",
+  "Blockout",
+  "BlockoutDate",
+  "Email",
+  "Item",
+  "Key",
+  "Layout",
+  "NeededPosition",
+  "Organization",
+  "Person",
+  "PersonTeamPositionAssignment",
+  "Plan",
+  "PlanPerson",
+  "PlanTime",
+  "Schedule",
+  "Series",
+  "ServiceType",
+  "Song",
+  "SongSchedule",
+  "Team",
+  "TeamLeader",
+  "TeamPosition",
+  "TimePreferenceOption",
+] as const;
+
 const decodeRowType = Schema.decodeUnknownOption(
-  Schema.Struct({ type: Schema.String })
+  Schema.Struct({ type: Schema.Literals(KNOWN_RESOURCE_TYPES) })
 );
 
 /** Each row Planning Center sent that reads as a resource, recording the ones that do not. */
