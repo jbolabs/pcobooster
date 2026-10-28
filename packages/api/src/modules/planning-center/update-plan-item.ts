@@ -10,6 +10,7 @@ import {
 } from "@pcobooster/api/modules/planning-center/plan-items-shared";
 import { listedValidationErrors } from "@pcobooster/api/planning-center/core-client";
 import type { PlanningCenterError } from "@pcobooster/api/planning-center/core-client";
+import { withPlanningCenterFailureDiagnostics } from "@pcobooster/api/planning-center/recover-failure";
 import type {
   PlanItemUpdateAttributes,
   PlanningCenterPlanItemsService,
@@ -148,56 +149,62 @@ export const commitUpdatePlanItem = (
         prepared.attributes
       )
       .pipe(
-        Effect.tapError((rejection) => {
-          if (
-            rejection._tag !== "PlanningCenterApiError" ||
-            rejection.status !== 422
-          ) {
-            return Effect.void;
-          }
-          return Effect.gen(function* diagnoseRejectedUpdate() {
-            const { songId, arrangementId } = prepared.diagnostics;
-            const context = {
-              serviceTypeId: prepared.serviceTypeId,
-              planId: prepared.planId,
-              itemId: prepared.itemId,
-              ...prepared.diagnostics,
-              sentLength: describeLength(prepared.attributes.length),
-              selectedKeyId: isString(prepared.attributes.key_id)
-                ? prepared.attributes.key_id
-                : null,
-              providerStatus: rejection.status,
-            };
-            yield* log.warn("Plan item update rejected", context);
-            const rejectedLength = listedValidationErrors(rejection.details, [
-              "length",
-            ]).some((entry) => entry.attribute === "length");
-            if (!rejectedLength || songId === null || arrangementId === null) {
-              return;
+        withPlanningCenterFailureDiagnostics(
+          (rejection: PlanningCenterError) => {
+            if (
+              rejection._tag !== "PlanningCenterApiError" ||
+              rejection.status !== 422
+            ) {
+              return Effect.void;
             }
-            // One uncached read on validation failure only. It shares the request budget and
-            // pacing; a failed diagnostic must preserve the original mutation failure.
-            yield* songsService.getArrangement(songId, arrangementId).pipe(
-              Effect.matchEffect({
-                onSuccess: (response) =>
+            return Effect.gen(function* diagnoseRejectedUpdate() {
+              const { songId, arrangementId } = prepared.diagnostics;
+              const context = {
+                serviceTypeId: prepared.serviceTypeId,
+                planId: prepared.planId,
+                itemId: prepared.itemId,
+                ...prepared.diagnostics,
+                sentLength: describeLength(prepared.attributes.length),
+                selectedKeyId: isString(prepared.attributes.key_id)
+                  ? prepared.attributes.key_id
+                  : null,
+                providerStatus: rejection.status,
+              };
+              yield* log.warn("Plan item update rejected", context);
+              const rejectedLength = listedValidationErrors(rejection.details, [
+                "length",
+              ]).some((entry) => entry.attribute === "length");
+              if (
+                !rejectedLength ||
+                songId === null ||
+                arrangementId === null
+              ) {
+                return;
+              }
+              // One uncached read on validation failure only. It shares the request budget and
+              // pacing; a failed diagnostic must preserve the original mutation failure.
+              yield* songsService.getArrangement(songId, arrangementId).pipe(
+                Effect.tap((response) =>
                   log.warn("Rejected plan item arrangement duration", {
                     ...context,
                     selectedArrangementLength: describeLength(
                       response.data.attributes.length
                     ),
-                  }),
-                onFailure: (failure) =>
+                  })
+                ),
+                Effect.tapError((failure) =>
                   log.warn(
                     "Rejected plan item arrangement diagnostic unavailable",
                     {
                       ...context,
                       diagnosticFailure: failure._tag,
                     }
-                  ),
-              })
-            );
-          });
-        })
+                  )
+                )
+              );
+            });
+          }
+        )
       ),
     (response) => normalizePlanItem(response.data, response.included)
   );
