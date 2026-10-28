@@ -2,9 +2,38 @@ import { describe, expect, it } from "vitest";
 
 import { validationScope } from "./affected";
 import { turboPlan, validationFixture, writeFixture } from "./fixtures";
-import { laneFilters, testLanes } from "./test-lane";
+import { laneFilters, laneTaskArgs, testLanes } from "./test-lane";
 
 describe("parallel test lanes", () => {
+  it("executes root guards only in the guards lane", () => {
+    const cwd = validationFixture();
+    writeFixture(
+      cwd,
+      "apps/server/package.json",
+      JSON.stringify({
+        name: "@pcobooster/server",
+        private: true,
+        scripts: { test: "bun -e 'console.log(1)'" },
+      })
+    );
+    const filters = [
+      ["--filter=@pcobooster/web"],
+      ["--filter=@pcobooster/server"],
+      ["--filter=//"],
+    ];
+    expect(
+      testLanes.map((lane, index) =>
+        turboPlan(cwd, laneTaskArgs(lane, filters[index] ?? []))
+          .filter((task) => task.command !== "<NONEXISTENT>")
+          .map((task) => task.taskId)
+      )
+    ).toStrictEqual([
+      ["@pcobooster/web#test"],
+      ["@pcobooster/server#test"],
+      ["//#test:root"],
+    ]);
+  });
+
   it("assigns every executable test to exactly one lane", () => {
     const tasks = [
       { taskId: "//#test:root", command: "vitest guards" },

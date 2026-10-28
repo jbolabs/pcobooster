@@ -38,6 +38,15 @@ export const laneFilters = (
     return taskLane === lane ? [`--filter=${packageName}`] : [];
   });
 
+export const laneTaskArgs = (
+  lane: TestLane,
+  filters: readonly string[]
+): string[] => [
+  lane === "guards" ? "//#test:root" : "test",
+  "--concurrency=2",
+  ...filters,
+];
+
 if (import.meta.main) {
   const lane = Schema.decodeUnknownSync(laneSchema)(process.argv[2]);
   const cwd = fileURLToPath(new URL("../../", import.meta.url));
@@ -64,10 +73,24 @@ if (import.meta.main) {
   if (filters.length === 0) {
     process.stdout.write(`No affected tests in ${lane}.\n`);
   } else {
-    const result = spawnSync("bun", ["run", "test", ...filters], {
+    const install = spawnSync("bun", ["run", "test:install"], {
       cwd,
       stdio: "inherit",
     });
+    if (install.error) {
+      throw install.error;
+    }
+    if (install.status !== 0) {
+      process.exit(install.status ?? 1);
+    }
+    const result = spawnSync(
+      "bun",
+      ["x", "--no-install", "turbo", "run", ...laneTaskArgs(lane, filters)],
+      {
+        cwd,
+        stdio: "inherit",
+      }
+    );
     if (result.error) {
       throw result.error;
     }

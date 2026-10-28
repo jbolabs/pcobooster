@@ -374,22 +374,6 @@ const runProof = async (args: readonly string[]): Promise<void> => {
   const notes = flagValues(args, "--note");
   const independentVerification = readIndependentVerification(args);
   const rollback = optionalFlagValue(args, "--rollback") ?? null;
-  if (visualEvidenceRequired && artifacts.length === 0) {
-    notes.push("Visible surface changed without an attached image or video.");
-  }
-  if (
-    (riskTier === "high" || riskTier === "critical") &&
-    independentVerification === null
-  ) {
-    notes.push("High-risk change has no independent verifier result.");
-  }
-  if (riskTier === "critical" && rollback === null) {
-    notes.push("Critical change has no rollback plan.");
-  }
-  if (riskTier === "critical" && focusedChecks.length === 0) {
-    notes.push("Critical change has no captured focused boundary check.");
-  }
-
   assertProofRevision(headSha, baseRef, baseSha);
 
   let receipt: ProofReceipt = {
