@@ -112,9 +112,10 @@ const getTeamInfo = (
     }
   }
 
+  // Only a read of one team can say which team an unlinked position belongs to.
   if (!teamId || !teamName) {
     const teams = findAllIncluded(included, "Team");
-    if (teams.length > 0) {
+    if (teams.length === 1) {
       const [team] = teams;
       teamId = team.id;
       teamName = isString(team.attributes.name) ? team.attributes.name : "";

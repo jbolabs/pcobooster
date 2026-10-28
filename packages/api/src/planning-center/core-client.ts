@@ -19,8 +19,13 @@ import type {
   PlanningCenterRequestAccounting,
 } from "@pcobooster/api/planning-center/request-accounting";
 import {
-  pcCollectionResponseSchema,
-  pcResourceResponseSchema,
+  decodeCollectionResponse,
+  decodeResourceResponse,
+  describeDecodeIssues,
+} from "@pcobooster/api/planning-center/resource-schemas";
+import type {
+  DecodedBody,
+  JsonBodyDecoder,
 } from "@pcobooster/api/planning-center/resource-schemas";
 import {
   PlanningCenterSubrequestLimitError,
@@ -165,16 +170,21 @@ interface SentResponse {
 const endpointUrl = (endpoint: string): string =>
   new URL(endpoint, PC_BASE_URL).toString();
 
+/** Names where decoding failed, so the report shows which field Planning Center changed. */
 const invalidProviderResponse = (
   status: number,
-  cause: unknown
-): PlanningCenterApiError =>
-  new PlanningCenterApiError({
-    message: "Planning Center returned an invalid response",
+  cause: Schema.SchemaError
+): PlanningCenterApiError => {
+  const where = describeDecodeIssues(cause.issue)
+    .map(({ path, message }) => (path === "" ? message : `${path}: ${message}`))
+    .join("; ");
+  return new PlanningCenterApiError({
+    message: `Planning Center returned an invalid response (${where})`,
     status,
     code: "INVALID_RESPONSE",
     cause,
   });
+};
 
 const attemptTimedOut = (): PlanningCenterNetworkError =>
   new PlanningCenterNetworkError({
@@ -588,16 +598,6 @@ const readResponseText = (
 ): Effect.Effect<string, PlanningCenterNetworkError> =>
   Effect.mapError(response.text, networkFailure);
 
-/** Parses a JSON body and decodes it, failing with the schema's issue when either step fails. */
-type JsonBodyDecoder<Output> = (
-  text: string
-) => Result.Result<Output, Schema.SchemaError>;
-
-const decodeResourceResponse: JsonBodyDecoder<PCApiResponse<PCResource>> =
-  Schema.decodeUnknownResult(Schema.fromJsonString(pcResourceResponseSchema));
-const decodeCollectionResponse: JsonBodyDecoder<PCApiResponse<PCResource[]>> =
-  Schema.decodeUnknownResult(Schema.fromJsonString(pcCollectionResponseSchema));
-
 /**
  * Reads the JSON body within whatever remains of the attempt's time budget and decodes it with
  * `decode`. The schema is the only validation pass: `JSON.parse` output is JSON by
@@ -608,7 +608,7 @@ const readJsonBody =
   ({
     response,
     startedAt,
-  }: SentResponse): Effect.Effect<Output, AttemptError> =>
+  }: SentResponse): Effect.Effect<DecodedBody<Output>, AttemptError> =>
     Effect.gen(function* readJson() {
       const elapsedMs = (yield* Clock.currentTimeMillis) - startedAt;
       const text = yield* readResponseText(response).pipe(
@@ -1044,7 +1044,28 @@ export class PlanningCenterCoreClient {
     options: PlanningCenterRequestOptions,
     decode: JsonBodyDecoder<Output>
   ): Effect.Effect<Output, PlanningCenterError> {
-    return Effect.flatMap(this.send(endpoint, options), readJsonBody(decode));
+    return this.send(endpoint, options).pipe(
+      Effect.flatMap(readJsonBody(decode)),
+      Effect.flatMap(({ value, dropped }) => {
+        if (dropped.length === 0) {
+          return Effect.succeed(value);
+        }
+        const described = describePlanningCenterEndpoint(endpoint);
+        return Effect.gen(function* reportDropped() {
+          const accounting = yield* Effect.serviceOption(
+            PlanningCenterAccounting
+          );
+          if (Option.isSome(accounting)) {
+            accounting.value.recordDroppedRows(described.path, dropped);
+          }
+          yield* log.warn("Dropped Planning Center rows it could not read", {
+            endpoint: described,
+            dropped,
+          });
+          return value;
+        });
+      })
+    );
   }
 
   fetch(
