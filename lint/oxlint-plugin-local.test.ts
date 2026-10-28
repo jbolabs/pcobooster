@@ -1182,6 +1182,16 @@ ruleTester.run(
       `,
         errors: [{ messageId: "uneven" }],
       },
+      {
+        name: "element returned from a render callback prop",
+        code: `<div className="rounded-3xl px-4 py-2"><Trigger render={() => <button className="rounded-xl" />} /></div>`,
+        errors: [{ messageId: "uneven" }],
+      },
+      {
+        name: "shared primitive row with its resting corner",
+        code: `<div className="rounded-3xl px-4 py-2"><DropdownMenuItem /></div>`,
+        errors: [{ messageId: "uneven" }],
+      },
     ],
   }
 );

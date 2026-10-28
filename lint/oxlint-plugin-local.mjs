@@ -2307,7 +2307,8 @@ const jsxContainer = (element) => {
     }
     if (
       node.type === "ArrowFunctionExpression" &&
-      node.parent?.type !== "CallExpression"
+      node.parent?.type !== "CallExpression" &&
+      node.parent?.type !== "JSXExpressionContainer"
     ) {
       return null;
     }
@@ -2343,13 +2344,24 @@ const evenCornerInsetRule = {
     const classesOf = (opening) => openingClassText(opening, resolve);
 
     /** @param {import("oxlint/plugins-dev").JSXOpeningElement} opening */
-    const radiusOf = (opening) =>
-      cornerGeometry(classesOf(opening)).radius ??
-      (getJsxName(opening.name) === ITEM_NAME &&
-      opening.name.type === "JSXIdentifier"
-        ? (ITEM_SIZE_RADIUS.get(stringAttribute(opening, "size") ?? "") ??
-          ITEM_RADIUS)
-        : null);
+    const radiusOf = (opening) => {
+      const own = cornerGeometry(classesOf(opening)).radius;
+      const name = getJsxName(opening.name);
+      if (
+        own !== null ||
+        name === null ||
+        opening.name.type !== "JSXIdentifier"
+      ) {
+        return own;
+      }
+      if (name === ITEM_NAME) {
+        return (
+          ITEM_SIZE_RADIUS.get(stringAttribute(opening, "size") ?? "") ??
+          ITEM_RADIUS
+        );
+      }
+      return PRIMITIVE_CORNERS.get(name)?.radius ?? null;
+    };
 
     /** @param {import("oxlint/plugins-dev").JSXOpeningElement} opening */
     const surfaceOf = (opening) => {
