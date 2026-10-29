@@ -11,6 +11,7 @@ export const secretScopeSchema = Schema.Literals([
   "posthog",
   "analytics-erasure",
   "recovery",
+  "builds-control",
 ]);
 export type SecretScope = typeof secretScopeSchema.Type;
 
@@ -68,6 +69,7 @@ const inheritedCredentialKeys = [
  * remain for the importer, `secrets:dev`, and the legacy Keychain deploy commands.
  */
 export const scopeKeys: Record<SecretScope, readonly string[]> = {
+  "builds-control": ["BUILDS_GITHUB_APP_PRIVATE_KEY"],
   local: localKeys,
   sandbox: ["PLANNING_CENTER_CLIENT", "PLANNING_CENTER_PAT"],
   // What `secrets:dev` passes from Infisical `pcobooster-dev` to a non-Alchemy command. The PAT
@@ -101,6 +103,7 @@ export const scopeKeys: Record<SecretScope, readonly string[]> = {
 };
 
 export const requiredScopeKeys: Record<SecretScope, readonly string[]> = {
+  "builds-control": scopeKeys["builds-control"],
   local: localKeys.slice(0, 3),
   sandbox: scopeKeys.sandbox,
   cloud: scopeKeys.cloud.slice(0, 3),
