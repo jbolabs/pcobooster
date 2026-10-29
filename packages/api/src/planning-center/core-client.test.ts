@@ -13,12 +13,13 @@ import { PlanningCenterPacing } from "@pcobooster/api/planning-center/pacing";
 import { PlanningCenterPaginationError } from "@pcobooster/api/planning-center/pagination-error";
 import { PlanningCenterRatePacer } from "@pcobooster/api/planning-center/rate-pacer";
 import { PlanningCenterRequestAccounting } from "@pcobooster/api/planning-center/request-accounting";
+import { SEND_PERMIT_POLL_MS } from "@pcobooster/api/planning-center/send-lane";
 import { PLANNING_CENTER_USER_AGENT } from "@pcobooster/api/planning-center/user-agent";
 import { httpClientFor } from "@pcobooster/api/testing/http-client";
 import { recordLogs } from "@pcobooster/api/testing/logs";
 import { testPlanningCenterToken } from "@pcobooster/api/testing/server";
 import type { JsonValue } from "@pcobooster/planning-center-models/json";
-import { Cause, Clock, Effect, Exit, Fiber } from "effect";
+import { Cause, Clock, Duration, Effect, Exit, Fiber } from "effect";
 import { TestClock } from "effect/testing";
 import { describe, expect, it, vi } from "vitest";
 
@@ -1565,6 +1566,9 @@ describe("Planning Center pacing and accounting", () => {
         const atOnce = sent;
         answers.shift()?.();
         yield* settle;
+        // The queued read finds the freed permit the next time it checks.
+        yield* TestClock.adjust(Duration.millis(SEND_PERMIT_POLL_MS));
+        yield* settle;
         const afterOneAnswer = sent;
         for (const answer of answers.splice(0)) {
           answer();
@@ -1604,6 +1608,8 @@ describe("Planning Center pacing and accounting", () => {
             { status: 429, headers: { "retry-after": "12" } }
           )
         );
+        yield* settle;
+        yield* TestClock.adjust(Duration.millis(SEND_PERMIT_POLL_MS));
         yield* settle;
         // The queued read takes the freed permit but must not send into the block.
         const duringBlock = sent.length;
