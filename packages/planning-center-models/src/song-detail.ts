@@ -104,6 +104,23 @@ export const historyRowDetail = (
   return parts.length === 0 ? null : parts.join(" · ");
 };
 
+/**
+ * "Sat, Oct 3, 2026 · Default Arrangement · Jordan's key": a history row's full day in the
+ * congregation's zone, then the arrangement and named key it was sung in.
+ */
+export const historyRowFullLabel = (
+  entry: SongHistoryEntry,
+  timeZone: string
+): string => {
+  const detail = historyRowDetail(entry, true);
+  const day = formatCalendarDateLabel(
+    entry.sortDate,
+    timeZone,
+    "weekdayMonthDayYear"
+  );
+  return detail === null ? day : `${day} · ${detail}`;
+};
+
 const sameOrgYear = (a: Date, b: Date, timeZone: string): boolean =>
   formatCalendarDayInTimeZone(a, timeZone).slice(0, 4) ===
   formatCalendarDayInTimeZone(b, timeZone).slice(0, 4);

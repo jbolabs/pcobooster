@@ -171,7 +171,7 @@ const runScenario = async (scenario: string) => {
       headers: { "content-type": "application/json", origin: previewOrigin },
       body: JSON.stringify({
         provider: "planning-center",
-        callbackURL: "/admin",
+        callbackURL: "/people",
         errorCallbackURL: `${previewOrigin}/auth`,
         disableRedirect: true,
       }),
@@ -222,7 +222,7 @@ const runScenario = async (scenario: string) => {
           key: proxyEncryptionKey("oauth-proxy-profile"),
           data: JSON.stringify({
             ...payload,
-            callbackURL: `${productionOrigin}/admin`,
+            callbackURL: `${productionOrigin}/people`,
           }),
         })
       );
@@ -285,7 +285,7 @@ describe("preview OAuth boundary", () => {
   it("completes only in the initiating preview, binds the OIDC nonce, and rejects replay", async () => {
     await expect(runScenario("valid")).resolves.toMatchObject({
       error: null,
-      destination: "/admin",
+      destination: "/people",
       hostOnly: true,
       replayError: "state_mismatch",
       expectedNonceForwarded: true,

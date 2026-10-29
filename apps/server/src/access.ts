@@ -3,7 +3,7 @@ const OWNER_EMAIL = "jakebodea@gmail.com";
 
 /**
  * `PCOBOOSTER_ADMIN_EMAILS` (comma-separated) as the lowercase addresses Cloudflare Access admits
- * to the admin app and to every staging and pull request stage (`alchemy.run.ts`).
+ * to every staging and pull request stage (`alchemy.run.ts`).
  */
 export const parseTeamEmails = (configured: string): string[] => {
   const emails = configured

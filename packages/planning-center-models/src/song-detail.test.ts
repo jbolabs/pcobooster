@@ -12,6 +12,7 @@ import {
   historyDateLabel,
   historyNamesArrangements,
   historyRowDetail,
+  historyRowFullLabel,
   historyServiceTypeId,
   keyEndingLabel,
   keyLabel,
@@ -195,6 +196,15 @@ describe("song history facts", () => {
       "Default Arrangement · Jordan's key"
     );
     expect(historyRowDetail(history[0], false)).toBeNull();
+  });
+
+  it("labels a history row with its full org-zone day and how it was sung", () => {
+    expect(historyRowFullLabel(history[2], zone)).toBe(
+      "Sat, Oct 3, 2026 · Default Arrangement · Jordan's key"
+    );
+    expect(historyRowFullLabel(history[3], zone)).toBe(
+      "Sun, Aug 16, 2026 · Acoustic"
+    );
   });
 
   it("dates history rows with the weekday this year and the year otherwise", () => {

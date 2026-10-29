@@ -1,14 +1,14 @@
 /**
  * Local dev server ports. One setting, `DEV_PORT_BASE`, places the whole stack so several
- * checkouts can run `bun run dev` at once: the API on the base, then the product, marketing,
- * and admin on the next three ports. `scripts/cloudflare/dev.ts` chooses the base and passes it
+ * checkouts can run `bun run dev` at once: the API on the base, then the product and
+ * marketing on the next two ports. `scripts/cloudflare/dev.ts` chooses the base and passes it
  * to every dev server; each reads it back with `readDevPorts`.
  */
 
 /** The main checkout's ports; Planning Center's local OAuth callback is registered on its product port. */
 export const DEFAULT_DEV_PORT_BASE = 3000;
 
-const PORT_COUNT = 4;
+const PORT_COUNT = 3;
 const MAX_PORT = 65_535;
 const MIN_UNPRIVILEGED_PORT = 1024;
 
@@ -21,14 +21,12 @@ export interface DevPorts {
   readonly api: number;
   readonly web: number;
   readonly marketing: number;
-  readonly admin: number;
 }
 
 export const devPorts = (base: number): DevPorts => ({
   api: base,
   web: base + 1,
   marketing: base + 2,
-  admin: base + 3,
 });
 
 export const devOrigin = (port: number): string => `http://127.0.0.1:${port}`;

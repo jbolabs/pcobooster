@@ -14,7 +14,6 @@ describe("dev ports", () => {
       api: 4020,
       web: 4021,
       marketing: 4022,
-      admin: 4023,
     });
   });
 
@@ -24,7 +23,7 @@ describe("dev ports", () => {
     expect(parseDevPortBase(" 5100 ")).toBe(5100);
   });
 
-  it.each(["abc", "3000.5", "-1", "80", "65533", "1e4"])(
+  it.each(["abc", "3000.5", "-1", "80", "65534", "1e4"])(
     "rejects DEV_PORT_BASE %s",
     (value) => {
       expect(() => parseDevPortBase(value)).toThrow(/DEV_PORT_BASE/u);

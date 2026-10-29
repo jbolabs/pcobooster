@@ -122,8 +122,6 @@ jobs:
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       TURBO_FORCE: ${{ github.event_name != 'pull_request' }}
-      # Validates admin's Vite build with the preview stages' base path.
-      ADMIN_BASE_PATH: /admin
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -242,7 +240,9 @@ jobs:
         run: bun scripts/cloudflare/verify-deployment.ts "$PREVIEW_ORIGIN" "$GITHUB_SHA"
 
   staging:
-    needs: [ci, cloudflare-build]
+    # Runs alongside the validation lanes rather than after them: staging is the CD stage, and
+    # production still waits for `ci`, `cloudflare-build`, and this deploy. A revision that fails
+    # validation on `main` can reach staging, never production.
     if: >-
       github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_production))
     runs-on: ubuntu-latest
@@ -293,7 +293,8 @@ jobs:
         run: bun scripts/cloudflare/verify-deployment.ts https://pcobooster-staging-web.jakebodea.workers.dev "$GITHUB_SHA"
 
   production:
-    # Staging deploys the same revision first, so a failing migration or deploy stops here.
+    # Staging deploys the same revision first, so a failing migration or deploy stops here, and
+    # every validation lane must pass on this exact commit.
     needs: [ci, cloudflare-build, staging]
     if: >-
       github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_production))

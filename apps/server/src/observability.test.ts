@@ -11,7 +11,7 @@ describe("Worker observability", () => {
     });
   });
 
-  it("preserves product and admin trace sampling alongside Issues and logs", () => {
+  it("preserves product trace sampling alongside Issues and logs", () => {
     for (const production of [false, true]) {
       expect(workerObservability(production)).toStrictEqual({
         enabled: true,

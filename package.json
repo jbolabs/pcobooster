@@ -52,7 +52,7 @@
     "posthog:deploy": "bun run secrets:run posthog -- env -u CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=984b82870acd18daf8bda97bad966b38 bun alchemy deploy alchemy.posthog.ts --stage prod",
     "db:rehearse": "bun run secrets:run recovery -- bun run scripts/database/migrate-from-postgres.ts --local",
     "alchemy": "bun ./node_modules/alchemy/bin/cli.js",
-    "build:cloudflare": "turbo run build --filter=@pcobooster/web --filter=@pcobooster/admin",
+    "build:cloudflare": "turbo run build --filter=@pcobooster/web",
     "secrets:run": "bun scripts/secrets/run.ts",
     "secrets:dev": "bun scripts/secrets/dev-run.ts",
     "setup:infisical": "bun alchemy profile edit --add Infisical --method universal-auth --set clientId=env:INFISICAL_CLIENT_ID --set clientSecret=env:INFISICAL_CLIENT_SECRET --no-input",

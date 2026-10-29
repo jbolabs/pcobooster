@@ -6,7 +6,6 @@ import type { ServerConfig } from "@pcobooster/api/config/server-config";
 import { createDatabase } from "@pcobooster/api/db/client";
 import type { Db } from "@pcobooster/api/db/client";
 import { boundaryLog } from "@pcobooster/api/logging";
-import { getPlanningCenterAccountIdentity } from "@pcobooster/api/modules/admin/planning-center-account-identities";
 import {
   createFlagshipFeatureFlags,
   createRegistryFeatureFlags,
@@ -15,6 +14,7 @@ import type {
   FeatureFlags,
   FlagshipBinding,
 } from "@pcobooster/api/modules/feature-flags/feature-flags";
+import { getPlanningCenterAccountIdentity } from "@pcobooster/api/modules/planning-center/account-identities";
 import {
   createModuleReadCaches,
   moduleReadCachesForRequest,

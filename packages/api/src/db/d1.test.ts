@@ -7,7 +7,6 @@ import {
   session,
   user,
 } from "@pcobooster/api/db/schema";
-import { getAccountActivity } from "@pcobooster/api/modules/admin/get-account-activity";
 import { testServerConfig } from "@pcobooster/api/testing/server";
 import { makeSignature } from "better-auth/crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -61,11 +60,6 @@ describe("D1 persistence", () => {
         success: false,
         metadata: { imported: true, details: { count: 2 } },
       },
-      {
-        eventType: "auth_session_created",
-        actorUserId: "preserved-user",
-        createdAt: new Date(Date.now() - 40 * 86_400_000),
-      },
     ]);
   });
 
@@ -95,21 +89,6 @@ describe("D1 persistence", () => {
       .returning();
     expect(inserted[0].id).toBeGreaterThan(42);
     expect(inserted[0].metadata).toStrictEqual({});
-  });
-
-  it("runs account reporting on D1 with correct date windows and provider arrays", async () => {
-    const rows = await getAccountActivity(database);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({
-      userId: "preserved-user",
-      createdAt: createdAt.toISOString(),
-      linkedAccounts: 1,
-      providers: ["planning-center"],
-      activeSessions: 1,
-      loginEvents: 2,
-      loginEvents7d: 1,
-      loginEvents30d: 1,
-    });
   });
 
   it("initializes Better Auth with D1 and safely handles an unsigned request", async () => {

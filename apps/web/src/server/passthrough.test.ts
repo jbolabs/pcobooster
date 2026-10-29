@@ -46,7 +46,10 @@ describe(forwardRequest, () => {
 
   it("returns redirects to the browser instead of following them", async () => {
     const { service, requests } = recordingService();
-    await forwardRequest(service, new Request("https://pcobooster.com/admin"));
+    await forwardRequest(
+      service,
+      new Request("https://pcobooster.com/api/auth/callback/planning-center")
+    );
     expect(requests[0]?.redirect).toBe("manual");
   });
 

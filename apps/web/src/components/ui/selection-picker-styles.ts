@@ -6,7 +6,7 @@ export const selectionPickerSectionTitleClass =
 export const selectionPickerShellClass =
   "border-border bg-muted/40 rounded-2xl border p-1.5";
 
-export const selectionPickerOptionClass = "rounded-xl outline-none";
+export const selectionPickerOptionClass = "rounded-lg outline-none";
 
 export const selectionPickerOptionSelectedClass =
   "bg-background text-foreground shadow-xs ring-foreground/10 ring-1";

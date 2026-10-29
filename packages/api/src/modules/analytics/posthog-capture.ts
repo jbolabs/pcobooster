@@ -1,7 +1,7 @@
 const POSTHOG_CAPTURE_URL = "https://us.i.posthog.com/i/v0/e/";
 const CAPTURE_TIMEOUT_MS = 1500;
 
-/** Person profile fields shared with the admin app, keyed by Better Auth user ID. */
+/** Person profile fields, keyed by Better Auth user ID. */
 export interface PostHogPersonProperties {
   readonly email: string;
   readonly name: string;

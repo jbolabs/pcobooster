@@ -317,7 +317,7 @@ The core now checks and charges the cap synchronously after pacing and immediate
 
 ### Source-derived overhead ledger
 
-The following is conservative source accounting, not a measured Cloudflare invocation waterfall or a universal bound. Sources include `auth/planning-center-session.ts`, `auth/planning-center-token.ts`, `auth.ts`, `server.ts`, `modules/admin/planning-center-account-identities.ts`, `modules/feature-flags/feature-flags.ts`, `planning-center/services/factory.ts`, `modules/analytics/posthog-capture.ts`, and `apps/server/src/procedure-reporting.ts`.
+The following is conservative source accounting, not a measured Cloudflare invocation waterfall or a universal bound. Sources include `auth/planning-center-session.ts`, `auth/planning-center-token.ts`, `auth.ts`, `server.ts`, `modules/planning-center/account-identities.ts`, `modules/feature-flags/feature-flags.ts`, `planning-center/services/factory.ts`, `modules/analytics/posthog-capture.ts`, and `apps/server/src/procedure-reporting.ts`.
 
 - Native or stale browser authentication: up to 8 D1 queries across `getSession`, `listUserAccounts`, and `getAccessToken`. Installed Better Auth 1.7.5 requests a session/user join, but the configured adapter has native joins disabled and expands it into separate session and user reads. Fresh browser cookie caching reduces this path.
 - Session renewal: 1 D1 update when the session reaches update age. It is not multiplied by every auth lookup after the first successful renewal.

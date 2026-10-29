@@ -18,7 +18,7 @@ const workerLogs = { enabled: true, invocationLogs: true };
 /**
  * Workers Logs as Alchemy enables them by default, plus Workers Issues and Traces. Traces show each
  * invocation's subrequests, which is how to inspect overhead beside the provider
- * request count (AGENTS.md, Request Budget). For the product and admin Workers.
+ * request count (AGENTS.md, Request Budget). For the product Worker.
  */
 export const workerObservability = (
   production: boolean
