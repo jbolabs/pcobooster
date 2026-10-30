@@ -146,6 +146,12 @@ describe("the procedures route table", () => {
 /** Procedures added after the cutover, so they are absent from main's list. */
 const addedSinceCutover = [
   {
+    tag: "people.mySchedule",
+    kind: "read",
+    feature: null,
+    planningCenter: true,
+  },
+  {
     tag: "catalog.planWindow",
     kind: "read",
     feature: null,

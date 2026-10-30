@@ -944,3 +944,49 @@ describe("PlanningCenterPeopleService.getPersonSchedulesAfter with an instant", 
     expect(sent[1]?.url.searchParams.get("include")).toBe("plan,team");
   });
 });
+
+describe("personal schedule archive", () => {
+  it("reads one page of personal assignments across all dates without per-plan calls", async () => {
+    const { service, sent } = serviceOver(() => ({
+      data: [
+        resource("assignment-1", "Schedule", {
+          sort_date: "2024-12-25T19:00:00Z",
+        }),
+      ],
+      links: {
+        next: "https://api.planningcenteronline.com/services/v2/people/person-7/schedules?offset=200&per_page=100",
+      },
+    }));
+    const schedulePage = await Effect.runPromise(
+      service.getPersonAllSchedulesPage("person-7", 100)
+    );
+    expect(schedulePage).toStrictEqual({
+      data: [
+        resource("assignment-1", "Schedule", {
+          sort_date: "2024-12-25T19:00:00Z",
+        }),
+      ],
+      included: [],
+      nextOffset: 200,
+    });
+    expect(
+      sent.map(({ url }) => ({
+        path: url.pathname,
+        filter: url.searchParams.get("filter"),
+        order: url.searchParams.get("order"),
+        offset: url.searchParams.get("offset"),
+        perPage: url.searchParams.get("per_page"),
+        include: url.searchParams.get("include"),
+      }))
+    ).toStrictEqual([
+      {
+        path: "/services/v2/people/person-7/schedules",
+        filter: "all,not_across_organizations",
+        order: "-starts_at",
+        offset: "100",
+        perPage: "100",
+        include: null,
+      },
+    ]);
+  });
+});

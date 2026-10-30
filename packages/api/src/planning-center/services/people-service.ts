@@ -508,6 +508,31 @@ export class PlanningCenterPeopleService {
     ).pipe(Effect.map((prefix) => structuredClone(prefix)));
   }
 
+  /** One page of this organization's personal assignments, across all dates, newest first. */
+  getPersonAllSchedulesPage(
+    personId: string,
+    offset: number
+  ): Effect.Effect<PlanningCenterPage, PlanningCenterError> {
+    // No includes or per-plan reads: the schedule supplies the card and navigation fields.
+    const params = {
+      filter: "all,not_across_organizations",
+      order: "-starts_at",
+      "fields[Schedule]":
+        "sort_date,service_type_name,team_name,team_position_name,plan_visible_to_me,plan,service_type",
+    };
+    return this.cachedPage(
+      ["person-schedules", personId, "all", stableParams(params)],
+      PERSON_READ_CACHE_TTL_MS,
+      offset,
+      () =>
+        this.core.fetchPage(
+          `/services/v2/people/${personId}/schedules`,
+          params,
+          offset
+        )
+    );
+  }
+
   /**
    * One page of the schedules `getPersonSchedulesAfter` reads, cached per page, for reads that
    * go page by page within a request budget and stop once they pass the dates they need.

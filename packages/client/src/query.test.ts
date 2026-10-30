@@ -86,6 +86,7 @@ describe(callForQuery, () => {
       | "dashboardActivity"
       | "dashboardPerson"
       | "myScheduledPlans"
+      | "mySchedule"
     >();
   });
 
