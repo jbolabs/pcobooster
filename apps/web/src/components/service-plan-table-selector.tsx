@@ -249,7 +249,7 @@ const PlanAgenda = ({
     return (
       <PlanListEmpty
         title="No matching plans"
-        description="Adjust the search or service types, or load more services."
+        description="Adjust the search or service types, or load more weeks."
       />
     );
   }
@@ -362,64 +362,6 @@ const MyScheduledServiceCards = ({
   );
 };
 
-const PersonalScheduleStatus = ({
-  loading,
-  hasMore,
-  failed,
-}: {
-  loading: boolean;
-  hasMore: boolean;
-  failed: boolean;
-}) => {
-  let message = "All your assignments are loaded.";
-  if (loading) {
-    message = "Loading your assignments…";
-  } else if (failed) {
-    message = "Your schedule couldn't finish loading. Retry above.";
-  } else if (hasMore) {
-    message =
-      "Search covers loaded assignments; load more to search further back.";
-  }
-  return (
-    <output className="text-muted-foreground py-2 text-xs">
-      Past and future assignments, newest first. {message}
-    </output>
-  );
-};
-
-const ServicesLoadMore = ({
-  hidden,
-  loading,
-  disabled,
-  personal,
-  onLoad,
-}: {
-  hidden: boolean;
-  loading: boolean;
-  disabled: boolean;
-  personal: boolean;
-  onLoad: () => void;
-}) => {
-  if (hidden) {
-    return null;
-  }
-  let label = personal ? "Load more assignments" : "Load next 2 weeks";
-  if (loading) {
-    label = "Loading services…";
-  }
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      disabled={disabled}
-      onClick={onLoad}
-    >
-      {label}
-    </Button>
-  );
-};
-
 export const ServicePlanTableSelector = ({
   selectedServiceTypeId,
   selectedPlanId,
@@ -429,10 +371,6 @@ export const ServicePlanTableSelector = ({
   const {
     searchValue,
     setSearchValue,
-    onlyMyServices,
-    setOnlyMyServices,
-    hasMoreMyServices,
-    loadMoreMyServices,
     serviceTypes,
     effectiveSelectedServiceTypeIds,
     setSelectedServiceTypeIds,
@@ -554,7 +492,6 @@ export const ServicePlanTableSelector = ({
   useEarlierPlansIntent({
     scrollRef,
     enabled:
-      !onlyMyServices &&
       !isInitialLoading &&
       !isRefreshing &&
       !errorMessage &&
@@ -580,7 +517,7 @@ export const ServicePlanTableSelector = ({
       <div className="flex flex-col [--plan-list-sticky-offset:6.25rem] md:min-h-0 md:flex-1">
         <div
           data-tour="plan-search"
-          className="bg-background sticky top-0 z-10 -mx-4 grid shrink-0 grid-cols-2 gap-2 px-4 py-2 md:static md:mx-0 md:grid-cols-[minmax(0,1fr)_auto] md:bg-transparent md:px-0 md:pt-0 md:pb-1"
+          className="bg-background sticky top-0 z-10 -mx-4 grid shrink-0 grid-cols-2 gap-2 px-4 py-2 md:static md:mx-0 md:grid-cols-[minmax(0,1fr)_180px] md:bg-transparent md:px-0 md:pt-0 md:pb-1"
         >
           <InputGroup className="col-span-2 md:col-span-1">
             <InputGroupAddon>
@@ -595,34 +532,17 @@ export const ServicePlanTableSelector = ({
               onChange={(event) => {
                 setSearchValue(event.target.value);
               }}
-              placeholder={
-                onlyMyServices
-                  ? "Search your services, teams, or dates"
-                  : "Search plans, series, or dates"
-              }
+              placeholder="Search plans, series, or dates"
               aria-label="Search services and plans"
             />
           </InputGroup>
 
-          <div className="col-span-2 flex min-w-0 items-center gap-2 md:col-span-1">
-            <Button
-              type="button"
-              variant={onlyMyServices ? "secondary" : "ghost"}
-              size="sm"
-              aria-pressed={onlyMyServices}
-              onClick={() => {
-                setOnlyMyServices(!onlyMyServices);
-              }}
-            >
-              Only my services
-            </Button>
-            <div className="min-w-0 flex-1 md:w-44 md:flex-none">
-              <ServiceTypeMultiSelect
-                options={serviceTypes ?? []}
-                selectedIds={effectiveSelectedServiceTypeIds}
-                onChange={setSelectedServiceTypeIds}
-              />
-            </div>
+          <div className="col-span-2 md:col-span-1">
+            <ServiceTypeMultiSelect
+              options={serviceTypes ?? []}
+              selectedIds={effectiveSelectedServiceTypeIds}
+              onChange={setSelectedServiceTypeIds}
+            />
           </div>
         </div>
 
@@ -631,13 +551,6 @@ export const ServicePlanTableSelector = ({
           className="shrink-0"
         />
 
-        {onlyMyServices ? (
-          <PersonalScheduleStatus
-            loading={isInitialLoading || isRefreshing}
-            hasMore={hasMoreMyServices}
-            failed={!!errorMessage}
-          />
-        ) : null}
         <PageScrollArea ref={scrollRef}>
           <div className="[overflow-anchor:none]">
             <PlanAgenda
@@ -650,22 +563,23 @@ export const ServicePlanTableSelector = ({
               getPlanIntentProps={getPlanIntentProps}
               orgTimeZone={orgTimeZone}
             />
-            <div ref={laterRef} className="flex justify-center py-4">
-              <ServicesLoadMore
-                hidden={
-                  isInitialLoading || (onlyMyServices && !hasMoreMyServices)
-                }
-                loading={isRefreshing}
-                disabled={
-                  isRefreshing ||
-                  (!onlyMyServices &&
-                    effectiveSelectedServiceTypeIds.length === 0) ||
-                  !!errorMessage
-                }
-                personal={onlyMyServices}
-                onLoad={onlyMyServices ? loadMoreMyServices : loadLaterWeeks}
-              />
-            </div>
+            {isInitialLoading ? null : (
+              <div ref={laterRef} className="flex justify-center py-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={
+                    isRefreshing ||
+                    effectiveSelectedServiceTypeIds.length === 0 ||
+                    !!errorMessage
+                  }
+                  onClick={loadLaterWeeks}
+                >
+                  {isRefreshing ? "Loading services…" : "Load next 2 weeks"}
+                </Button>
+              </div>
+            )}
           </div>
         </PageScrollArea>
       </div>

@@ -7,17 +7,17 @@ import { getMySchedulePage } from "./get-my-schedule";
 describe("personal schedule pages", () => {
   it("returns personal assignments beyond the agenda window with continuation", async () => {
     const result = await Effect.runPromise(
-      getMySchedulePage("person-7", 100, {
-        getPersonAllSchedulesPage: (personId, offset) =>
+      getMySchedulePage("person-7", 100, "2026-10-30", {
+        getPersonUpcomingSchedulesPage: (personId, after, offset) =>
           Effect.succeed({
             data: ["assignment-1"].map((id) => ({
               type: "Schedule",
               id,
               attributes: {
-                sort_date: "2024-12-25T19:00:00Z",
+                sort_date: "2027-12-25T19:00:00Z",
                 service_type_name: "Christmas",
                 team_name: "Worship",
-                team_position_name: `${personId}:${offset}`,
+                team_position_name: `${personId}:${after}:${offset}`,
               },
               relationships: {
                 plan: { data: { type: "Plan", id: "plan-9" } },
@@ -35,8 +35,8 @@ describe("personal schedule pages", () => {
           planId: "plan-9",
           serviceTypeId: "type-2",
           serviceTypeName: "Christmas",
-          sortDate: new Date("2024-12-25T19:00:00Z"),
-          assignment: "Worship · person-7:100",
+          sortDate: new Date("2027-12-25T19:00:00Z"),
+          assignment: "Worship · person-7:2026-10-30:100",
         },
       ],
       nextOffset: 200,
@@ -45,8 +45,8 @@ describe("personal schedule pages", () => {
 
   it("skips inaccessible or undated plans while retaining the provider continuation", async () => {
     const result = await Effect.runPromise(
-      getMySchedulePage("p", 0, {
-        getPersonAllSchedulesPage: () =>
+      getMySchedulePage("p", 0, "2026-10-30", {
+        getPersonUpcomingSchedulesPage: () =>
           Effect.succeed({
             data: [
               { id: "hidden", visible: false, date: "2020-01-01T19:00:00Z" },
@@ -73,8 +73,8 @@ describe("personal schedule pages", () => {
 
   it("keeps provider rate limits as failures instead of claiming an empty schedule", async () => {
     const result = await Effect.runPromise(
-      getMySchedulePage("person-7", 0, {
-        getPersonAllSchedulesPage: () =>
+      getMySchedulePage("person-7", 0, "2026-10-30", {
+        getPersonUpcomingSchedulesPage: () =>
           Effect.fail(
             new PlanningCenterRateLimitError({
               retryAfterSeconds: 12,

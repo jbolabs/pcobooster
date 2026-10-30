@@ -443,7 +443,7 @@ export type PeopleDashboardPersonDetail =
 export type PeopleSearchResult = typeof peopleSearchResultSchema.Type;
 export type MyScheduledPlansData = typeof myScheduledPlansDataSchema.Type;
 
-/** One provider page of the signed-in person's assignments, across all dates. */
+/** One provider page of the signed-in person's upcoming assignments. */
 export const mySchedulePageSchema = Schema.Struct({
   entries: mutableArray(
     Schema.Struct({

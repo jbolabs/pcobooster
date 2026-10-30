@@ -5,7 +5,6 @@ import type { ServicePlanRow } from "@pcobooster/planning-center-models/service-
 import {
   buildServicePlanRows,
   formatPlanDate,
-  isInDateWindow,
 } from "@pcobooster/planning-center-models/service-plans";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import type { QueryFunctionContext } from "@tanstack/react-query";
@@ -14,9 +13,8 @@ import { useCallback, useDeferredValue, useMemo, useState } from "react";
 
 import { useBrowserStorage } from "@/hooks/use-browser-storage";
 import { useIntentPrefetch } from "@/hooks/use-intent-prefetch";
-import { useMyScheduledPlans } from "@/hooks/use-my-scheduled-plans";
+import { useMyScheduledServices } from "@/hooks/use-my-scheduled-services";
 import { useOrganizationTimeZone } from "@/hooks/use-organization-timezone";
-import { usePersonalServicePlans } from "@/hooks/use-personal-service-plans";
 import { createPlanItemsQueryOptions } from "@/hooks/use-plan-items";
 import { createPlanTimesQueryOptions } from "@/hooks/use-plan-times";
 import { useServiceTypes } from "@/hooks/use-service-types";
@@ -53,11 +51,10 @@ export const useServicePlanSelection = ({
   const serviceTypesQuery = useServiceTypes();
   const { data: serviceTypes, isLoading: serviceTypesLoading } =
     serviceTypesQuery;
-  // Starts with the service types rather than after the plans: it lists every upcoming plan
-  // the person is on, and the rows are matched against it below.
-  const myScheduledPlansQuery = useMyScheduledPlans();
-  const { data: myScheduledPlans } = myScheduledPlansQuery;
-  const [onlyMyServices, setOnlyMyServices] = useState(false);
+  // Personal cards read their own assignments; the main agenda keeps its bounded windows.
+  const myScheduledPlansQuery = useMyScheduledServices();
+  const { rows: scheduledRows, isLoading: myScheduledPlansLoading } =
+    myScheduledPlansQuery;
   const [searchValue, setSearchValue] = useState("");
   const deferredSearchValue = useDeferredValue(searchValue);
   const [storedIds, setStoredIds] = useBrowserStorage(
@@ -119,13 +116,6 @@ export const useServicePlanSelection = ({
     [effectiveSelectedServiceTypeIds]
   );
 
-  const { query: personalSchedule, rows: personalRows } =
-    usePersonalServicePlans(
-      onlyMyServices,
-      selectedServiceTypeIds,
-      selectedServiceTypeId
-    );
-
   const selectedTypes = (serviceTypes ?? []).filter((type) =>
     selectedServiceTypeIdSet.has(type.id)
   );
@@ -140,7 +130,6 @@ export const useServicePlanSelection = ({
           })
         ),
       staleTime: 5 * 60 * 1000,
-      enabled: !onlyMyServices,
     }))
   );
   const planQueries = useQueries({ queries: planQueryOptions });
@@ -167,7 +156,6 @@ export const useServicePlanSelection = ({
   );
   const lastWindowQueries = planQueries.slice(-selectedTypes.length);
   const canAutoLoadMore =
-    !onlyMyServices &&
     deferredSearchValue.trim() === "" &&
     selectedTypes.length > 0 &&
     lastWindowQueries.every(
@@ -182,24 +170,15 @@ export const useServicePlanSelection = ({
   }, [setWindows]);
 
   const myScheduledPlanIdSet = useMemo(
-    () =>
-      new Set([
-        ...(myScheduledPlans?.planIds ?? []),
-        ...personalRows.map((row) => row.planId),
-      ]),
-    [myScheduledPlans?.planIds, personalRows]
+    () => new Set(scheduledRows.map((row) => row.planId)),
+    [scheduledRows]
   );
 
-  const plansLoading = onlyMyServices
-    ? personalSchedule.isFetching
-    : planQueries.some((query) => query.isLoading);
-  const scheduleQuery = onlyMyServices
-    ? personalSchedule
-    : myScheduledPlansQuery;
+  const plansLoading = planQueries.some((query) => query.isLoading);
   const failedQueries = [
     { title: "Couldn't load service types", query: serviceTypesQuery },
-    { title: "Couldn't load your services", query: scheduleQuery },
-    ...(onlyMyServices ? [] : planQueries).map((query, index) => ({
+    { title: "Couldn't load your services", query: myScheduledPlansQuery },
+    ...planQueries.map((query, index) => ({
       title: `Couldn't load ${selectedTypes[index % selectedTypes.length]?.name ?? "service"} plans for ${startDays[Math.floor(index / selectedTypes.length)]}`,
       query,
     })),
@@ -211,7 +190,7 @@ export const useServicePlanSelection = ({
   // then shows them together. Later, a service type added to the filter keeps the current rows
   // on screen, with the loading bar, until its plans arrive.
   const everythingLoaded =
-    !serviceTypesLoading && !plansLoading && !scheduleQuery.isLoading;
+    !serviceTypesLoading && !plansLoading && !myScheduledPlansLoading;
   const [hasLoaded, setHasLoaded] = useState(everythingLoaded);
   if (everythingLoaded && !hasLoaded) {
     setHasLoaded(true);
@@ -219,16 +198,14 @@ export const useServicePlanSelection = ({
   const isInitialLoading = !hasLoaded;
   const isRefreshing = hasLoaded && plansLoading;
 
-  // Keep the shortcuts one row tall as later agenda windows arrive.
-  const myScheduledRows = rows
-    .filter(
-      (row) =>
-        myScheduledPlanIdSet.has(row.planId) &&
-        isInDateWindow(row.sortDate, "60", orgTimeZone)
-    )
-    .slice(0, 3);
+  const agendaByPlan = new Map(rows.map((row) => [row.planId, row]));
+  const myScheduledRows = scheduledRows.flatMap((row) =>
+    selectedServiceTypeIdSet.has(row.serviceTypeId)
+      ? [agendaByPlan.get(row.planId) ?? row]
+      : []
+  );
   const normalizedSearch = deferredSearchValue.trim().toLowerCase();
-  const visibleRows = (onlyMyServices ? personalRows : rows).filter((row) => {
+  const visibleRows = rows.filter((row) => {
     if (!normalizedSearch) {
       return true;
     }
@@ -314,12 +291,6 @@ export const useServicePlanSelection = ({
   return {
     searchValue,
     setSearchValue,
-    onlyMyServices,
-    setOnlyMyServices,
-    hasMoreMyServices: personalSchedule.hasNextPage,
-    loadMoreMyServices: () => {
-      void personalSchedule.fetchNextPage();
-    },
     serviceTypes,
     effectiveSelectedServiceTypeIds,
     setSelectedServiceTypeIds,
@@ -327,8 +298,7 @@ export const useServicePlanSelection = ({
     loadEarlierWeeks,
     canAutoLoadMore,
     latestStartDay: startDays.at(-1),
-    isInitialLoading:
-      isInitialLoading || (onlyMyServices && personalSchedule.isLoading),
+    isInitialLoading,
     isRefreshing,
     errorMessage,
     failedQueries,

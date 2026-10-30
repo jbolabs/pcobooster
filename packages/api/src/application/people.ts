@@ -56,6 +56,7 @@ import { searchPeople } from "@pcobooster/api/modules/planning-center/search-peo
 import type { PeopleSearchResult } from "@pcobooster/api/modules/planning-center/search-people";
 import { Server } from "@pcobooster/api/server";
 import type { MySchedulePage } from "@pcobooster/contracts/http/people-schemas";
+import { formatCalendarDayInTimeZone } from "@pcobooster/planning-center-models/calendar";
 import type { Blockout } from "@pcobooster/planning-center-models/types";
 import { Effect } from "effect";
 
@@ -307,7 +308,11 @@ export const getMySchedule = (
 ): Effect.Effect<
   MySchedulePage,
   ApplicationFault,
-  PlanningCenterAccess | PlanningCenterPeople | RequestContext | Server
+  | OrganizationTimeZone
+  | PlanningCenterAccess
+  | PlanningCenterPeople
+  | RequestContext
+  | Server
 > =>
   Effect.gen(function* readMySchedule() {
     const access = yield* PlanningCenterAccess;
@@ -323,9 +328,12 @@ export const getMySchedule = (
     if (personId === null) {
       return { entries: [], nextOffset: null };
     }
+    const organizationTimeZone = yield* OrganizationTimeZone;
+    const orgTimeZone = yield* organizationTimeZone;
     return yield* getMySchedulePage(
       personId,
       offset,
+      formatCalendarDayInTimeZone(new Date(), orgTimeZone),
       yield* PlanningCenterPeople
     );
   }).pipe(withPlanningCenterFaults);

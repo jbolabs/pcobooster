@@ -945,12 +945,12 @@ describe("PlanningCenterPeopleService.getPersonSchedulesAfter with an instant", 
   });
 });
 
-describe("personal schedule archive", () => {
-  it("reads one page of personal assignments across all dates without per-plan calls", async () => {
+describe("upcoming personal services", () => {
+  it("reads one page of personal assignments from the org day without per-plan calls", async () => {
     const { service, sent } = serviceOver(() => ({
       data: [
         resource("assignment-1", "Schedule", {
-          sort_date: "2024-12-25T19:00:00Z",
+          sort_date: "2027-12-25T19:00:00Z",
         }),
       ],
       links: {
@@ -958,12 +958,12 @@ describe("personal schedule archive", () => {
       },
     }));
     const schedulePage = await Effect.runPromise(
-      service.getPersonAllSchedulesPage("person-7", 100)
+      service.getPersonUpcomingSchedulesPage("person-7", "2026-10-30", 100)
     );
     expect(schedulePage).toStrictEqual({
       data: [
         resource("assignment-1", "Schedule", {
-          sort_date: "2024-12-25T19:00:00Z",
+          sort_date: "2027-12-25T19:00:00Z",
         }),
       ],
       included: [],
@@ -973,6 +973,7 @@ describe("personal schedule archive", () => {
       sent.map(({ url }) => ({
         path: url.pathname,
         filter: url.searchParams.get("filter"),
+        after: url.searchParams.get("after"),
         order: url.searchParams.get("order"),
         offset: url.searchParams.get("offset"),
         perPage: url.searchParams.get("per_page"),
@@ -981,8 +982,9 @@ describe("personal schedule archive", () => {
     ).toStrictEqual([
       {
         path: "/services/v2/people/person-7/schedules",
-        filter: "all,not_across_organizations",
-        order: "-starts_at",
+        filter: "after,not_across_organizations",
+        after: "2026-10-30",
+        order: "starts_at",
         offset: "100",
         perPage: "100",
         include: null,

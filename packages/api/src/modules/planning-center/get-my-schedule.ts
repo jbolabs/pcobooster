@@ -16,10 +16,15 @@ const relatedId = (resource: PCResource, name: string): string | null => {
 export const getMySchedulePage = (
   personId: string,
   offset: number,
-  people: Pick<PlanningCenterPeopleService, "getPersonAllSchedulesPage">
+  after: string,
+  people: Pick<PlanningCenterPeopleService, "getPersonUpcomingSchedulesPage">
 ): Effect.Effect<MySchedulePage, PlanningCenterError> =>
   Effect.gen(function* readSchedulePage() {
-    const page = yield* people.getPersonAllSchedulesPage(personId, offset);
+    const page = yield* people.getPersonUpcomingSchedulesPage(
+      personId,
+      after,
+      offset
+    );
     const entries: MySchedulePage["entries"] = [];
     for (const schedule of page.data) {
       const planId = relatedId(schedule, "plan");
