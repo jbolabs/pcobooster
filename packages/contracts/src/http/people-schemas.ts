@@ -442,3 +442,18 @@ export type PeopleDashboardPersonDetail =
   typeof peopleDashboardPersonDetailSchema.Type;
 export type PeopleSearchResult = typeof peopleSearchResultSchema.Type;
 export type MyScheduledPlansData = typeof myScheduledPlansDataSchema.Type;
+
+/** One provider page of the signed-in person's upcoming assignments. */
+export const mySchedulePageSchema = Schema.Struct({
+  entries: mutableArray(
+    Schema.Struct({
+      planId: requiredId,
+      serviceTypeId: requiredId,
+      serviceTypeName: Schema.String,
+      sortDate: Schema.Date,
+      assignment: Schema.String,
+    })
+  ),
+  nextOffset: Schema.NullOr(nonNegativeInteger),
+});
+export type MySchedulePage = typeof mySchedulePageSchema.Type;

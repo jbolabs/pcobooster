@@ -5,7 +5,6 @@ import type { ServicePlanRow } from "@pcobooster/planning-center-models/service-
 import {
   buildServicePlanRows,
   formatPlanDate,
-  isInDateWindow,
 } from "@pcobooster/planning-center-models/service-plans";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import type { QueryFunctionContext } from "@tanstack/react-query";
@@ -14,7 +13,7 @@ import { useCallback, useDeferredValue, useMemo, useState } from "react";
 
 import { useBrowserStorage } from "@/hooks/use-browser-storage";
 import { useIntentPrefetch } from "@/hooks/use-intent-prefetch";
-import { useMyScheduledPlans } from "@/hooks/use-my-scheduled-plans";
+import { useMyScheduledServices } from "@/hooks/use-my-scheduled-services";
 import { useOrganizationTimeZone } from "@/hooks/use-organization-timezone";
 import { createPlanItemsQueryOptions } from "@/hooks/use-plan-items";
 import { createPlanTimesQueryOptions } from "@/hooks/use-plan-times";
@@ -52,10 +51,9 @@ export const useServicePlanSelection = ({
   const serviceTypesQuery = useServiceTypes();
   const { data: serviceTypes, isLoading: serviceTypesLoading } =
     serviceTypesQuery;
-  // Starts with the service types rather than after the plans: it lists every upcoming plan
-  // the person is on, and the rows are matched against it below.
-  const myScheduledPlansQuery = useMyScheduledPlans();
-  const { data: myScheduledPlans, isLoading: myScheduledPlansLoading } =
+  // Personal cards read their own assignments; the main agenda keeps its bounded windows.
+  const myScheduledPlansQuery = useMyScheduledServices();
+  const { rows: scheduledRows, isLoading: myScheduledPlansLoading } =
     myScheduledPlansQuery;
   const [searchValue, setSearchValue] = useState("");
   const deferredSearchValue = useDeferredValue(searchValue);
@@ -172,8 +170,8 @@ export const useServicePlanSelection = ({
   }, [setWindows]);
 
   const myScheduledPlanIdSet = useMemo(
-    () => new Set(myScheduledPlans?.planIds),
-    [myScheduledPlans?.planIds]
+    () => new Set(scheduledRows.map((row) => row.planId)),
+    [scheduledRows]
   );
 
   const plansLoading = planQueries.some((query) => query.isLoading);
@@ -200,14 +198,12 @@ export const useServicePlanSelection = ({
   const isInitialLoading = !hasLoaded;
   const isRefreshing = hasLoaded && plansLoading;
 
-  // Keep the shortcuts one row tall as later agenda windows arrive.
-  const myScheduledRows = rows
-    .filter(
-      (row) =>
-        myScheduledPlanIdSet.has(row.planId) &&
-        isInDateWindow(row.sortDate, "60", orgTimeZone)
-    )
-    .slice(0, 3);
+  const agendaByPlan = new Map(rows.map((row) => [row.planId, row]));
+  const myScheduledRows = scheduledRows.flatMap((row) =>
+    selectedServiceTypeIdSet.has(row.serviceTypeId)
+      ? [agendaByPlan.get(row.planId) ?? row]
+      : []
+  );
   const normalizedSearch = deferredSearchValue.trim().toLowerCase();
   const visibleRows = rows.filter((row) => {
     if (!normalizedSearch) {

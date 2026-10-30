@@ -5,6 +5,7 @@ import {
   blockoutSchema,
   candidateDetailsBatchSchema,
   myScheduledPlansDataSchema,
+  mySchedulePageSchema,
   peopleDashboardActivityBatchSchema,
   peopleDashboardPersonDetailSchema,
   peopleDashboardRosterSchema,
@@ -22,6 +23,7 @@ import {
   mutableArray,
   isoDateTimeWithOffset,
   requiredId,
+  nonNegativeInteger,
 } from "@pcobooster/contracts/http/schema";
 import {
   PEOPLE_CANDIDATE_DETAILS_BATCH_SIZE,
@@ -172,6 +174,10 @@ export const people = planningCenterGroup(
     payload: Struct.omit(peopleDashboardPersonInputSchema.fields, ["personId"]),
     success: peopleDashboardPersonDetailSchema,
     feature: "people",
+  }),
+  read("mySchedule", "/me/schedule", {
+    query: { offset: Schema.optional(nonNegativeInteger) },
+    success: mySchedulePageSchema,
   }),
   read("myScheduledPlans", "/me/scheduled-plans", {
     success: myScheduledPlansDataSchema,

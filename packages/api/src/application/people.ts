@@ -23,6 +23,7 @@ import {
   resolveCurrentUserPersonId,
 } from "@pcobooster/api/modules/planning-center/get-current-user-scheduled-plans";
 import type { CurrentUserIdentityDependencies } from "@pcobooster/api/modules/planning-center/get-current-user-scheduled-plans";
+import { getMySchedulePage } from "@pcobooster/api/modules/planning-center/get-my-schedule";
 import {
   getPeopleDashboardActivity as getPeopleDashboardActivityData,
   getPeopleDashboardRoster as getPeopleDashboardRosterData,
@@ -54,6 +55,8 @@ import {
 import { searchPeople } from "@pcobooster/api/modules/planning-center/search-people";
 import type { PeopleSearchResult } from "@pcobooster/api/modules/planning-center/search-people";
 import { Server } from "@pcobooster/api/server";
+import type { MySchedulePage } from "@pcobooster/contracts/http/people-schemas";
+import { formatCalendarDayInTimeZone } from "@pcobooster/planning-center-models/calendar";
 import type { Blockout } from "@pcobooster/planning-center-models/types";
 import { Effect } from "effect";
 
@@ -298,4 +301,39 @@ export const getMyScheduledPlans = (): Effect.Effect<
       resolveTimeZone: organizationTimeZone,
     });
     return { planIds };
+  }).pipe(withPlanningCenterFaults);
+
+export const getMySchedule = (
+  offset: number
+): Effect.Effect<
+  MySchedulePage,
+  ApplicationFault,
+  | OrganizationTimeZone
+  | PlanningCenterAccess
+  | PlanningCenterPeople
+  | RequestContext
+  | Server
+> =>
+  Effect.gen(function* readMySchedule() {
+    const access = yield* PlanningCenterAccess;
+    if (access.authentication.kind === "demo") {
+      return { entries: [], nextOffset: null };
+    }
+    const { request } = yield* RequestContext;
+    const personId = yield* resolveCurrentUserPersonId(
+      request,
+      access.authentication.account,
+      yield* currentUserIdentityDependencies
+    );
+    if (personId === null) {
+      return { entries: [], nextOffset: null };
+    }
+    const organizationTimeZone = yield* OrganizationTimeZone;
+    const orgTimeZone = yield* organizationTimeZone;
+    return yield* getMySchedulePage(
+      personId,
+      offset,
+      formatCalendarDayInTimeZone(new Date(), orgTimeZone),
+      yield* PlanningCenterPeople
+    );
   }).pipe(withPlanningCenterFaults);

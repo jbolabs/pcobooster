@@ -1,5 +1,6 @@
 import {
   getMyScheduledPlans,
+  getMySchedule,
   getPeopleBlockouts,
   getPeopleCandidateDetails,
   getPeopleDashboardActivity,
@@ -35,5 +36,6 @@ export const PeopleHandlers = HttpApiBuilder.group(
       .handle("dashboardPerson", ({ params, payload }) =>
         getPeopleDashboardPerson({ ...params, ...payload })
       )
+      .handle("mySchedule", ({ query }) => getMySchedule(query.offset ?? 0))
       .handle("myScheduledPlans", () => getMyScheduledPlans())
 );
