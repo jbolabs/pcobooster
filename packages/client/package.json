@@ -15,8 +15,8 @@
   },
   "dependencies": {
     "@pcobooster/contracts": "workspace:*",
-    "@tanstack/query-core": "5.104.3",
-    "effect": "4.0.5"
+    "@tanstack/query-core": "5.105.0",
+    "effect": "4.1.0"
   },
   "devDependencies": {
     "@pcobooster/config": "workspace:*",
