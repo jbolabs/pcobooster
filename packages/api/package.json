@@ -24,7 +24,7 @@
     "@cloudflare/workers-types": "5.20261016.1",
     "@pcobooster/config": "workspace:*",
     "@types/node": "^26.6.5",
-    "drizzle-kit": "1.0.0-rc.5-ab785fc",
+    "drizzle-kit": "1.0.0-rc.5",
     "miniflare": "5.20260921.0-alpha",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
