@@ -16,14 +16,14 @@
     "@pcobooster/contracts": "workspace:*",
     "@pcobooster/planning-center-models": "workspace:*",
     "@pcobooster/presentation-mode": "workspace:*",
-    "better-auth": "1.7.10",
+    "better-auth": "1.7.14",
     "drizzle-orm": "1.0.0-rc.5-ab785fc",
-    "effect": "4.0.5"
+    "effect": "4.1.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20261016.1",
+    "@cloudflare/workers-types": "5.20261029.1",
     "@pcobooster/config": "workspace:*",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "miniflare": "5.20260921.0-alpha",
     "typescript": "^7.0.2",

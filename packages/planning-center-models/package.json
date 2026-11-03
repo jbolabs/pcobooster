@@ -48,7 +48,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "4.0.5"
+    "effect": "4.1.0"
   },
   "devDependencies": {
     "@pcobooster/config": "workspace:*",

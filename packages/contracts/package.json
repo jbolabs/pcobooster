@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@pcobooster/planning-center-models": "workspace:*",
-    "effect": "4.0.5"
+    "effect": "4.1.0"
   },
   "devDependencies": {
     "@pcobooster/config": "workspace:*",
